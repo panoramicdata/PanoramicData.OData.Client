@@ -304,3 +304,7 @@ FodyWeavers.xsd
 
 # NuGet API key
 nuget-key.txt
+
+
+#Ignore vscode AI rules
+.github\instructions\codacy.instructions.md

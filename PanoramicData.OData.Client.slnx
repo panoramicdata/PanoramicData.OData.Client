@@ -4,6 +4,7 @@
 		<File Path=".gitignore" />
 		<File Path="Directory.Build.props" />
 		<File Path="LICENSE" />
+		<File Path="nuget-key.txt" />
 		<File Path="PanoramicData.OData.Client.dic" />
 		<File Path="README.md" />
 		<File Path="version.json" />
