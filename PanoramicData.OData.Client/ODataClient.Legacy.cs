@@ -32,14 +32,12 @@ public partial class ODataClient
 	/// <para>This method provides backward compatibility with Simple.OData.Client's fluent API pattern.</para>
 	/// <para><b>New API pattern (recommended):</b></para>
 	/// <code>
-	/// // Typed approach (recommended):
-	/// var query = client.For&lt;Incident&gt;("incidents").Top(10);
-	/// var response = await client.GetAsync(query, cancellationToken);
-	/// var incidents = response.Value;
+	/// var result = await client.For&lt;Incident&gt;("incidents").Top(10).GetAsync(ct);
+	/// // Or without explicit entity set name:
+	/// var result = await client.For&lt;Incident&gt;().Top(10).GetAsync(ct);
 	/// </code>
 	/// </remarks>
-	[Obsolete("Use For<T>(entitySetName) with a typed entity for better type safety. " +
-		"Example: var query = client.For<Incident>(\"incidents\").Top(10); var response = await client.GetAsync(query, ct);")]
+	[Obsolete("Use client.For<T>().Top(10).GetAsync(ct) with a typed entity for better type safety.")]
 	public FluentODataQueryBuilder For(string entitySetName)
 		=> new(this, entitySetName, _logger);
 
@@ -51,11 +49,9 @@ public partial class ODataClient
 	/// <returns>A collection of dictionaries representing the entities.</returns>
 	/// <remarks>
 	/// This method is provided for backward compatibility.
-	/// For new code, use <see cref="GetAsync{T}(ODataQueryBuilder{T}, CancellationToken)"/> with a typed entity,
-	/// or use <see cref="GetRawAsync(string, IReadOnlyDictionary{string, string}?, CancellationToken)"/>
-	/// and parse the JSON yourself for full control.
+	/// For new code, use the fluent typed API.
 	/// </remarks>
-	[Obsolete("Use For<T>().GetAsync() with a typed entity. Example: var response = await client.For<Product>().Top(10).GetAsync(ct);")]
+	[Obsolete("Use client.For<T>().Top(10).GetAsync(ct) with a typed entity.")]
 	public async Task<IEnumerable<IDictionary<string, object?>>> FindEntriesAsync(
 		string query,
 		CancellationToken cancellationToken)
@@ -72,10 +68,9 @@ public partial class ODataClient
 	/// <returns>A dictionary representing the entity, or null if not found.</returns>
 	/// <remarks>
 	/// This method is provided for backward compatibility.
-	/// For new code, use <see cref="GetByKeyAsync{T, TKey}(TKey, ODataQueryBuilder{T}?, CancellationToken)"/>
-	/// or <see cref="GetFirstOrDefaultAsync{T}(ODataQueryBuilder{T}, CancellationToken)"/> with a typed entity.
+	/// For new code, use the fluent typed API.
 	/// </remarks>
-	[Obsolete("Use For<T>().Key(id).GetEntryAsync() or client.GetByKeyAsync<T, TKey>(key, ct) with a typed entity.")]
+	[Obsolete("Use client.For<T>().Key(id).GetEntryAsync(ct) with a typed entity.")]
 	public async Task<IDictionary<string, object?>?> FindEntryAsync(
 		string query,
 		CancellationToken cancellationToken)
@@ -232,11 +227,8 @@ public partial class ODataClient
 /// This class is provided for backward compatibility with SimpleODataClient.
 /// For new code, use <see cref="JsonDocument"/> directly via <see cref="ODataClient.GetRawAsync"/>.
 /// </remarks>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ODataRawResponse"/> class.
-/// </remarks>
 /// <param name="document">The JSON document.</param>
-[Obsolete("Use JsonDocument from GetRawAsync() for new code.")]
+[Obsolete("Use GetRawAsync() which returns a JsonDocument for more efficient JSON handling.")]
 public class ODataRawResponse(JsonDocument document) : IDisposable
 {
 	private bool _disposed;
@@ -295,7 +287,7 @@ public class ODataRawResponse(JsonDocument document) : IDisposable
 	/// <summary>
 	/// Converts a JsonElement to a dictionary.
 	/// </summary>
-	internal static Dictionary<string, object?> JsonElementToDictionary(JsonElement element)
+	private static Dictionary<string, object?> JsonElementToDictionary(JsonElement element)
 	{
 		var dict = new Dictionary<string, object?>();
 
