@@ -308,6 +308,78 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 
 	#endregion
 
+	#region For(string).GetJsonAsync() Tests
+
+	/// <summary>
+	/// Tests that For(string).GetJsonAsync() returns a JsonDocument.
+	/// </summary>
+	[Fact]
+	public async Task For_GetJsonAsync_ReturnsJsonDocument()
+	{
+#pragma warning disable CS0618 // Type or member is obsolete
+		// Arrange & Act
+		using var json = await _fixture.Client
+			.For("Products")
+			.Top(5)
+			.GetJsonAsync(CancellationToken);
+#pragma warning restore CS0618
+
+		// Assert
+		json.Should().NotBeNull();
+		json.RootElement.TryGetProperty("value", out var valueElement).Should().BeTrue();
+		valueElement.ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
+		valueElement.GetArrayLength().Should().BeGreaterThan(0);
+	}
+
+	/// <summary>
+	/// Tests that For(string).GetJsonAsync() with filter returns filtered JSON.
+	/// </summary>
+	[Fact]
+	public async Task For_WithFilter_GetJsonAsync_ReturnsFilteredJson()
+	{
+#pragma warning disable CS0618 // Type or member is obsolete
+		// Arrange & Act
+		using var json = await _fixture.Client
+			.For("Products")
+			.Filter("Rating gt 3")
+			.Top(5)
+			.GetJsonAsync(CancellationToken);
+#pragma warning restore CS0618
+
+		// Assert
+		json.Should().NotBeNull();
+		var valueElement = json.RootElement.GetProperty("value");
+		foreach (var item in valueElement.EnumerateArray())
+		{
+			var rating = item.GetProperty("Rating").GetInt32();
+			rating.Should().BeGreaterThan(3);
+		}
+	}
+
+	/// <summary>
+	/// Tests that For(string).GetJsonAsync() preserves OData annotations.
+	/// </summary>
+	[Fact]
+	public async Task For_GetJsonAsync_PreservesODataAnnotations()
+	{
+#pragma warning disable CS0618 // Type or member is obsolete
+		// Arrange & Act
+		using var json = await _fixture.Client
+			.For("Products")
+			.Count()
+			.Top(1)
+			.GetJsonAsync(CancellationToken);
+#pragma warning restore CS0618
+
+		// Assert
+		json.Should().NotBeNull();
+		json.RootElement.TryGetProperty("@odata.context", out _).Should().BeTrue();
+		json.RootElement.TryGetProperty("@odata.count", out var countElement).Should().BeTrue();
+		countElement.GetInt64().Should().BePositive();
+	}
+
+	#endregion
+
 	#region Complex Query Tests
 
 	/// <summary>

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
 
 namespace PanoramicData.OData.Client;
 
@@ -208,6 +209,27 @@ public class FluentODataQueryBuilder
 	/// </remarks>
 	public Task<ODataResponse<Dictionary<string, object?>>> GetAsync(CancellationToken cancellationToken = default)
 		=> _client.GetFluentAsync(this, cancellationToken);
+
+	/// <summary>
+	/// Executes the query and returns the raw JSON response as a JsonDocument.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>A JsonDocument containing the raw OData response. The caller is responsible for disposing the document.</returns>
+	/// <remarks>
+	/// <para>This method returns the raw JSON response without any parsing into typed objects.</para>
+	/// <para>The returned JsonDocument must be disposed by the caller.</para>
+	/// <example>
+	/// <code>
+	/// using var json = await client.For("incidents").Top(10).GetJsonAsync(ct);
+	/// foreach (var item in json.RootElement.GetProperty("value").EnumerateArray())
+	/// {
+	///     Console.WriteLine(item.GetProperty("title").GetString());
+	/// }
+	/// </code>
+	/// </example>
+	/// </remarks>
+	public Task<JsonDocument> GetJsonAsync(CancellationToken cancellationToken = default)
+		=> _client.GetFluentJsonAsync(this, cancellationToken);
 
 	/// <summary>
 	/// Executes the query and returns all pages of results as dictionaries.

@@ -106,6 +106,25 @@ public partial class ODataClient
 	}
 
 	/// <summary>
+	/// Executes a query built by a FluentODataQueryBuilder and returns the raw JSON response.
+	/// </summary>
+	/// <param name="query">The fluent query builder.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>A JsonDocument containing the raw response. The caller must dispose of this document.</returns>
+	internal async Task<JsonDocument> GetFluentJsonAsync(
+		FluentODataQueryBuilder query,
+		CancellationToken cancellationToken)
+	{
+		var url = query.BuildUrl();
+		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
+		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+
+		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+		return JsonDocument.Parse(content);
+	}
+
+	/// <summary>
 	/// Executes a query built by a FluentODataQueryBuilder and returns results as dictionaries.
 	/// </summary>
 	internal async Task<ODataResponse<Dictionary<string, object?>>> GetFluentAsync(
