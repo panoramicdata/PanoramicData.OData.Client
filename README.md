@@ -1,5 +1,10 @@
 ﻿# PanoramicData.OData.Client
 
+[![Nuget](https://img.shields.io/nuget/v/PanoramicData.OData.Client)](https://www.nuget.org/packages/PanoramicData.OData.Client/)
+[![Nuget](https://img.shields.io/nuget/dt/PanoramicData.OData.Client)](https://www.nuget.org/packages/PanoramicData.OData.Client/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/ee4c431534a0455baf5733c36aa87a45)](https://app.codacy.com/gh/panoramicdata/PanoramicData.OData.Client/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+
 A lightweight, modern OData V4 client library for .NET 10.
 
 ## OData V4 Feature Support
