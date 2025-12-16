@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace PanoramicData.OData.Client;
@@ -66,7 +65,7 @@ public class ODataAsyncOperation<T>
 	/// </summary>
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>True if the operation is still running, false if completed or failed.</returns>
-	public async Task<bool> PollAsync(CancellationToken cancellationToken = default)
+	public async Task<bool> PollAsync(CancellationToken cancellationToken)
 	{
 		if (IsCompleted)
 		{
@@ -169,7 +168,7 @@ public class ODataAsyncOperation<T>
 	/// </summary>
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>True if the cancellation request was accepted.</returns>
-	public async Task<bool> TryCancelAsync(CancellationToken cancellationToken = default)
+	public async Task<bool> TryCancelAsync(CancellationToken cancellationToken)
 	{
 		if (IsCompleted)
 		{

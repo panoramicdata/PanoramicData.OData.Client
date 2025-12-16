@@ -1,4 +1,7 @@
 <Solution>
+	<Folder Name="/Documentation/">
+		<File Path="README.md" />
+	</Folder>
 	<Folder Name="/Solution Items/">
 		<File Path=".editorconfig" />
 		<File Path=".gitignore" />
@@ -6,7 +9,6 @@
 		<File Path="LICENSE" />
 		<File Path="nuget-key.txt" />
 		<File Path="PanoramicData.OData.Client.dic" />
-		<File Path="README.md" />
 		<File Path="version.json" />
 	</Folder>
 	<Project Path="PanoramicData.OData.Client.Test/PanoramicData.OData.Client.Test.csproj" Id="56794b6c-9510-4f89-ab13-f5f8bb907845" />

@@ -177,7 +177,7 @@ public class ODataBatchBuilder
 	/// </summary>
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>The batch response containing all operation results.</returns>
-	public Task<ODataBatchResponse> ExecuteAsync(CancellationToken cancellationToken = default)
+	public Task<ODataBatchResponse> ExecuteAsync(CancellationToken cancellationToken)
 		=> _client.ExecuteBatchAsync(this, cancellationToken);
 
 	private static string FormatKey<TKey>(TKey key) => key switch
