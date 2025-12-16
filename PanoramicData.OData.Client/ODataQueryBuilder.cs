@@ -24,6 +24,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 	private object? _functionParameters;
 	private string? _apply;
 	private string? _search;
+	private string? _derivedType;
 
 	/// <summary>
 	/// Sets the key for a single entity query.
@@ -31,6 +32,56 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 	public ODataQueryBuilder<T> Key<TKey>(TKey key)
 	{
 		_key = key;
+		return this;
+	}
+
+	/// <summary>
+	/// Filters to only entities of a derived type.
+	/// OData V4 supports querying derived types via type casting.
+	/// Example: GET People/Microsoft.OData.SampleService.Models.TripPin.Employee
+	/// </summary>
+	/// <typeparam name="TDerived">The derived type to filter to.</typeparam>
+	/// <param name="fullTypeName">The full namespace-qualified type name. If null, uses the type name without namespace.</param>
+	/// <returns>A new query builder for the derived type.</returns>
+	public ODataQueryBuilder<TDerived> OfType<TDerived>(string? fullTypeName = null) where TDerived : class, T
+	{
+		var typeName = fullTypeName ?? typeof(TDerived).Name;
+
+		// Create a new query builder with the derived type
+		var derivedBuilder = new ODataQueryBuilder<TDerived>(entitySet, logger)
+		{
+			_derivedType = typeName
+		};
+
+		// Copy over existing query options
+		derivedBuilder._filterClauses.AddRange(_filterClauses);
+		derivedBuilder._orderByClauses.AddRange(_orderByClauses);
+		derivedBuilder._selectFields.AddRange(_selectFields);
+		derivedBuilder._expandFields.AddRange(_expandFields);
+		derivedBuilder._computeExpressions.AddRange(_computeExpressions);
+		foreach (var header in _customHeaders)
+		{
+			derivedBuilder._customHeaders[header.Key] = header.Value;
+		}
+
+		derivedBuilder._skip = _skip;
+		derivedBuilder._top = _top;
+		derivedBuilder._count = _count;
+		derivedBuilder._apply = _apply;
+		derivedBuilder._search = _search;
+
+		return derivedBuilder;
+	}
+
+	/// <summary>
+	/// Sets the derived type for this query without changing the result type.
+	/// Use this when you want to filter to a derived type but keep the same result type.
+	/// </summary>
+	/// <param name="fullTypeName">The full namespace-qualified type name.</param>
+	/// <returns>This query builder.</returns>
+	public ODataQueryBuilder<T> Cast(string fullTypeName)
+	{
+		_derivedType = fullTypeName;
 		return this;
 	}
 
@@ -233,6 +284,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		var sb = new StringBuilder();
 		sb.Append(entitySet);
 
+		AppendDerivedTypeToUrl(sb);
 		AppendKeyToUrl(sb);
 		AppendFunctionToUrl(sb);
 		AppendQueryString(sb);
@@ -241,6 +293,18 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		logger.LogDebug("ODataQueryBuilder<{Type}>.BuildUrl() - Final URL: {Url}", typeof(T).Name, url);
 
 		return url;
+	}
+
+	private void AppendDerivedTypeToUrl(StringBuilder sb)
+	{
+		if (string.IsNullOrEmpty(_derivedType))
+		{
+			return;
+		}
+
+		sb.Append('/');
+		sb.Append(_derivedType);
+		logger.LogDebug("ODataQueryBuilder - DerivedType: {DerivedType}", _derivedType);
 	}
 
 	private void AppendKeyToUrl(StringBuilder sb)

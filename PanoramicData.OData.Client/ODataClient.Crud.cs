@@ -175,4 +175,96 @@ public partial class ODataClient
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
 		await EnsureSuccessAsync(response, url, etag, cancellationToken).ConfigureAwait(false);
 	}
+
+	/// <summary>
+	/// Replaces an entire entity using PUT.
+	/// Unlike PATCH which merges changes, PUT replaces the entire entity.
+	/// </summary>
+	/// <typeparam name="T">The entity type.</typeparam>
+	/// <param name="entitySet">The entity set name.</param>
+	/// <param name="key">The entity key.</param>
+	/// <param name="entity">The complete entity to replace with.</param>
+	/// <param name="headers">Optional additional headers.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>The replaced entity.</returns>
+	public Task<T> ReplaceAsync<T>(
+		string entitySet,
+		object key,
+		T entity,
+		IReadOnlyDictionary<string, string>? headers = null,
+		CancellationToken cancellationToken = default) where T : class
+		=> ReplaceAsync<T, object>(entitySet, key, entity, etag: null, headers, cancellationToken);
+
+	/// <summary>
+	/// Replaces an entire entity using PUT with optimistic concurrency via ETag.
+	/// </summary>
+	/// <typeparam name="T">The entity type.</typeparam>
+	/// <param name="entitySet">The entity set name.</param>
+	/// <param name="key">The entity key.</param>
+	/// <param name="entity">The complete entity to replace with.</param>
+	/// <param name="etag">The ETag value for concurrency control.</param>
+	/// <param name="headers">Optional additional headers.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>The replaced entity.</returns>
+	/// <exception cref="ODataConcurrencyException">Thrown when the server returns 412 Precondition Failed.</exception>
+	public Task<T> ReplaceAsync<T>(
+		string entitySet,
+		object key,
+		T entity,
+		string? etag,
+		IReadOnlyDictionary<string, string>? headers = null,
+		CancellationToken cancellationToken = default) where T : class
+		=> ReplaceAsync<T, object>(entitySet, key, entity, etag, headers, cancellationToken);
+
+	/// <summary>
+	/// Replaces an entire entity using PUT with strongly-typed key and optimistic concurrency via ETag.
+	/// </summary>
+	/// <typeparam name="T">The entity type.</typeparam>
+	/// <typeparam name="TKey">The key type.</typeparam>
+	/// <param name="entitySet">The entity set name.</param>
+	/// <param name="key">The entity key.</param>
+	/// <param name="entity">The complete entity to replace with.</param>
+	/// <param name="etag">The ETag value for concurrency control.</param>
+	/// <param name="headers">Optional additional headers.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>The replaced entity.</returns>
+	/// <exception cref="ODataConcurrencyException">Thrown when the server returns 412 Precondition Failed.</exception>
+	public async Task<T> ReplaceAsync<T, TKey>(
+		string entitySet,
+		TKey key,
+		T entity,
+		string? etag = null,
+		IReadOnlyDictionary<string, string>? headers = null,
+		CancellationToken cancellationToken = default) where T : class
+	{
+		var url = $"{entitySet}({FormatKey(key)})";
+		_logger.LogDebug("ReplaceAsync<{Type}> - URL: {Url}, ETag: {ETag}", typeof(T).Name, url, etag ?? "(none)");
+
+		var request = CreateRequest(HttpMethod.Put, url, headers);
+		request.Content = JsonContent.Create(entity, options: _jsonOptions);
+
+		// Add If-Match header for concurrency control
+		if (!string.IsNullOrEmpty(etag))
+		{
+			request.Headers.TryAddWithoutValidation("If-Match", etag);
+			_logger.LogDebug("ReplaceAsync<{Type}> - Added If-Match header: {ETag}", typeof(T).Name, etag);
+		}
+
+		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+		await EnsureSuccessAsync(response, url, etag, cancellationToken).ConfigureAwait(false);
+
+		// Handle 204 No Content response by fetching the updated entity
+		if (response.StatusCode == HttpStatusCode.NoContent)
+		{
+			_logger.LogDebug("ReplaceAsync<{Type}> - Received 204 No Content, fetching replaced entity", typeof(T).Name);
+			var getRequest = CreateRequest(HttpMethod.Get, url, headers);
+			var getResponse = await SendWithRetryAsync(getRequest, cancellationToken).ConfigureAwait(false);
+			await EnsureSuccessAsync(getResponse, url, cancellationToken).ConfigureAwait(false);
+			return await getResponse.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+				?? throw new ODataClientException("Failed to deserialize replaced entity after refetch");
+		}
+
+		return await response.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+			?? throw new ODataClientException("Failed to deserialize replaced entity");
+	}
 }

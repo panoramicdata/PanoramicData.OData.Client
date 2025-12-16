@@ -431,9 +431,7 @@ public class ODataClientCrudTests : TestBase, IDisposable
 
 	#region Helper Methods
 
-	private void SetupMockResponse(HttpStatusCode statusCode, string content)
-	{
-		_mockHandler.Protected()
+	private void SetupMockResponse(HttpStatusCode statusCode, string content) => _mockHandler.Protected()
 			.Setup<Task<HttpResponseMessage>>(
 				"SendAsync",
 				ItExpr.IsAny<HttpRequestMessage>(),
@@ -442,18 +440,14 @@ public class ODataClientCrudTests : TestBase, IDisposable
 			{
 				Content = new StringContent(content, System.Text.Encoding.UTF8, "application/json")
 			});
-	}
 
-	private void VerifyRequest(HttpMethod method, string url)
-	{
-		_mockHandler.Protected().Verify(
+	private void VerifyRequest(HttpMethod method, string url) => _mockHandler.Protected().Verify(
 			"SendAsync",
 			Times.AtLeastOnce(),
 			ItExpr.Is<HttpRequestMessage>(r =>
 				r.Method == method &&
 				r.RequestUri!.ToString().Contains(url)),
 			ItExpr.IsAny<CancellationToken>());
-	}
 
 	#endregion
 }

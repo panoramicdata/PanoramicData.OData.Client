@@ -1,8 +1,6 @@
 using Microsoft.Extensions.Logging;
-using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 
 namespace PanoramicData.OData.Client;
@@ -280,6 +278,121 @@ public partial class ODataClient
 		}
 
 		return result;
+	}
+
+	/// <summary>
+	/// Asynchronously gets the total number of entities of the specified type in the data store.
+	/// </summary>
+	/// <typeparam name="T">The type of entity to count. Must be a reference type.</typeparam>
+	/// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+	/// <returns>A task that represents the asynchronous operation. The task result contains the total number of entities of type T.</returns>
+	public Task<long> GetCountAsync<T>(
+	CancellationToken cancellationToken) where T : class
+		=> GetCountAsync<T>(null, cancellationToken);
+
+	/// <summary>
+	/// Gets only the count of entities matching the query, without retrieving the entities.
+	/// </summary>
+	/// <typeparam name="T">The entity type.</typeparam>
+	/// <param name="query">The query builder (optional filter, etc.).</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>The count of matching entities.</returns>
+	public async Task<long> GetCountAsync<T>(
+		ODataQueryBuilder<T>? query = null,
+		CancellationToken cancellationToken = default) where T : class
+	{
+		query ??= For<T>();
+		var baseUrl = query.BuildUrl();
+
+		// Append /$count to the entity set path
+		var url = baseUrl.Contains('?')
+			? baseUrl.Replace("?", "/$count?")
+			: baseUrl + "/$count";
+
+		_logger.LogDebug("GetCountAsync<{Type}> - URL: {Url}", typeof(T).Name, url);
+
+		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
+
+		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+
+		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+		if (long.TryParse(content.Trim(), out var count))
+		{
+			_logger.LogDebug("GetCountAsync<{Type}> - Count: {Count}", typeof(T).Name, count);
+			return count;
+		}
+
+		throw new InvalidOperationException($"Could not parse count response: {content}");
+	}
+
+	/// <summary>
+	/// Gets the first entity matching the query, or null if no match.
+	/// </summary>
+	/// <typeparam name="T">The entity type.</typeparam>
+	/// <param name="query">The query builder.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>The first matching entity, or null.</returns>
+	public async Task<T?> GetFirstOrDefaultAsync<T>(
+		ODataQueryBuilder<T> query,
+		CancellationToken cancellationToken = default) where T : class
+	{
+		// Ensure we only fetch one item
+		query.Top(1);
+
+		var response = await GetAsync(query, cancellationToken).ConfigureAwait(false);
+		return response.Value.FirstOrDefault();
+	}
+
+	/// <summary>
+	/// Gets a single entity matching the query. Throws if zero or more than one match.
+	/// </summary>
+	/// <typeparam name="T">The entity type.</typeparam>
+	/// <param name="query">The query builder.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>The single matching entity.</returns>
+	/// <exception cref="InvalidOperationException">Thrown if zero or more than one entity matches.</exception>
+	public async Task<T> GetSingleAsync<T>(
+		ODataQueryBuilder<T> query,
+		CancellationToken cancellationToken = default) where T : class
+	{
+		// Fetch up to 2 to detect multiple matches
+		query.Top(2);
+
+		var response = await GetAsync(query, cancellationToken).ConfigureAwait(false);
+
+		return response.Value.Count switch
+		{
+			0 => throw new InvalidOperationException("Sequence contains no elements"),
+			1 => response.Value[0],
+			_ => throw new InvalidOperationException("Sequence contains more than one element")
+		};
+	}
+
+	/// <summary>
+	/// Gets a single entity matching the query, or null if no match. Throws if more than one match.
+	/// </summary>
+	/// <typeparam name="T">The entity type.</typeparam>
+	/// <param name="query">The query builder.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>The single matching entity, or null.</returns>
+	/// <exception cref="InvalidOperationException">Thrown if more than one entity matches.</exception>
+	public async Task<T?> GetSingleOrDefaultAsync<T>(
+		ODataQueryBuilder<T> query,
+		CancellationToken cancellationToken = default) where T : class
+	{
+		// Fetch up to 2 to detect multiple matches
+		query.Top(2);
+
+		var response = await GetAsync(query, cancellationToken).ConfigureAwait(false);
+
+		return response.Value.Count switch
+		{
+			0 => default,
+			1 => response.Value[0],
+			_ => throw new InvalidOperationException("Sequence contains more than one element")
+		};
 	}
 
 	private static string GetEntitySetName<T>()
