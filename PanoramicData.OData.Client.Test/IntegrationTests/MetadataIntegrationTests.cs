@@ -7,17 +7,11 @@ namespace PanoramicData.OData.Client.Test.IntegrationTests;
 /// Integration tests for OData metadata and service document operations.
 /// Tests $metadata endpoint and service document retrieval.
 /// </summary>
-public class MetadataIntegrationTests : TestBase, IClassFixture<ODataClientFixture>
+/// <remarks>
+/// Initializes a new instance of the test class.
+/// </remarks>
+public class MetadataIntegrationTests(ODataClientFixture fixture) : TestBase, IClassFixture<ODataClientFixture>
 {
-	private readonly ODataClientFixture _fixture;
-
-	/// <summary>
-	/// Initializes a new instance of the test class.
-	/// </summary>
-	public MetadataIntegrationTests(ODataClientFixture fixture)
-	{
-		_fixture = fixture;
-	}
 
 	#region Metadata Tests
 
@@ -28,7 +22,7 @@ public class MetadataIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetMetadataXmlAsync_ReturnsValidMetadata()
 	{
 		// Act
-		var metadata = await _fixture.Client.GetMetadataXmlAsync(CancellationToken);
+		var metadata = await fixture.Client.GetMetadataXmlAsync(CancellationToken);
 
 		// Assert
 		metadata.Should().NotBeNullOrEmpty();
@@ -44,7 +38,7 @@ public class MetadataIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetMetadataXmlAsync_ContainsEntityTypes()
 	{
 		// Act
-		var metadata = await _fixture.Client.GetMetadataXmlAsync(CancellationToken);
+		var metadata = await fixture.Client.GetMetadataXmlAsync(CancellationToken);
 
 		// Assert
 		metadata.Should().Contain("EntityType");
@@ -59,7 +53,7 @@ public class MetadataIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetMetadataXmlAsync_ContainsNavigationProperties()
 	{
 		// Act
-		var metadata = await _fixture.Client.GetMetadataXmlAsync(CancellationToken);
+		var metadata = await fixture.Client.GetMetadataXmlAsync(CancellationToken);
 
 		// Assert
 		metadata.Should().Contain("NavigationProperty");
@@ -72,7 +66,7 @@ public class MetadataIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetMetadataXmlAsync_ContainsProperties()
 	{
 		// Act
-		var metadata = await _fixture.Client.GetMetadataXmlAsync(CancellationToken);
+		var metadata = await fixture.Client.GetMetadataXmlAsync(CancellationToken);
 
 		// Assert
 		metadata.Should().Contain("Property Name=\"ID\"");
@@ -86,7 +80,7 @@ public class MetadataIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetMetadataAsync_ReturnsParsedMetadata()
 	{
 		// Act
-		var metadata = await _fixture.Client.GetMetadataAsync(CancellationToken);
+		var metadata = await fixture.Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.Should().NotBeNull();
@@ -100,7 +94,7 @@ public class MetadataIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetMetadataAsync_ContainsEntitySets()
 	{
 		// Act
-		var metadata = await _fixture.Client.GetMetadataAsync(CancellationToken);
+		var metadata = await fixture.Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EntitySets.Should().NotBeEmpty();
@@ -118,7 +112,7 @@ public class MetadataIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetServiceDocumentAsync_ReturnsValidDocument()
 	{
 		// Act
-		var serviceDoc = await _fixture.Client.GetServiceDocumentAsync(headers: null, cancellationToken: CancellationToken);
+		var serviceDoc = await fixture.Client.GetServiceDocumentAsync(headers: null, cancellationToken: CancellationToken);
 
 		// Assert
 		serviceDoc.Should().NotBeNull();
@@ -133,7 +127,7 @@ public class MetadataIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetServiceDocumentAsync_ContainsEntitySets()
 	{
 		// Act
-		var serviceDoc = await _fixture.Client.GetServiceDocumentAsync(headers: null, cancellationToken: CancellationToken);
+		var serviceDoc = await fixture.Client.GetServiceDocumentAsync(headers: null, cancellationToken: CancellationToken);
 
 		// Assert
 		serviceDoc.EntitySets.Should().Contain(es =>
@@ -147,7 +141,7 @@ public class MetadataIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetServiceDocumentAsync_EntitySetsHaveUrls()
 	{
 		// Act
-		var serviceDoc = await _fixture.Client.GetServiceDocumentAsync(headers: null, cancellationToken: CancellationToken);
+		var serviceDoc = await fixture.Client.GetServiceDocumentAsync(headers: null, cancellationToken: CancellationToken);
 
 		// Assert
 		serviceDoc.EntitySets.Should().AllSatisfy(es =>
@@ -168,11 +162,11 @@ public class MetadataIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task InvalidateMetadataCache_ThenGetMetadata_Succeeds()
 	{
 		// Arrange - First fetch to populate any cache
-		var metadata1 = await _fixture.Client.GetMetadataXmlAsync(CancellationToken);
+		var metadata1 = await fixture.Client.GetMetadataXmlAsync(CancellationToken);
 
 		// Act - Invalidate cache and refetch
-		_fixture.Client.InvalidateMetadataCache();
-		var metadata2 = await _fixture.Client.GetMetadataXmlAsync(CancellationToken);
+		fixture.Client.InvalidateMetadataCache();
+		var metadata2 = await fixture.Client.GetMetadataXmlAsync(CancellationToken);
 
 		// Assert
 		metadata1.Should().Be(metadata2); // Content should be the same

@@ -8,17 +8,11 @@ namespace PanoramicData.OData.Client.Test.IntegrationTests;
 /// Integration tests for pagination and GetAllAsync operations.
 /// Tests automatic pagination following nextLink and large result set handling.
 /// </summary>
-public class PaginationIntegrationTests : TestBase, IClassFixture<ODataClientFixture>
+/// <remarks>
+/// Initializes a new instance of the test class.
+/// </remarks>
+public class PaginationIntegrationTests(ODataClientFixture fixture) : TestBase, IClassFixture<ODataClientFixture>
 {
-	private readonly ODataClientFixture _fixture;
-
-	/// <summary>
-	/// Initializes a new instance of the test class.
-	/// </summary>
-	public PaginationIntegrationTests(ODataClientFixture fixture)
-	{
-		_fixture = fixture;
-	}
 
 	#region GetAllAsync Tests
 
@@ -29,10 +23,10 @@ public class PaginationIntegrationTests : TestBase, IClassFixture<ODataClientFix
 	public async Task GetAllAsync_ReturnsAllResults()
 	{
 		// Arrange
-		var query = _fixture.Client.For<Product>("Products");
+		var query = fixture.Client.For<Product>("Products");
 
 		// Act
-		var response = await _fixture.Client.GetAllAsync(query, CancellationToken);
+		var response = await fixture.Client.GetAllAsync(query, CancellationToken);
 
 		// Assert
 		response.Value.Should().NotBeEmpty();
@@ -47,11 +41,11 @@ public class PaginationIntegrationTests : TestBase, IClassFixture<ODataClientFix
 	public async Task GetAllAsync_WithFilter_ReturnsAllMatchingResults()
 	{
 		// Arrange
-		var query = _fixture.Client.For<Product>("Products")
+		var query = fixture.Client.For<Product>("Products")
 			.Filter("Rating ge 3");
 
 		// Act
-		var response = await _fixture.Client.GetAllAsync(query, CancellationToken);
+		var response = await fixture.Client.GetAllAsync(query, CancellationToken);
 
 		// Assert
 		response.Value.Should().NotBeEmpty();
@@ -65,11 +59,11 @@ public class PaginationIntegrationTests : TestBase, IClassFixture<ODataClientFix
 	public async Task GetAllAsync_WithOrderBy_PreservesOrder()
 	{
 		// Arrange
-		var query = _fixture.Client.For<Product>("Products")
+		var query = fixture.Client.For<Product>("Products")
 			.OrderBy("Name");
 
 		// Act
-		var response = await _fixture.Client.GetAllAsync(query, CancellationToken);
+		var response = await fixture.Client.GetAllAsync(query, CancellationToken);
 
 		// Assert
 		response.Value.Should().NotBeEmpty();
@@ -87,12 +81,12 @@ public class PaginationIntegrationTests : TestBase, IClassFixture<ODataClientFix
 		using var cts = new CancellationTokenSource();
 		cts.Cancel(); // Cancel immediately
 
-		var query = _fixture.Client.For<Product>("Products");
+		var query = fixture.Client.For<Product>("Products");
 
 		// Act & Assert
 		await Assert.ThrowsAsync<OperationCanceledException>(async () =>
 		{
-			await _fixture.Client.GetAllAsync(query, cts.Token);
+			await fixture.Client.GetAllAsync(query, cts.Token);
 		});
 	}
 
@@ -109,25 +103,25 @@ public class PaginationIntegrationTests : TestBase, IClassFixture<ODataClientFix
 		// Arrange
 		var pageSize = 3;
 
-		var queryPage1 = _fixture.Client.For<Product>("Products")
+		var queryPage1 = fixture.Client.For<Product>("Products")
 			.OrderBy("ID")
 			.Skip(0)
 			.Top(pageSize);
 
-		var queryPage2 = _fixture.Client.For<Product>("Products")
+		var queryPage2 = fixture.Client.For<Product>("Products")
 			.OrderBy("ID")
 			.Skip(pageSize)
 			.Top(pageSize);
 
-		var queryPage3 = _fixture.Client.For<Product>("Products")
+		var queryPage3 = fixture.Client.For<Product>("Products")
 			.OrderBy("ID")
 			.Skip(pageSize * 2)
 			.Top(pageSize);
 
 		// Act
-		var page1 = await _fixture.Client.GetAsync(queryPage1, CancellationToken);
-		var page2 = await _fixture.Client.GetAsync(queryPage2, CancellationToken);
-		var page3 = await _fixture.Client.GetAsync(queryPage3, CancellationToken);
+		var page1 = await fixture.Client.GetAsync(queryPage1, CancellationToken);
+		var page2 = await fixture.Client.GetAsync(queryPage2, CancellationToken);
+		var page3 = await fixture.Client.GetAsync(queryPage3, CancellationToken);
 
 		// Assert
 		page1.Value.Should().HaveCountLessThanOrEqualTo(pageSize);
@@ -149,19 +143,19 @@ public class PaginationIntegrationTests : TestBase, IClassFixture<ODataClientFix
 	public async Task Pagination_CountRemainsConsistent()
 	{
 		// Arrange
-		var queryPage1 = _fixture.Client.For<Product>("Products")
+		var queryPage1 = fixture.Client.For<Product>("Products")
 			.Count()
 			.Skip(0)
 			.Top(2);
 
-		var queryPage2 = _fixture.Client.For<Product>("Products")
+		var queryPage2 = fixture.Client.For<Product>("Products")
 			.Count()
 			.Skip(2)
 			.Top(2);
 
 		// Act
-		var page1 = await _fixture.Client.GetAsync(queryPage1, CancellationToken);
-		var page2 = await _fixture.Client.GetAsync(queryPage2, CancellationToken);
+		var page1 = await fixture.Client.GetAsync(queryPage1, CancellationToken);
+		var page2 = await fixture.Client.GetAsync(queryPage2, CancellationToken);
 
 		// Assert
 		page1.Count.Should().BePositive();
@@ -179,11 +173,11 @@ public class PaginationIntegrationTests : TestBase, IClassFixture<ODataClientFix
 	public async Task GetAsync_WithLimitedTop_MayHaveNextLink()
 	{
 		// Arrange
-		var query = _fixture.Client.For<Product>("Products")
+		var query = fixture.Client.For<Product>("Products")
 			.Top(2);
 
 		// Act
-		var response = await _fixture.Client.GetAsync(query, CancellationToken);
+		var response = await fixture.Client.GetAsync(query, CancellationToken);
 
 		// Assert
 		response.Value.Should().NotBeEmpty();
@@ -201,11 +195,11 @@ public class PaginationIntegrationTests : TestBase, IClassFixture<ODataClientFix
 	public async Task GetAllAsync_LargerResultSet_HandlesCorrectly()
 	{
 		// Arrange - Categories have Products expanded
-		var query = _fixture.Client.For<Category>("Categories")
+		var query = fixture.Client.For<Category>("Categories")
 			.Expand("Products");
 
 		// Act
-		var response = await _fixture.Client.GetAllAsync(query, CancellationToken);
+		var response = await fixture.Client.GetAllAsync(query, CancellationToken);
 
 		// Assert
 		response.Value.Should().NotBeEmpty();
@@ -224,7 +218,7 @@ public class PaginationIntegrationTests : TestBase, IClassFixture<ODataClientFix
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		var response = await _fixture.Client
+		var response = await fixture.Client
 			.For("Products")
 			.Filter("Rating ge 3")
 			.GetAllAsync(CancellationToken);

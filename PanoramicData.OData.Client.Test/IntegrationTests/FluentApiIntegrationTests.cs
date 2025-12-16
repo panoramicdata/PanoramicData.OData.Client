@@ -8,17 +8,11 @@ namespace PanoramicData.OData.Client.Test.IntegrationTests;
 /// Integration tests for the fluent (non-generic) API pattern.
 /// Tests the For(string).GetAsync() fluent execution pattern.
 /// </summary>
-public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixture>
+/// <remarks>
+/// Initializes a new instance of the test class.
+/// </remarks>
+public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, IClassFixture<ODataClientFixture>
 {
-	private readonly ODataClientFixture _fixture;
-
-	/// <summary>
-	/// Initializes a new instance of the test class.
-	/// </summary>
-	public FluentApiIntegrationTests(ODataClientFixture fixture)
-	{
-		_fixture = fixture;
-	}
 
 	#region For(string).GetAsync() Tests
 
@@ -30,7 +24,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		var response = await _fixture.Client
+		var response = await fixture.Client
 			.For("Products")
 			.Top(5)
 			.GetAsync(CancellationToken);
@@ -50,7 +44,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		var response = await _fixture.Client
+		var response = await fixture.Client
 			.For("Products")
 			.Filter("Rating gt 3")
 			.Top(5)
@@ -75,7 +69,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		var response = await _fixture.Client
+		var response = await fixture.Client
 			.For("Products")
 			.Select("ID,Name,Price")
 			.Top(3)
@@ -100,7 +94,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		var response = await _fixture.Client
+		var response = await fixture.Client
 			.For("Products")
 			.OrderBy("Name")
 			.Top(5)
@@ -125,7 +119,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		var response = await _fixture.Client
+		var response = await fixture.Client
 			.For("Products")
 			.Filter("Price ne null")
 			.OrderByDescending("Price")
@@ -151,14 +145,14 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		var page1 = await _fixture.Client
+		var page1 = await fixture.Client
 			.For("Products")
 			.OrderBy("ID")
 			.Skip(0)
 			.Top(2)
 			.GetAsync(CancellationToken);
 
-		var page2 = await _fixture.Client
+		var page2 = await fixture.Client
 			.For("Products")
 			.OrderBy("ID")
 			.Skip(2)
@@ -182,7 +176,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		var response = await _fixture.Client
+		var response = await fixture.Client
 			.For("Products")
 			.Count()
 			.Top(1)
@@ -202,7 +196,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		var response = await _fixture.Client
+		var response = await fixture.Client
 			.For("Categories")
 			.Expand("Products")
 			.Top(1)
@@ -227,7 +221,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		var response = await _fixture.Client
+		var response = await fixture.Client
 			.For("Products")
 			.Filter("Rating gt 4")
 			.GetAllAsync(CancellationToken);
@@ -250,7 +244,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		var entity = await _fixture.Client
+		var entity = await fixture.Client
 			.For("Products")
 			.Key(0)
 			.GetEntryAsync(CancellationToken);
@@ -270,7 +264,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		var entity = await _fixture.Client
+		var entity = await fixture.Client
 			.For("Products")
 			.Key(0)
 			.Select("ID,Name")
@@ -295,7 +289,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		var entity = await _fixture.Client
+		var entity = await fixture.Client
 			.For("Products")
 			.Filter("Rating eq 5")
 			.GetFirstOrDefaultAsync(CancellationToken);
@@ -318,7 +312,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		using var json = await _fixture.Client
+		using var json = await fixture.Client
 			.For("Products")
 			.Top(5)
 			.GetJsonAsync(CancellationToken);
@@ -328,7 +322,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 		json.Should().NotBeNull();
 		json.RootElement.TryGetProperty("value", out var valueElement).Should().BeTrue();
 		valueElement.ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
-		valueElement.GetArrayLength().Should().BeGreaterThan(0);
+		valueElement.GetArrayLength().Should().BePositive();
 	}
 
 	/// <summary>
@@ -339,7 +333,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		using var json = await _fixture.Client
+		using var json = await fixture.Client
 			.For("Products")
 			.Filter("Rating gt 3")
 			.Top(5)
@@ -364,7 +358,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		using var json = await _fixture.Client
+		using var json = await fixture.Client
 			.For("Products")
 			.Count()
 			.Top(1)
@@ -390,7 +384,7 @@ public class FluentApiIntegrationTests : TestBase, IClassFixture<ODataClientFixt
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
-		var response = await _fixture.Client
+		var response = await fixture.Client
 			.For("Products")
 			.Filter("Rating ge 3")
 			.Select("ID,Name,Rating,Price")

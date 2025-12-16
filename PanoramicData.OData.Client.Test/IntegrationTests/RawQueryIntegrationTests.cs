@@ -8,17 +8,11 @@ namespace PanoramicData.OData.Client.Test.IntegrationTests;
 /// Integration tests for raw query operations using GetRawAsync.
 /// Tests direct JSON document access and custom query scenarios.
 /// </summary>
-public class RawQueryIntegrationTests : TestBase, IClassFixture<ODataClientFixture>
+/// <remarks>
+/// Initializes a new instance of the test class.
+/// </remarks>
+public class RawQueryIntegrationTests(ODataClientFixture fixture) : TestBase, IClassFixture<ODataClientFixture>
 {
-	private readonly ODataClientFixture _fixture;
-
-	/// <summary>
-	/// Initializes a new instance of the test class.
-	/// </summary>
-	public RawQueryIntegrationTests(ODataClientFixture fixture)
-	{
-		_fixture = fixture;
-	}
 
 	#region GetRawAsync Tests
 
@@ -29,7 +23,7 @@ public class RawQueryIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetRawAsync_ValidQuery_ReturnsJsonDocument()
 	{
 		// Arrange & Act
-		using var doc = await _fixture.Client.GetRawAsync(
+		using var doc = await fixture.Client.GetRawAsync(
 			"Products?$top=5",
 			cancellationToken: CancellationToken);
 
@@ -37,7 +31,7 @@ public class RawQueryIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 		doc.Should().NotBeNull();
 		doc.RootElement.TryGetProperty("value", out var valueElement).Should().BeTrue();
 		valueElement.ValueKind.Should().Be(JsonValueKind.Array);
-		valueElement.GetArrayLength().Should().BeGreaterThan(0);
+		valueElement.GetArrayLength().Should().BePositive();
 	}
 
 	/// <summary>
@@ -47,7 +41,7 @@ public class RawQueryIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetRawAsync_WithFilter_ReturnsFilteredResults()
 	{
 		// Arrange & Act
-		using var doc = await _fixture.Client.GetRawAsync(
+		using var doc = await fixture.Client.GetRawAsync(
 			"Products?$filter=Rating gt 3&$top=5",
 			cancellationToken: CancellationToken);
 
@@ -68,7 +62,7 @@ public class RawQueryIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetRawAsync_WithSelect_ReturnsSelectedFields()
 	{
 		// Arrange & Act
-		using var doc = await _fixture.Client.GetRawAsync(
+		using var doc = await fixture.Client.GetRawAsync(
 			"Products?$select=ID,Name&$top=3",
 			cancellationToken: CancellationToken);
 
@@ -89,7 +83,7 @@ public class RawQueryIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetRawAsync_WithCount_ReturnsCount()
 	{
 		// Arrange & Act
-		using var doc = await _fixture.Client.GetRawAsync(
+		using var doc = await fixture.Client.GetRawAsync(
 			"Products?$count=true&$top=1",
 			cancellationToken: CancellationToken);
 
@@ -106,7 +100,7 @@ public class RawQueryIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetRawAsync_SingleEntity_ReturnsEntity()
 	{
 		// Arrange & Act
-		using var doc = await _fixture.Client.GetRawAsync(
+		using var doc = await fixture.Client.GetRawAsync(
 			"Products(0)",
 			cancellationToken: CancellationToken);
 
@@ -124,7 +118,7 @@ public class RawQueryIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetRawAsync_WithExpand_ReturnsRelatedEntities()
 	{
 		// Arrange & Act
-		using var doc = await _fixture.Client.GetRawAsync(
+		using var doc = await fixture.Client.GetRawAsync(
 			"Categories?$expand=Products&$top=1",
 			cancellationToken: CancellationToken);
 
@@ -154,7 +148,7 @@ public class RawQueryIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 		};
 
 		// Act
-		using var doc = await _fixture.Client.GetRawAsync(
+		using var doc = await fixture.Client.GetRawAsync(
 			"Products?$top=1",
 			headers,
 			CancellationToken);
@@ -175,7 +169,7 @@ public class RawQueryIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetRawAsync_PreservesODataAnnotations()
 	{
 		// Arrange & Act
-		using var doc = await _fixture.Client.GetRawAsync(
+		using var doc = await fixture.Client.GetRawAsync(
 			"Products?$count=true&$top=1",
 			cancellationToken: CancellationToken);
 
@@ -197,7 +191,7 @@ public class RawQueryIntegrationTests : TestBase, IClassFixture<ODataClientFixtu
 	public async Task GetRawAsync_EmptyResults_ReturnsEmptyArray()
 	{
 		// Arrange & Act
-		using var doc = await _fixture.Client.GetRawAsync(
+		using var doc = await fixture.Client.GetRawAsync(
 			"Products?$filter=ID eq -99999",
 			cancellationToken: CancellationToken);
 
