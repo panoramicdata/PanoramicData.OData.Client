@@ -29,15 +29,13 @@ public partial class ODataClient
 	/// <param name="entitySetName">The name of the entity set.</param>
 	/// <returns>A fluent query builder with execution methods.</returns>
 	/// <remarks>
-	/// <para>This method provides backward compatibility with Simple.OData.Client's fluent API pattern.</para>
-	/// <para><b>New API pattern (recommended):</b></para>
+	/// <para>This method provides a fluent API for building OData queries without requiring a typed entity class.</para>
+	/// <para>For strongly-typed results, use the generic overload:</para>
 	/// <code>
-	/// var result = await client.For&lt;Incident&gt;("incidents").Top(10).GetAsync(ct);
-	/// // Or without explicit entity set name:
-	/// var result = await client.For&lt;Incident&gt;().Top(10).GetAsync(ct);
+	/// var query = client.For&lt;Product&gt;("Products").Top(10);
+	/// var response = await client.GetAsync(query, ct);
 	/// </code>
 	/// </remarks>
-	[Obsolete("Use client.For<T>().Top(10).GetAsync(ct) with a typed entity for better type safety.")]
 	public FluentODataQueryBuilder For(string entitySetName)
 		=> new(this, entitySetName, _logger);
 

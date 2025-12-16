@@ -216,13 +216,11 @@ public class PaginationIntegrationTests(ODataClientFixture fixture) : TestBase, 
 	[Fact]
 	public async Task FluentApi_GetAllAsync_ReturnsAllResults()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		var response = await fixture.Client
 			.For("Products")
 			.Filter("Rating ge 3")
 			.GetAllAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		response.Should().NotBeNull();

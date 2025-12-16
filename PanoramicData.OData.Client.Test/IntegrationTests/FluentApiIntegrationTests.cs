@@ -22,13 +22,11 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_GetAsync_ReturnsResults()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		var response = await fixture.Client
 			.For("Products")
 			.Top(5)
 			.GetAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		response.Should().NotBeNull();
@@ -42,14 +40,12 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_WithFilter_GetAsync_ReturnsFilteredResults()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		var response = await fixture.Client
 			.For("Products")
 			.Filter("Rating gt 3")
 			.Top(5)
 			.GetAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		response.Should().NotBeNull();
@@ -67,14 +63,12 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_WithSelect_GetAsync_ReturnsSelectedFields()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		var response = await fixture.Client
 			.For("Products")
 			.Select("ID,Name,Price")
 			.Top(3)
 			.GetAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		response.Should().NotBeNull();
@@ -92,14 +86,12 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_WithOrderBy_GetAsync_ReturnsOrderedResults()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		var response = await fixture.Client
 			.For("Products")
 			.OrderBy("Name")
 			.Top(5)
 			.GetAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		response.Should().NotBeNull();
@@ -117,7 +109,6 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_WithOrderByDescending_GetAsync_ReturnsOrderedResults()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		var response = await fixture.Client
 			.For("Products")
@@ -125,7 +116,6 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 			.OrderByDescending("Price")
 			.Top(5)
 			.GetAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		response.Should().NotBeNull();
@@ -143,7 +133,6 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_WithSkipAndTop_GetAsync_ReturnsPaginatedResults()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		var page1 = await fixture.Client
 			.For("Products")
@@ -158,7 +147,6 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 			.Skip(2)
 			.Top(2)
 			.GetAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		page1.Value.Should().NotBeEmpty();
@@ -174,14 +162,12 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_WithCount_GetAsync_ReturnsCount()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		var response = await fixture.Client
 			.For("Products")
 			.Count()
 			.Top(1)
 			.GetAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		response.Should().NotBeNull();
@@ -194,14 +180,12 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_WithExpand_GetAsync_ReturnsRelatedEntities()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		var response = await fixture.Client
 			.For("Categories")
 			.Expand("Products")
 			.Top(1)
 			.GetAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		response.Should().NotBeNull();
@@ -219,13 +203,11 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_GetAllAsync_ReturnsAllResults()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		var response = await fixture.Client
 			.For("Products")
 			.Filter("Rating gt 4")
 			.GetAllAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		response.Should().NotBeNull();
@@ -242,13 +224,11 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_Key_GetEntryAsync_ReturnsEntity()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		var entity = await fixture.Client
 			.For("Products")
 			.Key(0)
 			.GetEntryAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		entity.Should().NotBeNull();
@@ -262,14 +242,12 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_Key_WithSelect_GetEntryAsync_ReturnsSelectedFields()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		var entity = await fixture.Client
 			.For("Products")
 			.Key(0)
 			.Select("ID,Name")
 			.GetEntryAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		entity.Should().NotBeNull();
@@ -287,13 +265,11 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_GetFirstOrDefaultAsync_ReturnsFirstEntity()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		var entity = await fixture.Client
 			.For("Products")
 			.Filter("Rating eq 5")
 			.GetFirstOrDefaultAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		entity.Should().NotBeNull();
@@ -310,13 +286,11 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_GetJsonAsync_ReturnsJsonDocument()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		using var json = await fixture.Client
 			.For("Products")
 			.Top(5)
 			.GetJsonAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		json.Should().NotBeNull();
@@ -331,14 +305,12 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_WithFilter_GetJsonAsync_ReturnsFilteredJson()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		using var json = await fixture.Client
 			.For("Products")
 			.Filter("Rating gt 3")
 			.Top(5)
 			.GetJsonAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		json.Should().NotBeNull();
@@ -356,14 +328,12 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_GetJsonAsync_PreservesODataAnnotations()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		using var json = await fixture.Client
 			.For("Products")
 			.Count()
 			.Top(1)
 			.GetJsonAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		json.Should().NotBeNull();
@@ -382,7 +352,6 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	[Fact]
 	public async Task For_ComplexQuery_ReturnsCorrectResults()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		// Arrange & Act
 		var response = await fixture.Client
 			.For("Products")
@@ -393,7 +362,6 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 			.Top(5)
 			.Count()
 			.GetAsync(CancellationToken);
-#pragma warning restore CS0618
 
 		// Assert
 		response.Should().NotBeNull();

@@ -50,9 +50,7 @@ public class ODataClientLegacyTests : IDisposable
 	[Fact]
 	public void For_WithEntitySetName_CreatesFluentQueryBuilder()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		var builder = _client.For("Products");
-#pragma warning restore CS0618
 
 		var url = builder.BuildUrl();
 		url.Should().Be("Products");
@@ -64,11 +62,9 @@ public class ODataClientLegacyTests : IDisposable
 	[Fact]
 	public void For_WithFilter_BuildsCorrectUrl()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		var builder = _client.For("Products")
 			.Filter("Price gt 100")
 			.Top(10);
-#pragma warning restore CS0618
 
 		var url = builder.BuildUrl();
 		url.Should().Contain("Products");
@@ -103,11 +99,9 @@ public class ODataClientLegacyTests : IDisposable
 			});
 
 		// Act - This is the fluent pattern!
-#pragma warning disable CS0618 // Type or member is obsolete
 		var response = await _client.For("Products")
 			.Top(10)
 			.GetAsync(CancellationToken.None);
-#pragma warning restore CS0618
 
 		// Assert
 		response.Should().NotBeNull();
@@ -142,11 +136,9 @@ public class ODataClientLegacyTests : IDisposable
 			});
 
 		// Act
-#pragma warning disable CS0618 // Type or member is obsolete
 		var response = await _client.For("Products")
 			.Filter("Price gt 100")
 			.GetAllAsync(CancellationToken.None);
-#pragma warning restore CS0618
 
 		// Assert
 		response.Should().NotBeNull();
@@ -178,11 +170,9 @@ public class ODataClientLegacyTests : IDisposable
 			});
 
 		// Act
-#pragma warning disable CS0618 // Type or member is obsolete
 		var entry = await _client.For("Products")
 			.Key(123)
 			.GetEntryAsync(CancellationToken.None);
-#pragma warning restore CS0618
 
 		// Assert
 		entry.Should().NotBeNull();
@@ -216,11 +206,9 @@ public class ODataClientLegacyTests : IDisposable
 			});
 
 		// Act
-#pragma warning disable CS0618 // Type or member is obsolete
 		var entry = await _client.For("Products")
 			.Filter("Name eq 'First Product'")
 			.GetFirstOrDefaultAsync(CancellationToken.None);
-#pragma warning restore CS0618
 
 		// Assert
 		entry.Should().NotBeNull();
@@ -426,7 +414,6 @@ public class ODataClientLegacyTests : IDisposable
 	[Fact]
 	public void FluentQueryBuilder_BuildsUrlWithAllOptions()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		var builder = _client.For("Products")
 			.Filter("Price gt 100")
 			.Select("ID,Name,Price")
@@ -435,7 +422,6 @@ public class ODataClientLegacyTests : IDisposable
 			.Skip(10)
 			.Top(5)
 			.Count();
-#pragma warning restore CS0618
 
 		var url = builder.BuildUrl();
 
@@ -455,9 +441,7 @@ public class ODataClientLegacyTests : IDisposable
 	[Fact]
 	public void FluentQueryBuilder_BuildsUrlWithIntKey()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		var builder = _client.For("Products").Key(123);
-#pragma warning restore CS0618
 
 		var url = builder.BuildUrl();
 		url.Should().Be("Products(123)");
@@ -469,9 +453,7 @@ public class ODataClientLegacyTests : IDisposable
 	[Fact]
 	public void FluentQueryBuilder_BuildsUrlWithStringKey()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		var builder = _client.For("Products").Key("abc-123");
-#pragma warning restore CS0618
 
 		var url = builder.BuildUrl();
 		url.Should().Be("Products('abc-123')");
@@ -484,9 +466,7 @@ public class ODataClientLegacyTests : IDisposable
 	public void FluentQueryBuilder_BuildsUrlWithGuidKey()
 	{
 		var guid = Guid.Parse("12345678-1234-1234-1234-123456789012");
-#pragma warning disable CS0618 // Type or member is obsolete
 		var builder = _client.For("Products").Key(guid);
-#pragma warning restore CS0618
 
 		var url = builder.BuildUrl();
 		url.Should().Be("Products(12345678-1234-1234-1234-123456789012)");
@@ -498,9 +478,7 @@ public class ODataClientLegacyTests : IDisposable
 	[Fact]
 	public void FluentQueryBuilder_OrderByDescending_BuildsCorrectUrl()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		var builder = _client.For("Products").OrderByDescending("Price");
-#pragma warning restore CS0618
 
 		var url = builder.BuildUrl();
 		url.Should().Contain("$orderby=Price desc");
@@ -512,9 +490,7 @@ public class ODataClientLegacyTests : IDisposable
 	[Fact]
 	public void FluentQueryBuilder_Search_BuildsCorrectUrl()
 	{
-#pragma warning disable CS0618 // Type or member is obsolete
 		var builder = _client.For("Products").Search("widget");
-#pragma warning restore CS0618
 
 		var url = builder.BuildUrl();
 		url.Should().Contain("$search=");
