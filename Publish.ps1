@@ -15,7 +15,7 @@
 
 .EXAMPLE
     .\Publish.ps1
-    
+
 .EXAMPLE
     .\Publish.ps1 -SkipTests
 #>
@@ -103,7 +103,7 @@ if ($SkipTests) {
     Write-Step "Skipping unit tests (-SkipTests specified)."
 } else {
     Write-Step "Running unit tests..."
-    
+
     $testResult = dotnet test "$solutionRoot\PanoramicData.OData.Client.Test\PanoramicData.OData.Client.Test.csproj" --configuration Release --verbosity minimal
     if ($LASTEXITCODE -ne 0) {
         Write-Error-Exit "Unit tests failed."
