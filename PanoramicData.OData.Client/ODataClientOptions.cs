@@ -51,4 +51,16 @@ public class ODataClientOptions
 	/// <remarks>Assign an implementation of <see cref="ILogger"/> to enable logging. If not set, logging is
 	/// disabled.</remarks>
 	public ILogger? Logger { get; set; }
+
+	/// <summary>
+	/// Gets or sets the duration for which metadata should be cached.
+	/// </summary>
+	/// <remarks>
+	/// When set to a non-null value, the client will cache metadata responses for the specified duration.
+	/// Subsequent calls to GetMetadataAsync or GetMetadataXmlAsync
+	/// will return the cached data until the cache expires or <see cref="ODataClient.InvalidateMetadataCache"/> is called.
+	/// Set to <c>null</c> (the default) to disable caching.
+	/// A common value is <c>TimeSpan.FromHours(1)</c> since OData metadata rarely changes.
+	/// </remarks>
+	public TimeSpan? MetadataCacheDuration { get; set; }
 }

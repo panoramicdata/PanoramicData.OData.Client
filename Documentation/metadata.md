@@ -9,6 +9,7 @@ OData V4 services expose metadata that describes the data model, including entit
 - [Understanding Metadata](#understanding-metadata)
 - [Service Document](#service-document)
 - [Using Metadata](#using-metadata)
+- [Metadata Caching](#metadata-caching)
 
 ## Overview
 
@@ -23,7 +24,7 @@ OData services provide two discovery mechanisms:
 
 ```csharp
 // Get structured metadata
-var metadata = await client.GetMetadataAsync();
+var metadata = await client.GetMetadataAsync(cancellationToken);
 
 Console.WriteLine($"Namespace: {metadata.Namespace}");
 Console.WriteLine($"Entity Types: {metadata.EntityTypes.Count}");
@@ -34,7 +35,7 @@ Console.WriteLine($"Entity Sets: {metadata.EntitySets.Count}");
 
 ```csharp
 // Get raw CSDL XML
-var xml = await client.GetMetadataXmlAsync();
+var xml = await client.GetMetadataXmlAsync(cancellationToken);
 Console.WriteLine(xml);
 ```
 
@@ -154,7 +155,7 @@ The service document lists all available resources:
 ```csharp
 var serviceDoc = await client.GetServiceDocumentAsync();
 
-Console.WriteLine($"Context: {serviceDoc.Context}");
+Console.WriteLine($"Context: {serviceDoc.Context}", cancellationToken);
 
 // Entity Sets
 Console.WriteLine("\nEntity Sets:");
@@ -256,40 +257,66 @@ public async Task<List<string>> GetEntityProperties(string entityTypeName)
 
 ## Metadata Caching
 
-Metadata rarely changes, so consider caching it:
+OData metadata rarely changes during application runtime. The client provides built-in caching to improve performance and reduce unnecessary network calls.
+
+### Enabling Caching
+
+To enable metadata caching, set `MetadataCacheDuration` in your client options:
 
 ```csharp
-public class CachedMetadataProvider
+var client = new ODataClient(new ODataClientOptions
 {
-    private readonly ODataClient _client;
-    private ODataMetadata? _cachedMetadata;
-    private DateTime _cacheTime;
-    private readonly TimeSpan _cacheDuration = TimeSpan.FromHours(1);
-    
-    public CachedMetadataProvider(ODataClient client)
-    {
-        _client = client;
-    }
-    
-    public async Task<ODataMetadata> GetMetadataAsync()
-    {
-        if (_cachedMetadata != null && DateTime.UtcNow - _cacheTime < _cacheDuration)
-        {
-            return _cachedMetadata;
-        }
-        
-        _cachedMetadata = await _client.GetMetadataAsync();
-        _cacheTime = DateTime.UtcNow;
-        
-        return _cachedMetadata;
-    }
-    
-    public void InvalidateCache()
-    {
-        _cachedMetadata = null;
-    }
-}
+    BaseUrl = "https://api.example.com/odata",
+    MetadataCacheDuration = TimeSpan.FromHours(1) // Cache for 1 hour
+});
+
+// First call fetches from server
+var metadata1 = await client.GetMetadataAsync(cancellationToken);
+
+// Subsequent calls return cached data (no network request)
+var metadata2 = await client.GetMetadataAsync(cancellationToken);
 ```
+
+### Force Refresh
+
+To bypass the cache and fetch fresh metadata from the server, use `CacheHandling.ForceRefresh`:
+
+```csharp
+// Force a refresh, ignoring cached data
+var freshMetadata = await client.GetMetadataAsync(CacheHandling.ForceRefresh, cancellationToken);
+
+// Also works for raw XML
+var freshXml = await client.GetMetadataXmlAsync(CacheHandling.ForceRefresh, cancellationToken);
+```
+
+### Invalidating the Cache
+
+If you know the metadata has changed (e.g., after a schema deployment), you can manually invalidate the cache:
+
+```csharp
+// Clear the cached metadata
+client.InvalidateMetadataCache();
+
+// Next call will fetch from the server
+var metadata = await client.GetMetadataAsync(cancellationToken);
+```
+
+### CacheHandling Enum
+
+| Value | Description |
+|-------|-------------|
+| `CacheHandling.Default` | Use cached data if available and not expired |
+| `CacheHandling.ForceRefresh` | Bypass cache and fetch fresh data from server |
+
+### Caching Behavior
+
+| MetadataCacheDuration | Behavior |
+|-----------------------|----------|
+| `null` (default) | No caching - each call fetches from server |
+| `TimeSpan.FromHours(1)` | Cache for 1 hour |
+| `TimeSpan.MaxValue` | Cache indefinitely (until invalidated) |
+
+Both `GetMetadataAsync()` and `GetMetadataXmlAsync()` share the same cache, so fetching one will benefit the other.
 
 ## OData Type Mapping
 
@@ -309,4 +336,4 @@ Common OData EDM types and their .NET equivalents:
 | Edm.DateTimeOffset | DateTimeOffset |
 | Edm.Guid | Guid |
 | Edm.Binary | byte[] |
-| Collection(Edm.String) | List\<string\> |
+| Collection(Edm.String) | List\<string\>|

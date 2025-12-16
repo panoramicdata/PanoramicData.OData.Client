@@ -9,7 +9,7 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for OData metadata parsing support.
 /// </summary>
-public class ODataClientMetadataTests : IDisposable
+public class ODataClientMetadataTests : TestBase, IDisposable
 {
 	private readonly Mock<HttpMessageHandler> _mockHandler;
 	private readonly HttpClient _httpClient;
@@ -65,7 +65,7 @@ public class ODataClientMetadataTests : IDisposable
 			});
 
 		// Act
-		await _client.GetMetadataAsync(cancellationToken: CancellationToken.None);
+		await _client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -90,7 +90,7 @@ public class ODataClientMetadataTests : IDisposable
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(cancellationToken: CancellationToken.None);
+		var metadata = await _client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.Namespace.Should().Be("TestService");
@@ -114,7 +114,7 @@ public class ODataClientMetadataTests : IDisposable
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(cancellationToken: CancellationToken.None);
+		var metadata = await _client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EntityTypes.Should().HaveCount(2);
@@ -140,7 +140,7 @@ public class ODataClientMetadataTests : IDisposable
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(cancellationToken: CancellationToken.None);
+		var metadata = await _client.GetMetadataAsync(CancellationToken);
 		var productType = metadata.GetEntityType("Product");
 
 		// Assert
@@ -173,7 +173,7 @@ public class ODataClientMetadataTests : IDisposable
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(cancellationToken: CancellationToken.None);
+		var metadata = await _client.GetMetadataAsync(CancellationToken);
 		var productType = metadata.GetEntityType("Product");
 
 		// Assert
@@ -200,7 +200,7 @@ public class ODataClientMetadataTests : IDisposable
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(cancellationToken: CancellationToken.None);
+		var metadata = await _client.GetMetadataAsync(CancellationToken);
 		var productType = metadata.GetEntityType("Product");
 
 		// Assert
@@ -231,7 +231,7 @@ public class ODataClientMetadataTests : IDisposable
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(cancellationToken: CancellationToken.None);
+		var metadata = await _client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EntitySets.Should().HaveCount(2);
@@ -260,7 +260,7 @@ public class ODataClientMetadataTests : IDisposable
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(cancellationToken: CancellationToken.None);
+		var metadata = await _client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.ComplexTypes.Should().ContainSingle();
@@ -287,7 +287,7 @@ public class ODataClientMetadataTests : IDisposable
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(cancellationToken: CancellationToken.None);
+		var metadata = await _client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EnumTypes.Should().ContainSingle();
@@ -316,12 +316,274 @@ public class ODataClientMetadataTests : IDisposable
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(cancellationToken: CancellationToken.None);
+		var metadata = await _client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.Singletons.Should().ContainSingle();
 		metadata.Singletons[0].Name.Should().Be("Me");
 		metadata.Singletons[0].Type.Should().Be("TestService.Person");
+	}
+
+	#endregion
+
+	#region GetMetadataXmlAsync Tests
+
+	/// <summary>
+	/// Tests that GetMetadataXmlAsync returns raw XML content.
+	/// </summary>
+	[Fact]
+	public async Task GetMetadataXmlAsync_ReturnsRawXml()
+	{
+		// Arrange
+		_mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new StringContent(SimpleMetadataXml)
+			});
+
+		// Act
+		var xml = await _client.GetMetadataXmlAsync(CancellationToken);
+
+		// Assert
+		xml.Should().Contain("edmx:Edmx");
+		xml.Should().Contain("TestService");
+		xml.Should().Contain("Product");
+	}
+
+	#endregion
+
+	#region Metadata Caching Tests
+
+	/// <summary>
+	/// Tests that metadata is cached when MetadataCacheDuration is set.
+	/// </summary>
+	[Fact]
+	public async Task GetMetadataAsync_WithCaching_ReturnsCachedMetadata()
+	{
+		// Arrange
+		var callCount = 0;
+		var mockHandler = new Mock<HttpMessageHandler>();
+		mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.ReturnsAsync(() =>
+			{
+				callCount++;
+				return new HttpResponseMessage(HttpStatusCode.OK)
+				{
+					Content = new StringContent(SimpleMetadataXml)
+				};
+			});
+
+		using var httpClient = new HttpClient(mockHandler.Object)
+		{
+			BaseAddress = new Uri("https://test.odata.org/")
+		};
+
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			MetadataCacheDuration = TimeSpan.FromHours(1)
+		});
+
+		// Act - call twice
+		var metadata1 = await client.GetMetadataAsync(CancellationToken);
+		var metadata2 = await client.GetMetadataAsync(CancellationToken);
+
+		// Assert - should only make one HTTP call
+		callCount.Should().Be(1);
+		metadata1.Should().BeSameAs(metadata2);
+	}
+
+	/// <summary>
+	/// Tests that GetMetadataXmlAsync returns cached XML.
+	/// </summary>
+	[Fact]
+	public async Task GetMetadataXmlAsync_WithCaching_ReturnsCachedXml()
+	{
+		// Arrange
+		var callCount = 0;
+		var mockHandler = new Mock<HttpMessageHandler>();
+		mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.ReturnsAsync(() =>
+			{
+				callCount++;
+				return new HttpResponseMessage(HttpStatusCode.OK)
+				{
+					Content = new StringContent(SimpleMetadataXml)
+				};
+			});
+
+		using var httpClient = new HttpClient(mockHandler.Object)
+		{
+			BaseAddress = new Uri("https://test.odata.org/")
+		};
+
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			MetadataCacheDuration = TimeSpan.FromHours(1)
+		});
+
+		// Act - call twice
+		var xml1 = await client.GetMetadataXmlAsync(CancellationToken);
+		var xml2 = await client.GetMetadataXmlAsync(CancellationToken);
+
+		// Assert - should only make one HTTP call
+		callCount.Should().Be(1);
+		xml1.Should().Be(xml2);
+	}
+
+	/// <summary>
+	/// Tests that CacheHandling.ForceRefresh bypasses the cache.
+	/// </summary>
+	[Fact]
+	public async Task GetMetadataAsync_ForceRefresh_BypassesCache()
+	{
+		// Arrange
+		var callCount = 0;
+		var mockHandler = new Mock<HttpMessageHandler>();
+		mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.ReturnsAsync(() =>
+			{
+				callCount++;
+				return new HttpResponseMessage(HttpStatusCode.OK)
+				{
+					Content = new StringContent(SimpleMetadataXml)
+				};
+			});
+
+		using var httpClient = new HttpClient(mockHandler.Object)
+		{
+			BaseAddress = new Uri("https://test.odata.org/")
+		};
+
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			MetadataCacheDuration = TimeSpan.FromHours(1)
+		});
+
+		// Act - call twice, second with ForceRefresh
+		await client.GetMetadataAsync(CancellationToken);
+		await client.GetMetadataAsync(CacheHandling.ForceRefresh, CancellationToken);
+
+		// Assert - should make two HTTP calls
+		callCount.Should().Be(2);
+	}
+
+	/// <summary>
+	/// Tests that InvalidateMetadataCache clears the cache.
+	/// </summary>
+	[Fact]
+	public async Task InvalidateMetadataCache_ClearsCache()
+	{
+		// Arrange
+		var callCount = 0;
+		var mockHandler = new Mock<HttpMessageHandler>();
+		mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.ReturnsAsync(() =>
+			{
+				callCount++;
+				return new HttpResponseMessage(HttpStatusCode.OK)
+				{
+					Content = new StringContent(SimpleMetadataXml)
+				};
+			});
+
+		using var httpClient = new HttpClient(mockHandler.Object)
+		{
+			BaseAddress = new Uri("https://test.odata.org/")
+		};
+
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			MetadataCacheDuration = TimeSpan.FromHours(1)
+		});
+
+		// Act - call, invalidate, call again
+		await client.GetMetadataAsync(CancellationToken);
+		client.InvalidateMetadataCache();
+		await client.GetMetadataAsync(CancellationToken);
+
+		// Assert - should make two HTTP calls
+		callCount.Should().Be(2);
+	}
+
+	/// <summary>
+	/// Tests that metadata is not cached when MetadataCacheDuration is null.
+	/// </summary>
+	[Fact]
+	public async Task GetMetadataAsync_WithoutCaching_AlwaysFetches()
+	{
+		// Arrange
+		var callCount = 0;
+		var mockHandler = new Mock<HttpMessageHandler>();
+		mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.ReturnsAsync(() =>
+			{
+				callCount++;
+				return new HttpResponseMessage(HttpStatusCode.OK)
+				{
+					Content = new StringContent(SimpleMetadataXml)
+				};
+			});
+
+		using var httpClient = new HttpClient(mockHandler.Object)
+		{
+			BaseAddress = new Uri("https://test.odata.org/")
+		};
+
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			MetadataCacheDuration = null // No caching
+		});
+
+		// Act - call twice
+		await client.GetMetadataAsync(CancellationToken);
+		await client.GetMetadataAsync(CancellationToken);
+
+		// Assert - should make two HTTP calls
+		callCount.Should().Be(2);
 	}
 
 	#endregion
