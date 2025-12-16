@@ -438,37 +438,31 @@ public partial class ODataQueryBuilder<T> where T : class
 		return $"{collectionPath}/{odataMethodName}({parameterName}: {predicateBody})";
 	}
 
-	private static string GetCollectionPath(Expression expression)
+	private static string GetCollectionPath(Expression expression) => expression switch
 	{
-		return expression switch
-		{
-			MemberExpression member => GetMemberPath(member),
-			MethodCallExpression methodCall when methodCall.Method.Name == "Select" =>
-				// Handle .Select().Any() pattern - get the source collection
-				GetCollectionPath(methodCall.Arguments[0]),
-			UnaryExpression unary => GetCollectionPath(unary.Operand),
-			_ => string.Empty
-		};
-	}
+		MemberExpression member => GetMemberPath(member),
+		MethodCallExpression methodCall when methodCall.Method.Name == "Select" =>
+			// Handle .Select().Any() pattern - get the source collection
+			GetCollectionPath(methodCall.Arguments[0]),
+		UnaryExpression unary => GetCollectionPath(unary.Operand),
+		_ => string.Empty
+	};
 
-	private static string ParseLambdaBody(Expression body, ParameterExpression lambdaParam, string odataParamName)
+	private static string ParseLambdaBody(Expression body, ParameterExpression lambdaParam, string odataParamName) => body switch
 	{
-		return body switch
-		{
-			BinaryExpression binary => ParseLambdaBinaryExpression(binary, lambdaParam, odataParamName),
-			MethodCallExpression methodCall => ParseLambdaMethodCall(methodCall, lambdaParam, odataParamName),
-			UnaryExpression unary when unary.NodeType == ExpressionType.Not =>
-				$"not ({ParseLambdaBody(unary.Operand, lambdaParam, odataParamName)})",
-			UnaryExpression unary when unary.NodeType == ExpressionType.Convert =>
-				ParseLambdaBody(unary.Operand, lambdaParam, odataParamName),
-			MemberExpression member when member.Type == typeof(bool) =>
-				GetLambdaMemberPath(member, lambdaParam, odataParamName),
-			MemberExpression member => GetLambdaMemberPath(member, lambdaParam, odataParamName),
-			ConstantExpression constant => FormatValue(constant.Value),
-			ParameterExpression param when param == lambdaParam => odataParamName,
-			_ => throw new NotSupportedException($"Expression type {body.NodeType} is not supported in lambda body")
-		};
-	}
+		BinaryExpression binary => ParseLambdaBinaryExpression(binary, lambdaParam, odataParamName),
+		MethodCallExpression methodCall => ParseLambdaMethodCall(methodCall, lambdaParam, odataParamName),
+		UnaryExpression unary when unary.NodeType == ExpressionType.Not =>
+			$"not ({ParseLambdaBody(unary.Operand, lambdaParam, odataParamName)})",
+		UnaryExpression unary when unary.NodeType == ExpressionType.Convert =>
+			ParseLambdaBody(unary.Operand, lambdaParam, odataParamName),
+		MemberExpression member when member.Type == typeof(bool) =>
+			GetLambdaMemberPath(member, lambdaParam, odataParamName),
+		MemberExpression member => GetLambdaMemberPath(member, lambdaParam, odataParamName),
+		ConstantExpression constant => FormatValue(constant.Value),
+		ParameterExpression param when param == lambdaParam => odataParamName,
+		_ => throw new NotSupportedException($"Expression type {body.NodeType} is not supported in lambda body")
+	};
 
 	private static string ParseLambdaBinaryExpression(BinaryExpression binary, ParameterExpression lambdaParam, string odataParamName)
 	{
@@ -593,18 +587,15 @@ public partial class ODataQueryBuilder<T> where T : class
 		return $"{collectionPath}/{odataMethodName}({innerParamName}: {predicateBody})";
 	}
 
-	private static string GetLambdaExpressionPath(Expression expression, ParameterExpression lambdaParam, string odataParamName)
+	private static string GetLambdaExpressionPath(Expression expression, ParameterExpression lambdaParam, string odataParamName) => expression switch
 	{
-		return expression switch
-		{
-			ParameterExpression param when param == lambdaParam => odataParamName,
-			MemberExpression member => GetLambdaMemberPath(member, lambdaParam, odataParamName),
-			MethodCallExpression methodCall => ParseLambdaMethodCall(methodCall, lambdaParam, odataParamName),
-			UnaryExpression unary when unary.NodeType == ExpressionType.Convert =>
-				GetLambdaExpressionPath(unary.Operand, lambdaParam, odataParamName),
-			_ => throw new NotSupportedException($"Expression type {expression.GetType().Name} is not supported in lambda path")
-		};
-	}
+		ParameterExpression param when param == lambdaParam => odataParamName,
+		MemberExpression member => GetLambdaMemberPath(member, lambdaParam, odataParamName),
+		MethodCallExpression methodCall => ParseLambdaMethodCall(methodCall, lambdaParam, odataParamName),
+		UnaryExpression unary when unary.NodeType == ExpressionType.Convert =>
+			GetLambdaExpressionPath(unary.Operand, lambdaParam, odataParamName),
+		_ => throw new NotSupportedException($"Expression type {expression.GetType().Name} is not supported in lambda path")
+	};
 
 	private static string GetLambdaMemberPath(MemberExpression member, ParameterExpression lambdaParam, string odataParamName)
 	{

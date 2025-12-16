@@ -1,0 +1,178 @@
+using Microsoft.Extensions.Logging;
+using PanoramicData.OData.Client.Exceptions;
+using System.Globalization;
+using System.Net;
+using System.Net.Http.Json;
+
+namespace PanoramicData.OData.Client;
+
+/// <summary>
+/// ODataClient - CRUD operations (Create, Update, Delete).
+/// </summary>
+public partial class ODataClient
+{
+	/// <summary>
+	/// Creates a new entity.
+	/// </summary>
+	public async Task<T> CreateAsync<T>(
+		string entitySet,
+		T entity,
+		IReadOnlyDictionary<string, string>? headers = null,
+		CancellationToken cancellationToken = default) where T : class
+	{
+		var url = entitySet;
+		_logger.LogDebug("CreateAsync<{Type}> - EntitySet: {EntitySet}", typeof(T).Name, entitySet);
+
+		var request = CreateRequest(HttpMethod.Post, url, headers);
+		request.Content = JsonContent.Create(entity, options: _jsonOptions);
+
+		// Log the request body for debugging
+		if (_logger.IsEnabled(LogLevel.Debug))
+		{
+			var requestBody = await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+			_logger.LogDebug("CreateAsync<{Type}> - Request body: {RequestBody}", typeof(T).Name, requestBody);
+		}
+
+		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+
+		return await response.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+			?? throw new ODataClientException("Failed to deserialize created entity");
+	}
+
+	/// <summary>
+	/// Updates an entity using PATCH.
+	/// </summary>
+	public Task<T> UpdateAsync<T>(
+		string entitySet,
+		object key,
+		object patchValues,
+		IReadOnlyDictionary<string, string>? headers = null,
+		CancellationToken cancellationToken = default) where T : class
+		=> UpdateAsync<T, object>(entitySet, key, patchValues, etag: null, headers, cancellationToken);
+
+	/// <summary>
+	/// Updates an entity using PATCH with optimistic concurrency via ETag.
+	/// </summary>
+	/// <param name="entitySet">The entity set name.</param>
+	/// <param name="key">The entity key.</param>
+	/// <param name="patchValues">The values to update.</param>
+	/// <param name="etag">The ETag value for concurrency control. If provided, an If-Match header is sent.</param>
+	/// <param name="headers">Optional additional headers.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>The updated entity.</returns>
+	/// <exception cref="ODataConcurrencyException">Thrown when the server returns 412 Precondition Failed.</exception>
+	public Task<T> UpdateAsync<T>(
+		string entitySet,
+		object key,
+		object patchValues,
+		string? etag,
+		IReadOnlyDictionary<string, string>? headers = null,
+		CancellationToken cancellationToken = default) where T : class
+		=> UpdateAsync<T, object>(entitySet, key, patchValues, etag, headers, cancellationToken);
+
+	/// <summary>
+	/// Updates an entity using PATCH with strongly-typed key.
+	/// </summary>
+	public Task<T> UpdateAsync<T, TKey>(
+		string entitySet,
+		TKey key,
+		object patchValues,
+		IReadOnlyDictionary<string, string>? headers = null,
+		CancellationToken cancellationToken = default) where T : class
+		=> UpdateAsync<T, TKey>(entitySet, key, patchValues, etag: null, headers, cancellationToken);
+
+	/// <summary>
+	/// Updates an entity using PATCH with strongly-typed key and optimistic concurrency via ETag.
+	/// </summary>
+	/// <typeparam name="T">The entity type.</typeparam>
+	/// <typeparam name="TKey">The key type.</typeparam>
+	/// <param name="entitySet">The entity set name.</param>
+	/// <param name="key">The entity key.</param>
+	/// <param name="patchValues">The values to update.</param>
+	/// <param name="etag">The ETag value for concurrency control. If provided, an If-Match header is sent.</param>
+	/// <param name="headers">Optional additional headers.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>The updated entity.</returns>
+	/// <exception cref="ODataConcurrencyException">Thrown when the server returns 412 Precondition Failed.</exception>
+	public async Task<T> UpdateAsync<T, TKey>(
+		string entitySet,
+		TKey key,
+		object patchValues,
+		string? etag,
+		IReadOnlyDictionary<string, string>? headers = null,
+		CancellationToken cancellationToken = default) where T : class
+	{
+		var url = $"{entitySet}({FormatKey(key)})";
+		_logger.LogDebug("UpdateAsync<{Type}> - URL: {Url}, ETag: {ETag}", typeof(T).Name, url, etag ?? "(none)");
+
+		var request = CreateRequest(new HttpMethod("PATCH"), url, headers);
+		request.Content = JsonContent.Create(patchValues, options: _jsonOptions);
+
+		// Add If-Match header for concurrency control
+		if (!string.IsNullOrEmpty(etag))
+		{
+			request.Headers.TryAddWithoutValidation("If-Match", etag);
+			_logger.LogDebug("UpdateAsync<{Type}> - Added If-Match header: {ETag}", typeof(T).Name, etag);
+		}
+
+		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+		await EnsureSuccessAsync(response, url, etag, cancellationToken).ConfigureAwait(false);
+
+		// Handle 204 No Content response by fetching the updated entity
+		if (response.StatusCode == HttpStatusCode.NoContent)
+		{
+			_logger.LogDebug("UpdateAsync<{Type}> - Received 204 No Content, fetching updated entity", typeof(T).Name);
+			var getRequest = CreateRequest(HttpMethod.Get, url, headers);
+			var getResponse = await SendWithRetryAsync(getRequest, cancellationToken).ConfigureAwait(false);
+			await EnsureSuccessAsync(getResponse, url, cancellationToken).ConfigureAwait(false);
+			return await getResponse.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+				?? throw new ODataClientException("Failed to deserialize updated entity after refetch");
+		}
+
+		return await response.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+			?? throw new ODataClientException("Failed to deserialize updated entity");
+	}
+
+	/// <summary>
+	/// Deletes an entity.
+	/// </summary>
+	public Task DeleteAsync(
+		string entitySet,
+		object key,
+		IReadOnlyDictionary<string, string>? headers = null,
+		CancellationToken cancellationToken = default)
+		=> DeleteAsync(entitySet, key, etag: null, headers, cancellationToken);
+
+	/// <summary>
+	/// Deletes an entity with optimistic concurrency via ETag.
+	/// </summary>
+	/// <param name="entitySet">The entity set name.</param>
+	/// <param name="key">The entity key.</param>
+	/// <param name="etag">The ETag value for concurrency control. If provided, an If-Match header is sent.</param>
+	/// <param name="headers">Optional additional headers.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <exception cref="ODataConcurrencyException">Thrown when the server returns 412 Precondition Failed.</exception>
+	public async Task DeleteAsync(
+		string entitySet,
+		object key,
+		string? etag,
+		IReadOnlyDictionary<string, string>? headers = null,
+		CancellationToken cancellationToken = default)
+	{
+		var url = $"{entitySet}({FormatKey(key)})";
+		_logger.LogDebug("DeleteAsync - EntitySet: {EntitySet}, Key: {Key}, URL: {Url}, ETag: {ETag}", entitySet, key, url, etag ?? "(none)");
+
+		var request = CreateRequest(HttpMethod.Delete, url, headers);
+
+		// Add If-Match header for concurrency control
+		if (!string.IsNullOrEmpty(etag))
+		{
+			request.Headers.TryAddWithoutValidation("If-Match", etag);
+			_logger.LogDebug("DeleteAsync - Added If-Match header: {ETag}", etag);
+		}
+
+		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+		await EnsureSuccessAsync(response, url, etag, cancellationToken).ConfigureAwait(false);
+	}
+}
