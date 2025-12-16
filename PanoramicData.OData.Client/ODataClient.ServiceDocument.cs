@@ -38,60 +38,64 @@ public partial class ODataClient
 		using var doc = JsonDocument.Parse(content);
 		var result = new ODataServiceDocument();
 
-		// Parse @odata.context
 		if (doc.RootElement.TryGetProperty("@odata.context", out var contextElement))
 		{
 			result.Context = contextElement.GetString();
 		}
 
-		// Parse value array (entity sets, singletons, function imports)
 		if (doc.RootElement.TryGetProperty("value", out var valueElement))
 		{
-			foreach (var item in valueElement.EnumerateArray())
-			{
-				var resource = new ODataServiceResource();
-
-				if (item.TryGetProperty("name", out var nameElement))
-				{
-					resource.Name = nameElement.GetString() ?? string.Empty;
-				}
-
-				if (item.TryGetProperty("kind", out var kindElement))
-				{
-					var kindStr = kindElement.GetString() ?? "EntitySet";
-					resource.Kind = kindStr switch
-					{
-						"Singleton" => ODataServiceResourceKind.Singleton,
-						"FunctionImport" => ODataServiceResourceKind.FunctionImport,
-						"ServiceDocument" => ODataServiceResourceKind.ServiceDocument,
-						_ => ODataServiceResourceKind.EntitySet
-					};
-				}
-
-				if (item.TryGetProperty("url", out var urlElement))
-				{
-					resource.Url = urlElement.GetString() ?? resource.Name;
-				}
-				else
-				{
-					resource.Url = resource.Name;
-				}
-
-				if (item.TryGetProperty("title", out var titleElement))
-				{
-					resource.Title = titleElement.GetString();
-				}
-
-				result.Resources.Add(resource);
-
-				_logger.LogDebug("ParseServiceDocument - Found resource: {Name} ({Kind})", resource.Name, resource.Kind);
-			}
+			ParseServiceResources(valueElement, result);
 		}
 
 		_logger.LogDebug("ParseServiceDocument - Parsed {Count} resources", result.Resources.Count);
 
 		return result;
 	}
+
+	private void ParseServiceResources(JsonElement valueElement, ODataServiceDocument result)
+	{
+		foreach (var item in valueElement.EnumerateArray())
+		{
+			var resource = ParseServiceResource(item);
+			result.Resources.Add(resource);
+			_logger.LogDebug("ParseServiceDocument - Found resource: {Name} ({Kind})", resource.Name, resource.Kind);
+		}
+	}
+
+	private static ODataServiceResource ParseServiceResource(JsonElement item)
+	{
+		var resource = new ODataServiceResource();
+
+		if (item.TryGetProperty("name", out var nameElement))
+		{
+			resource.Name = nameElement.GetString() ?? string.Empty;
+		}
+
+		if (item.TryGetProperty("kind", out var kindElement))
+		{
+			resource.Kind = ParseResourceKind(kindElement.GetString());
+		}
+
+		resource.Url = item.TryGetProperty("url", out var urlElement)
+			? urlElement.GetString() ?? resource.Name
+			: resource.Name;
+
+		if (item.TryGetProperty("title", out var titleElement))
+		{
+			resource.Title = titleElement.GetString();
+		}
+
+		return resource;
+	}
+
+	private static ODataServiceResourceKind ParseResourceKind(string? kindStr) => kindStr switch
+	{
+		"Singleton" => ODataServiceResourceKind.Singleton,
+		"FunctionImport" => ODataServiceResourceKind.FunctionImport,
+		"ServiceDocument" => ODataServiceResourceKind.ServiceDocument,
+		_ => ODataServiceResourceKind.EntitySet
+	};
 }
 
 /// <summary>

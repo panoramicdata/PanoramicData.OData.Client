@@ -159,37 +159,74 @@ public class ODataCrossJoinBuilder
 	{
 		var sb = new StringBuilder();
 
-		// Build the cross-join path: /$crossjoin(EntitySet1,EntitySet2,...)
 		sb.Append("$crossjoin(");
 		sb.Append(string.Join(",", _entitySets));
 		sb.Append(')');
 
 		_logger.LogDebug("ODataCrossJoinBuilder.BuildUrl() - EntitySets: {EntitySets}", string.Join(",", _entitySets));
 
-		// Build query string
+		var queryParams = BuildQueryParameters();
+
+		if (queryParams.Count > 0)
+		{
+			sb.Append('?');
+			sb.Append(string.Join("&", queryParams));
+		}
+
+		var url = sb.ToString();
+		_logger.LogDebug("ODataCrossJoinBuilder.BuildUrl() - Final URL: {Url}", url);
+
+		return url;
+	}
+
+	private List<string> BuildQueryParameters()
+	{
 		var queryParams = new List<string>();
 
+		AppendFilterParameter(queryParams);
+		AppendSelectParameter(queryParams);
+		AppendExpandParameter(queryParams);
+		AppendOrderByParameter(queryParams);
+		AppendPaginationParameters(queryParams);
+
+		return queryParams;
+	}
+
+	private void AppendFilterParameter(List<string> queryParams)
+	{
 		if (_filterClauses.Count > 0)
 		{
 			var combinedFilter = string.Join(" and ", _filterClauses.Select(f => $"({f})"));
 			queryParams.Add($"$filter={Uri.EscapeDataString(combinedFilter)}");
 		}
+	}
 
+	private void AppendSelectParameter(List<string> queryParams)
+	{
 		if (_selectFields.Count > 0)
 		{
 			queryParams.Add($"$select={string.Join(",", _selectFields)}");
 		}
+	}
 
+	private void AppendExpandParameter(List<string> queryParams)
+	{
 		if (_expandFields.Count > 0)
 		{
 			queryParams.Add($"$expand={string.Join(",", _expandFields)}");
 		}
+	}
 
+	private void AppendOrderByParameter(List<string> queryParams)
+	{
 		if (_orderByClauses.Count > 0)
 		{
 			queryParams.Add($"$orderby={string.Join(",", _orderByClauses)}");
 		}
+	}
 
+	private void AppendPaginationParameters(List<string> queryParams)
+	{
 		if (_skip.HasValue)
 		{
 			queryParams.Add($"$skip={_skip.Value}");
@@ -204,16 +241,5 @@ public class ODataCrossJoinBuilder
 		{
 			queryParams.Add("$count=true");
 		}
-
-		if (queryParams.Count > 0)
-		{
-			sb.Append('?');
-			sb.Append(string.Join("&", queryParams));
-		}
-
-		var url = sb.ToString();
-		_logger.LogDebug("ODataCrossJoinBuilder.BuildUrl() - Final URL: {Url}", url);
-
-		return url;
 	}
 }

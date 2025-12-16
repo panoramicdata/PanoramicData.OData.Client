@@ -221,35 +221,50 @@ public partial class ODataClient : IDisposable
 		var responseBody = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 		var statusCode = (int)response.StatusCode;
 
-		// Check for error status codes
 		if (!response.IsSuccessStatusCode)
 		{
-			_logger.LogError("Request to {Url} failed with status {StatusCode}: {ResponseBody}",
-				requestUrl, response.StatusCode, responseBody);
-
-			// Handle 412 Precondition Failed (concurrency conflict)
-			if (response.StatusCode == HttpStatusCode.PreconditionFailed)
-			{
-				var currentETag = response.Headers.ETag?.ToString();
-				throw new ODataConcurrencyException(
-					$"Concurrency conflict: The entity was modified since it was last retrieved. Request URL: {requestUrl}",
-					requestUrl,
-					requestETag,
-					currentETag,
-					responseBody);
-			}
-
-			throw response.StatusCode switch
-			{
-				HttpStatusCode.NotFound => new ODataNotFoundException($"Resource not found: {requestUrl}", requestUrl),
-				HttpStatusCode.Unauthorized => new ODataUnauthorizedException("Unauthorized", responseBody, requestUrl),
-				HttpStatusCode.Forbidden => new ODataForbiddenException("Forbidden", responseBody, requestUrl),
-				_ => new ODataClientException($"Request failed with status {response.StatusCode}", statusCode, responseBody, requestUrl)
-			};
+			ThrowForErrorStatusCode(response, requestUrl, requestETag, statusCode, responseBody);
 		}
 
-		// Check for HTML content returned with success status (misconfigured server/proxy)
-		// Skip this check for $metadata endpoint which returns XML, and for any XML content types
+		ThrowForUnexpectedHtmlResponse(response, requestUrl, statusCode, responseBody);
+	}
+
+	private void ThrowForErrorStatusCode(
+		HttpResponseMessage response,
+		string requestUrl,
+		string? requestETag,
+		int statusCode,
+		string responseBody)
+	{
+		_logger.LogError("Request to {Url} failed with status {StatusCode}: {ResponseBody}",
+			requestUrl, response.StatusCode, responseBody);
+
+		if (response.StatusCode == HttpStatusCode.PreconditionFailed)
+		{
+			var currentETag = response.Headers.ETag?.ToString();
+			throw new ODataConcurrencyException(
+				$"Concurrency conflict: The entity was modified since it was last retrieved. Request URL: {requestUrl}",
+				requestUrl,
+				requestETag,
+				currentETag,
+				responseBody);
+		}
+
+		throw response.StatusCode switch
+		{
+			HttpStatusCode.NotFound => new ODataNotFoundException($"Resource not found: {requestUrl}", requestUrl),
+			HttpStatusCode.Unauthorized => new ODataUnauthorizedException("Unauthorized", responseBody, requestUrl),
+			HttpStatusCode.Forbidden => new ODataForbiddenException("Forbidden", responseBody, requestUrl),
+			_ => new ODataClientException($"Request failed with status {response.StatusCode}", statusCode, responseBody, requestUrl)
+		};
+	}
+
+	private void ThrowForUnexpectedHtmlResponse(
+		HttpResponseMessage response,
+		string requestUrl,
+		int statusCode,
+		string responseBody)
+	{
 		var contentType = response.Content.Headers.ContentType?.MediaType ?? "unknown";
 		var isXmlContentType = contentType.Contains("xml", StringComparison.OrdinalIgnoreCase);
 		var isMetadataRequest = requestUrl.Contains("$metadata", StringComparison.OrdinalIgnoreCase);

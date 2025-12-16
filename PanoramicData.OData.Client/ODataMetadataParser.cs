@@ -5,7 +5,7 @@ namespace PanoramicData.OData.Client;
 /// <summary>
 /// Parses OData CSDL (Common Schema Definition Language) metadata.
 /// </summary>
-internal static class ODataMetadataParser
+internal static partial class ODataMetadataParser
 {
 	// OData CSDL namespace
 	private static readonly XNamespace EdmxNs = "http://docs.oasis-open.org/odata/ns/edmx";
@@ -21,276 +21,87 @@ internal static class ODataMetadataParser
 		var doc = XDocument.Parse(xml);
 		var metadata = new ODataMetadata();
 
-		// Find the Schema element
-		var schemaElement = doc.Descendants(EdmNs + "Schema").FirstOrDefault()
-			?? doc.Descendants().FirstOrDefault(e => e.Name.LocalName == "Schema");
-
+		var schemaElement = FindSchemaElement(doc);
 		if (schemaElement is null)
 		{
 			return metadata;
 		}
 
-		// Get namespace from Schema
 		metadata.Namespace = schemaElement.Attribute("Namespace")?.Value ?? string.Empty;
 
-		// Parse entity types
-		foreach (var entityTypeElement in schemaElement.Elements().Where(e => e.Name.LocalName == "EntityType"))
-		{
-			var entityType = ParseEntityType(entityTypeElement);
-			metadata.EntityTypes.Add(entityType);
-		}
-
-		// Parse complex types
-		foreach (var complexTypeElement in schemaElement.Elements().Where(e => e.Name.LocalName == "ComplexType"))
-		{
-			var complexType = ParseComplexType(complexTypeElement);
-			metadata.ComplexTypes.Add(complexType);
-		}
-
-		// Parse enum types
-		foreach (var enumTypeElement in schemaElement.Elements().Where(e => e.Name.LocalName == "EnumType"))
-		{
-			var enumType = ParseEnumType(enumTypeElement);
-			metadata.EnumTypes.Add(enumType);
-		}
-
-		// Find the EntityContainer
-		var containerElement = schemaElement.Elements()
-			.FirstOrDefault(e => e.Name.LocalName == "EntityContainer");
-
-		if (containerElement is not null)
-		{
-			// Parse entity sets
-			foreach (var entitySetElement in containerElement.Elements().Where(e => e.Name.LocalName == "EntitySet"))
-			{
-				var entitySet = ParseEntitySet(entitySetElement);
-				metadata.EntitySets.Add(entitySet);
-			}
-
-			// Parse singletons
-			foreach (var singletonElement in containerElement.Elements().Where(e => e.Name.LocalName == "Singleton"))
-			{
-				var singleton = ParseSingleton(singletonElement);
-				metadata.Singletons.Add(singleton);
-			}
-
-			// Parse function imports
-			foreach (var functionImportElement in containerElement.Elements().Where(e => e.Name.LocalName == "FunctionImport"))
-			{
-				var functionImport = ParseFunctionImport(functionImportElement);
-				metadata.FunctionImports.Add(functionImport);
-			}
-
-			// Parse action imports
-			foreach (var actionImportElement in containerElement.Elements().Where(e => e.Name.LocalName == "ActionImport"))
-			{
-				var actionImport = ParseActionImport(actionImportElement);
-				metadata.ActionImports.Add(actionImport);
-			}
-		}
+		ParseSchemaTypes(schemaElement, metadata);
+		ParseEntityContainer(schemaElement, metadata);
 
 		return metadata;
 	}
 
-	private static ODataEntityType ParseEntityType(XElement element)
+	private static XElement? FindSchemaElement(XDocument doc) =>
+		doc.Descendants(EdmNs + "Schema").FirstOrDefault()
+		?? doc.Descendants().FirstOrDefault(e => e.Name.LocalName == "Schema");
+
+	private static void ParseSchemaTypes(XElement schemaElement, ODataMetadata metadata)
 	{
-		var entityType = new ODataEntityType
+		foreach (var entityTypeElement in schemaElement.Elements().Where(e => e.Name.LocalName == "EntityType"))
 		{
-			Name = element.Attribute("Name")?.Value ?? string.Empty,
-			BaseType = element.Attribute("BaseType")?.Value,
-			IsAbstract = element.Attribute("Abstract")?.Value?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false,
-			IsOpenType = element.Attribute("OpenType")?.Value?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false,
-			HasStream = element.Attribute("HasStream")?.Value?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false
-		};
-
-		// Parse Key
-		var keyElement = element.Elements().FirstOrDefault(e => e.Name.LocalName == "Key");
-		if (keyElement is not null)
-		{
-			foreach (var propertyRefElement in keyElement.Elements().Where(e => e.Name.LocalName == "PropertyRef"))
-			{
-				var keyName = propertyRefElement.Attribute("Name")?.Value;
-				if (!string.IsNullOrEmpty(keyName))
-				{
-					entityType.Key.Add(keyName);
-				}
-			}
+			metadata.EntityTypes.Add(ParseEntityType(entityTypeElement));
 		}
 
-		// Parse Properties
-		foreach (var propertyElement in element.Elements().Where(e => e.Name.LocalName == "Property"))
+		foreach (var complexTypeElement in schemaElement.Elements().Where(e => e.Name.LocalName == "ComplexType"))
 		{
-			var property = ParseProperty(propertyElement);
-			entityType.Properties.Add(property);
+			metadata.ComplexTypes.Add(ParseComplexType(complexTypeElement));
 		}
 
-		// Parse Navigation Properties
-		foreach (var navPropertyElement in element.Elements().Where(e => e.Name.LocalName == "NavigationProperty"))
+		foreach (var enumTypeElement in schemaElement.Elements().Where(e => e.Name.LocalName == "EnumType"))
 		{
-			var navProperty = ParseNavigationProperty(navPropertyElement);
-			entityType.NavigationProperties.Add(navProperty);
+			metadata.EnumTypes.Add(ParseEnumType(enumTypeElement));
 		}
-
-		return entityType;
 	}
 
-	private static ODataComplexType ParseComplexType(XElement element)
+	private static void ParseEntityContainer(XElement schemaElement, ODataMetadata metadata)
 	{
-		var complexType = new ODataComplexType
-		{
-			Name = element.Attribute("Name")?.Value ?? string.Empty,
-			BaseType = element.Attribute("BaseType")?.Value,
-			IsAbstract = element.Attribute("Abstract")?.Value?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false,
-			IsOpenType = element.Attribute("OpenType")?.Value?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false
-		};
+		var containerElement = schemaElement.Elements()
+			.FirstOrDefault(e => e.Name.LocalName == "EntityContainer");
 
-		// Parse Properties
-		foreach (var propertyElement in element.Elements().Where(e => e.Name.LocalName == "Property"))
+		if (containerElement is null)
 		{
-			var property = ParseProperty(propertyElement);
-			complexType.Properties.Add(property);
+			return;
 		}
 
-		return complexType;
+		ParseEntitySets(containerElement, metadata);
+		ParseSingletons(containerElement, metadata);
+		ParseFunctionImports(containerElement, metadata);
+		ParseActionImports(containerElement, metadata);
 	}
 
-	private static ODataProperty ParseProperty(XElement element)
+	private static void ParseEntitySets(XElement containerElement, ODataMetadata metadata)
 	{
-		var property = new ODataProperty
+		foreach (var entitySetElement in containerElement.Elements().Where(e => e.Name.LocalName == "EntitySet"))
 		{
-			Name = element.Attribute("Name")?.Value ?? string.Empty,
-			Type = element.Attribute("Type")?.Value ?? "Edm.String",
-			IsNullable = !element.Attribute("Nullable")?.Value?.Equals("false", StringComparison.OrdinalIgnoreCase) ?? true,
-			DefaultValue = element.Attribute("DefaultValue")?.Value
-		};
-
-		// Parse optional attributes
-		if (int.TryParse(element.Attribute("MaxLength")?.Value, out var maxLength))
-		{
-			property.MaxLength = maxLength;
+			metadata.EntitySets.Add(ParseEntitySet(entitySetElement));
 		}
+	}
 
-		if (int.TryParse(element.Attribute("Precision")?.Value, out var precision))
+	private static void ParseSingletons(XElement containerElement, ODataMetadata metadata)
+	{
+		foreach (var singletonElement in containerElement.Elements().Where(e => e.Name.LocalName == "Singleton"))
 		{
-			property.Precision = precision;
+			metadata.Singletons.Add(ParseSingleton(singletonElement));
 		}
+	}
 
-		if (int.TryParse(element.Attribute("Scale")?.Value, out var scale))
+	private static void ParseFunctionImports(XElement containerElement, ODataMetadata metadata)
+	{
+		foreach (var functionImportElement in containerElement.Elements().Where(e => e.Name.LocalName == "FunctionImport"))
 		{
-			property.Scale = scale;
+			metadata.FunctionImports.Add(ParseFunctionImport(functionImportElement));
 		}
-
-		return property;
 	}
 
-	private static ODataNavigationProperty ParseNavigationProperty(XElement element)
+	private static void ParseActionImports(XElement containerElement, ODataMetadata metadata)
 	{
-		var navProperty = new ODataNavigationProperty
+		foreach (var actionImportElement in containerElement.Elements().Where(e => e.Name.LocalName == "ActionImport"))
 		{
-			Name = element.Attribute("Name")?.Value ?? string.Empty,
-			Type = element.Attribute("Type")?.Value ?? string.Empty,
-			IsNullable = !element.Attribute("Nullable")?.Value?.Equals("false", StringComparison.OrdinalIgnoreCase) ?? true,
-			Partner = element.Attribute("Partner")?.Value,
-			ContainsTarget = element.Attribute("ContainsTarget")?.Value?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false
-		};
-
-		return navProperty;
-	}
-
-	private static ODataEnumType ParseEnumType(XElement element)
-	{
-		var enumType = new ODataEnumType
-		{
-			Name = element.Attribute("Name")?.Value ?? string.Empty,
-			UnderlyingType = element.Attribute("UnderlyingType")?.Value ?? "Edm.Int32",
-			IsFlags = element.Attribute("IsFlags")?.Value?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false
-		};
-
-		// Parse Members
-		foreach (var memberElement in element.Elements().Where(e => e.Name.LocalName == "Member"))
-		{
-			var member = new ODataEnumMember
-			{
-				Name = memberElement.Attribute("Name")?.Value ?? string.Empty
-			};
-
-			if (long.TryParse(memberElement.Attribute("Value")?.Value, out var value))
-			{
-				member.Value = value;
-			}
-
-			enumType.Members.Add(member);
+			metadata.ActionImports.Add(ParseActionImport(actionImportElement));
 		}
-
-		return enumType;
-	}
-
-	private static ODataEntitySet ParseEntitySet(XElement element)
-	{
-		var entitySet = new ODataEntitySet
-		{
-			Name = element.Attribute("Name")?.Value ?? string.Empty,
-			EntityType = element.Attribute("EntityType")?.Value ?? string.Empty
-		};
-
-		// Parse Navigation Property Bindings
-		foreach (var bindingElement in element.Elements().Where(e => e.Name.LocalName == "NavigationPropertyBinding"))
-		{
-			var binding = new ODataNavigationPropertyBinding
-			{
-				Path = bindingElement.Attribute("Path")?.Value ?? string.Empty,
-				Target = bindingElement.Attribute("Target")?.Value ?? string.Empty
-			};
-			entitySet.NavigationPropertyBindings.Add(binding);
-		}
-
-		return entitySet;
-	}
-
-	private static ODataSingleton ParseSingleton(XElement element)
-	{
-		var singleton = new ODataSingleton
-		{
-			Name = element.Attribute("Name")?.Value ?? string.Empty,
-			Type = element.Attribute("Type")?.Value ?? string.Empty
-		};
-
-		// Parse Navigation Property Bindings
-		foreach (var bindingElement in element.Elements().Where(e => e.Name.LocalName == "NavigationPropertyBinding"))
-		{
-			var binding = new ODataNavigationPropertyBinding
-			{
-				Path = bindingElement.Attribute("Path")?.Value ?? string.Empty,
-				Target = bindingElement.Attribute("Target")?.Value ?? string.Empty
-			};
-			singleton.NavigationPropertyBindings.Add(binding);
-		}
-
-		return singleton;
-	}
-
-	private static ODataFunctionImport ParseFunctionImport(XElement element)
-	{
-		var functionImport = new ODataFunctionImport
-		{
-			Name = element.Attribute("Name")?.Value ?? string.Empty,
-			Function = element.Attribute("Function")?.Value ?? string.Empty,
-			EntitySet = element.Attribute("EntitySet")?.Value,
-			IncludeInServiceDocument = element.Attribute("IncludeInServiceDocument")?.Value?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false
-		};
-
-		return functionImport;
-	}
-
-	private static ODataActionImport ParseActionImport(XElement element)
-	{
-		var actionImport = new ODataActionImport
-		{
-			Name = element.Attribute("Name")?.Value ?? string.Empty,
-			Action = element.Attribute("Action")?.Value ?? string.Empty,
-			EntitySet = element.Attribute("EntitySet")?.Value
-		};
-
-		return actionImport;
 	}
 }
