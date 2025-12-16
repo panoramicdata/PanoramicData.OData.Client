@@ -14,6 +14,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 	private readonly List<string> _orderByClauses = [];
 	private readonly List<string> _selectFields = [];
 	private readonly List<string> _expandFields = [];
+	private readonly List<string> _computeExpressions = [];
 	private readonly Dictionary<string, string> _customHeaders = [];
 	private long? _skip;
 	private long? _top;
@@ -194,6 +195,21 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 	}
 
 	/// <summary>
+	/// Adds a $compute expression for computed properties.
+	/// OData V4.01 feature that allows defining computed properties in the query.
+	/// </summary>
+	/// <param name="computeExpression">The compute expression (e.g., "Price mul Quantity as Total").</param>
+	public ODataQueryBuilder<T> Compute(string computeExpression)
+	{
+		if (!string.IsNullOrWhiteSpace(computeExpression))
+		{
+			_computeExpressions.Add(computeExpression);
+		}
+
+		return this;
+	}
+
+	/// <summary>
 	/// Adds a custom header to be sent with the request.
 	/// </summary>
 	public ODataQueryBuilder<T> WithHeader(string name, string value)
@@ -284,6 +300,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		AppendTopParameter(queryParams);
 		AppendCountParameter(queryParams);
 		AppendApplyParameter(queryParams);
+		AppendComputeParameter(queryParams);
 
 		return queryParams;
 	}
@@ -389,5 +406,17 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 		queryParams.Add($"$apply={Uri.EscapeDataString(_apply)}");
 		logger.LogDebug("ODataQueryBuilder - Apply: {Apply}", _apply);
+	}
+
+	private void AppendComputeParameter(List<string> queryParams)
+	{
+		if (_computeExpressions.Count <= 0)
+		{
+			return;
+		}
+
+		var computeClause = string.Join(",", _computeExpressions);
+		queryParams.Add($"$compute={Uri.EscapeDataString(computeClause)}");
+		logger.LogDebug("ODataQueryBuilder - Compute: {Compute}", computeClause);
 	}
 }

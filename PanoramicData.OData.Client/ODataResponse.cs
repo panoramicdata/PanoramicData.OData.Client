@@ -25,6 +25,11 @@ public class ODataResponse<T>
 	/// The URL for the delta link (for change tracking).
 	/// </summary>
 	public string? DeltaLink { get; set; }
+
+	/// <summary>
+	/// The ETag value from the response (for concurrency control).
+	/// </summary>
+	public string? ETag { get; set; }
 }
 
 /// <summary>
@@ -42,4 +47,9 @@ public class ODataSingleResponse<T>
 	/// The OData context URL.
 	/// </summary>
 	public string? Context { get; set; }
+
+	/// <summary>
+	/// The ETag value from the response (for concurrency control).
+	/// </summary>
+	public string? ETag { get; set; }
 }

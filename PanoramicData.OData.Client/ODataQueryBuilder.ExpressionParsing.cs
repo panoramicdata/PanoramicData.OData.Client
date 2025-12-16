@@ -89,6 +89,16 @@ public partial class ODataQueryBuilder<T> where T : class
 			}
 		}
 
+		// Handle Any/All on collections
+		if (methodName is "Any" or "All")
+		{
+			var result = TryParseAnyAll(methodCall, methodName);
+			if (result is not null)
+			{
+				return result;
+			}
+		}
+
 		throw new NotSupportedException($"Method {methodName} is not supported");
 	}
 
@@ -360,5 +370,265 @@ public partial class ODataQueryBuilder<T> where T : class
 		}
 
 		throw new ArgumentException("Invalid selector expression");
+	}
+
+	private static string? TryParseAnyAll(MethodCallExpression methodCall, string methodName)
+	{
+		// Handle two patterns:
+		// 1. Instance method: collection.Any(x => predicate) - methodCall.Object is the collection
+		// 2. Static method: Enumerable.Any(collection, x => predicate) - methodCall.Arguments[0] is the collection
+
+		Expression? collectionExpr = null;
+		LambdaExpression? predicateLambda = null;
+
+		if (methodCall.Object is not null)
+		{
+			// Instance method pattern: collection.Any() or collection.Any(x => predicate)
+			collectionExpr = methodCall.Object;
+			if (methodCall.Arguments.Count > 0 && methodCall.Arguments[0] is LambdaExpression lambda)
+			{
+				predicateLambda = lambda;
+			}
+		}
+		else if (methodCall.Arguments.Count >= 1)
+		{
+			// Static method pattern: Enumerable.Any(collection) or Enumerable.Any(collection, x => predicate)
+			collectionExpr = methodCall.Arguments[0];
+			if (methodCall.Arguments.Count > 1)
+			{
+				// Need to unwrap the Quote expression that wraps the lambda
+				var predicateArg = methodCall.Arguments[1];
+				if (predicateArg is UnaryExpression quote && quote.NodeType == ExpressionType.Quote)
+				{
+					predicateLambda = quote.Operand as LambdaExpression;
+				}
+				else if (predicateArg is LambdaExpression lambda)
+				{
+					predicateLambda = lambda;
+				}
+			}
+		}
+
+		if (collectionExpr is null)
+		{
+			return null;
+		}
+
+		// Get the collection path (e.g., "Emails", "Friends", "Orders/Items")
+		var collectionPath = GetCollectionPath(collectionExpr);
+		if (string.IsNullOrEmpty(collectionPath))
+		{
+			return null;
+		}
+
+		var odataMethodName = methodName.ToLowerInvariant(); // "any" or "all"
+
+		if (predicateLambda is null)
+		{
+			// No predicate: collection.Any() -> CollectionName/any()
+			return $"{collectionPath}/{odataMethodName}()";
+		}
+
+		// Get the lambda parameter name (e.g., "e" from e => e.Contains("@"))
+		var parameterName = predicateLambda.Parameters[0].Name ?? "x";
+
+		// Parse the predicate body, replacing parameter references with the OData lambda variable
+		var predicateBody = ParseLambdaBody(predicateLambda.Body, predicateLambda.Parameters[0], parameterName);
+
+		return $"{collectionPath}/{odataMethodName}({parameterName}: {predicateBody})";
+	}
+
+	private static string GetCollectionPath(Expression expression)
+	{
+		return expression switch
+		{
+			MemberExpression member => GetMemberPath(member),
+			MethodCallExpression methodCall when methodCall.Method.Name == "Select" =>
+				// Handle .Select().Any() pattern - get the source collection
+				GetCollectionPath(methodCall.Arguments[0]),
+			UnaryExpression unary => GetCollectionPath(unary.Operand),
+			_ => string.Empty
+		};
+	}
+
+	private static string ParseLambdaBody(Expression body, ParameterExpression lambdaParam, string odataParamName)
+	{
+		return body switch
+		{
+			BinaryExpression binary => ParseLambdaBinaryExpression(binary, lambdaParam, odataParamName),
+			MethodCallExpression methodCall => ParseLambdaMethodCall(methodCall, lambdaParam, odataParamName),
+			UnaryExpression unary when unary.NodeType == ExpressionType.Not =>
+				$"not ({ParseLambdaBody(unary.Operand, lambdaParam, odataParamName)})",
+			UnaryExpression unary when unary.NodeType == ExpressionType.Convert =>
+				ParseLambdaBody(unary.Operand, lambdaParam, odataParamName),
+			MemberExpression member when member.Type == typeof(bool) =>
+				GetLambdaMemberPath(member, lambdaParam, odataParamName),
+			MemberExpression member => GetLambdaMemberPath(member, lambdaParam, odataParamName),
+			ConstantExpression constant => FormatValue(constant.Value),
+			ParameterExpression param when param == lambdaParam => odataParamName,
+			_ => throw new NotSupportedException($"Expression type {body.NodeType} is not supported in lambda body")
+		};
+	}
+
+	private static string ParseLambdaBinaryExpression(BinaryExpression binary, ParameterExpression lambdaParam, string odataParamName)
+	{
+		var left = ParseLambdaBody(binary.Left, lambdaParam, odataParamName);
+		var right = ParseLambdaBody(binary.Right, lambdaParam, odataParamName);
+
+		var op = binary.NodeType switch
+		{
+			ExpressionType.Equal => "eq",
+			ExpressionType.NotEqual => "ne",
+			ExpressionType.GreaterThan => "gt",
+			ExpressionType.GreaterThanOrEqual => "ge",
+			ExpressionType.LessThan => "lt",
+			ExpressionType.LessThanOrEqual => "le",
+			ExpressionType.AndAlso => "and",
+			ExpressionType.OrElse => "or",
+			_ => throw new NotSupportedException($"Binary operator {binary.NodeType} is not supported in lambda")
+		};
+
+		return $"{left} {op} {right}";
+	}
+
+	private static string ParseLambdaMethodCall(MethodCallExpression methodCall, ParameterExpression lambdaParam, string odataParamName)
+	{
+		var methodName = methodCall.Method.Name;
+
+		// Handle string methods on lambda parameter properties
+		if (methodCall.Object?.Type == typeof(string))
+		{
+			var stringPath = GetLambdaExpressionPath(methodCall.Object, lambdaParam, odataParamName);
+			return methodName switch
+			{
+				"Contains" => $"contains({stringPath},{FormatValue(GetValue(methodCall.Arguments[0]))})",
+				"StartsWith" => $"startswith({stringPath},{FormatValue(GetValue(methodCall.Arguments[0]))})",
+				"EndsWith" => $"endswith({stringPath},{FormatValue(GetValue(methodCall.Arguments[0]))})",
+				"ToLower" => $"tolower({stringPath})",
+				"ToUpper" => $"toupper({stringPath})",
+				"Trim" => $"trim({stringPath})",
+				_ => throw new NotSupportedException($"String method {methodName} is not supported in lambda")
+			};
+		}
+
+		// Handle static string methods like string.IsNullOrEmpty
+		if (methodCall.Method.DeclaringType == typeof(string))
+		{
+			if (methodName == "IsNullOrEmpty" && methodCall.Arguments.Count == 1)
+			{
+				var argPath = GetLambdaExpressionPath(methodCall.Arguments[0], lambdaParam, odataParamName);
+				return $"({argPath} eq null or {argPath} eq '')";
+			}
+		}
+
+		// Handle nested Any/All
+		if (methodName is "Any" or "All")
+		{
+			// For nested any/all, we need to handle it recursively
+			var nestedResult = TryParseNestedAnyAll(methodCall, methodName, lambdaParam, odataParamName);
+			if (nestedResult is not null)
+			{
+				return nestedResult;
+			}
+		}
+
+		throw new NotSupportedException($"Method {methodName} is not supported in lambda body");
+	}
+
+	private static string? TryParseNestedAnyAll(MethodCallExpression methodCall, string methodName, ParameterExpression outerLambdaParam, string outerODataParamName)
+	{
+		Expression? collectionExpr = null;
+		LambdaExpression? predicateLambda = null;
+
+		if (methodCall.Object is not null)
+		{
+			collectionExpr = methodCall.Object;
+			if (methodCall.Arguments.Count > 0)
+			{
+				var arg = methodCall.Arguments[0];
+				if (arg is UnaryExpression quote && quote.NodeType == ExpressionType.Quote)
+				{
+					predicateLambda = quote.Operand as LambdaExpression;
+				}
+				else if (arg is LambdaExpression lambda)
+				{
+					predicateLambda = lambda;
+				}
+			}
+		}
+		else if (methodCall.Arguments.Count >= 1)
+		{
+			collectionExpr = methodCall.Arguments[0];
+			if (methodCall.Arguments.Count > 1)
+			{
+				var arg = methodCall.Arguments[1];
+				if (arg is UnaryExpression quote && quote.NodeType == ExpressionType.Quote)
+				{
+					predicateLambda = quote.Operand as LambdaExpression;
+				}
+				else if (arg is LambdaExpression lambda)
+				{
+					predicateLambda = lambda;
+				}
+			}
+		}
+
+		if (collectionExpr is null)
+		{
+			return null;
+		}
+
+		// Get the collection path relative to the outer lambda parameter
+		var collectionPath = GetLambdaExpressionPath(collectionExpr, outerLambdaParam, outerODataParamName);
+		var odataMethodName = methodName.ToLowerInvariant();
+
+		if (predicateLambda is null)
+		{
+			return $"{collectionPath}/{odataMethodName}()";
+		}
+
+		var innerParamName = predicateLambda.Parameters[0].Name ?? "x";
+		var predicateBody = ParseLambdaBody(predicateLambda.Body, predicateLambda.Parameters[0], innerParamName);
+
+		return $"{collectionPath}/{odataMethodName}({innerParamName}: {predicateBody})";
+	}
+
+	private static string GetLambdaExpressionPath(Expression expression, ParameterExpression lambdaParam, string odataParamName)
+	{
+		return expression switch
+		{
+			ParameterExpression param when param == lambdaParam => odataParamName,
+			MemberExpression member => GetLambdaMemberPath(member, lambdaParam, odataParamName),
+			MethodCallExpression methodCall => ParseLambdaMethodCall(methodCall, lambdaParam, odataParamName),
+			UnaryExpression unary when unary.NodeType == ExpressionType.Convert =>
+				GetLambdaExpressionPath(unary.Operand, lambdaParam, odataParamName),
+			_ => throw new NotSupportedException($"Expression type {expression.GetType().Name} is not supported in lambda path")
+		};
+	}
+
+	private static string GetLambdaMemberPath(MemberExpression member, ParameterExpression lambdaParam, string odataParamName)
+	{
+		var path = new List<string>();
+		Expression? current = member;
+
+		while (current is MemberExpression memberExpr)
+		{
+			path.Insert(0, memberExpr.Member.Name);
+			current = memberExpr.Expression;
+		}
+
+		// Check if the expression chain ends at the lambda parameter
+		if (current == lambdaParam)
+		{
+			// Prefix with the OData parameter name
+			path.Insert(0, odataParamName);
+		}
+		else if (current is ConstantExpression)
+		{
+			// This is a closure variable - evaluate it
+			return FormatValue(EvaluateExpression(member));
+		}
+
+		return string.Join("/", path);
 	}
 }
