@@ -294,6 +294,24 @@ public class FluentODataQueryBuilder
 	public Task DeleteAsync(CancellationToken cancellationToken = default)
 		=> _client.DeleteByUrlAsync(BuildUrl(), CustomHeaders, cancellationToken);
 
+	/// <summary>
+	/// Deletes the entity identified by the key set on this query builder.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>A task representing the delete operation.</returns>
+	/// <remarks>
+	/// <para>This is an alias for <see cref="DeleteAsync"/> to match Simple.OData.Client naming conventions.</para>
+	/// <example>
+	/// <code>
+	/// await client.For("incidents")
+	///     .Key(entityId)
+	///     .DeleteEntryAsync(cancellationToken);
+	/// </code>
+	/// </example>
+	/// </remarks>
+	public Task DeleteEntryAsync(CancellationToken cancellationToken = default)
+		=> DeleteAsync(cancellationToken);
+
 	#endregion
 
 	#region URL Building

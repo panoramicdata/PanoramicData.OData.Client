@@ -22,6 +22,9 @@
 		<File Path="LICENSE" />
 		<File Path="nuget-key.txt" />
 		<File Path="PanoramicData.OData.Client.dic" />
+		<File Path="Publish.ps1" />
+		<File Path="Run-Benchmarks.ps1" />
+		<File Path="Run-Coverage.ps1" />
 		<File Path="version.json" />
 	</Folder>
 	<Project Path="PanoramicData.OData.Client.Test/PanoramicData.OData.Client.Test.csproj" Id="56794b6c-9510-4f89-ab13-f5f8bb907845" />
