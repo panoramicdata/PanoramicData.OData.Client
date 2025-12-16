@@ -74,7 +74,7 @@ public class ODataQueryBuilder<T>(string entitySet, ILogger logger) where T : cl
 	/// <summary>
 	/// Adds select fields from an expression.
 	/// </summary>
-	public ODataQueryBuilder<T> Select(Expression<Func<T, object>> selector)
+	public ODataQueryBuilder<T> Select(Expression<Func<T, object?>> selector)
 	{
 		var memberNames = GetMemberNames(selector);
 		_selectFields.AddRange(memberNames);
@@ -97,7 +97,7 @@ public class ODataQueryBuilder<T>(string entitySet, ILogger logger) where T : cl
 	/// <summary>
 	/// Adds expand fields from an expression.
 	/// </summary>
-	public ODataQueryBuilder<T> Expand(Expression<Func<T, object>> selector)
+	public ODataQueryBuilder<T> Expand(Expression<Func<T, object?>> selector)
 	{
 		var memberNames = GetMemberNames(selector);
 		_expandFields.AddRange(memberNames);
@@ -120,7 +120,7 @@ public class ODataQueryBuilder<T>(string entitySet, ILogger logger) where T : cl
 	/// <summary>
 	/// Adds an order by clause.
 	/// </summary>
-	public ODataQueryBuilder<T> OrderBy(Expression<Func<T, object>> selector, bool descending = false)
+	public ODataQueryBuilder<T> OrderBy(Expression<Func<T, object?>> selector, bool descending = false)
 	{
 		var memberName = GetMemberName(selector);
 		_orderByClauses.Add(descending ? $"{memberName} desc" : memberName);
@@ -132,11 +132,7 @@ public class ODataQueryBuilder<T>(string entitySet, ILogger logger) where T : cl
 	/// </summary>
 	public ODataQueryBuilder<T> OrderBy(IEnumerable<KeyValuePair<string, bool>> orderBys)
 	{
-		foreach (var ob in orderBys)
-		{
-			_orderByClauses.Add(ob.Value ? $"{ob.Key} desc" : ob.Key);
-		}
-
+		_orderByClauses.AddRange(orderBys.Select(ob => ob.Value ? $"{ob.Key} desc" : ob.Key));
 		return this;
 	}
 
@@ -604,7 +600,7 @@ public class ODataQueryBuilder<T>(string entitySet, ILogger logger) where T : cl
 		return $"[{string.Join(",", elements)}]";
 	}
 
-	private static List<string> GetMemberNames(Expression<Func<T, object>> selector)
+	private static List<string> GetMemberNames(Expression<Func<T, object?>> selector)
 	{
 		if (selector.Body is NewExpression newExpr)
 		{
@@ -666,7 +662,7 @@ public class ODataQueryBuilder<T>(string entitySet, ILogger logger) where T : cl
 		return string.Empty;
 	}
 
-	private static string GetMemberName(Expression<Func<T, object>> selector)
+	private static string GetMemberName(Expression<Func<T, object?>> selector)
 	{
 		if (selector.Body is MemberExpression member)
 		{

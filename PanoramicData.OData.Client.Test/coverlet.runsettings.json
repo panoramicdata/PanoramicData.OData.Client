@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/coverlet-coverage/coverlet/master/src/coverlet.runsettings.schema.json",
+  "Format": "cobertura,json,lcov",
+  "ExcludeByAttribute": [
+    "Obsolete",
+    "GeneratedCodeAttribute",
+    "CompilerGeneratedAttribute",
+    "ExcludeFromCodeCoverageAttribute"
+  ],
+  "ExcludeByFile": [
+    "**/obj/**/*.*",
+    "**/Benchmarks/**/*.*"
+  ],
+  "Include": [
+    "[PanoramicData.OData.Client]*"
+  ],
+  "Exclude": [
+    "[*]*.GlobalSuppressions",
+    "[*]*Program",
+    "[*.Test]*"
+  ],
+  "SingleHit": false,
+  "UseSourceLink": true,
+  "SkipAutoProps": true,
+  "DeterministicReport": true
+}

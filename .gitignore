@@ -305,6 +305,11 @@ FodyWeavers.xsd
 # NuGet API key
 nuget-key.txt
 
+# Code Coverage
+coverage/
+*.coverage
+*.coveragexml
+TestResults/
 
-#Ignore vscode AI rules
-.github\instructions\codacy.instructions.md
+# BenchmarkDotNet
+BenchmarkDotNet.Artifacts/

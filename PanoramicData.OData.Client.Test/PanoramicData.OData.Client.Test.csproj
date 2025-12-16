@@ -8,20 +8,34 @@
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 	</PropertyGroup>
 
+	<!-- Code Coverage Settings -->
+	<PropertyGroup>
+		<CollectCoverage>true</CollectCoverage>
+		<CoverletOutputFormat>cobertura</CoverletOutputFormat>
+		<CoverletOutput>./coverage/</CoverletOutput>
+		<ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<PackageReference Include="AwesomeAssertions" Version="9.3.0" />
 		<PackageReference Include="AwesomeAssertions.Analyzers" Version="9.0.8">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
 		<PackageReference Include="coverlet.collector" Version="6.0.4">
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 			<PrivateAssets>all</PrivateAssets>
+		</PackageReference>
+		<PackageReference Include="coverlet.msbuild" Version="6.0.4">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0-preview.4.25258.110" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0-preview.4.25258.110" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0-preview.4.25258.110" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+		<PackageReference Include="Moq" Version="4.20.72" />
 		<PackageReference Include="xunit.v3" Version="3.2.1" />
 		<PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

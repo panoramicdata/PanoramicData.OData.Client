@@ -36,7 +36,7 @@ public abstract class TestBase
 	protected const string TripPinRESTierUri = "https://services.odata.org/TripPinRESTierService/";
 
 	/// <summary>
-	/// Default cancellation token with a reasonable timeout for integration tests.
+	/// Gets a CancellationToken from the current test context.
 	/// </summary>
-	protected static CancellationToken DefaultCancellationToken => new CancellationTokenSource(TimeSpan.FromSeconds(30)).Token;
+	protected static CancellationToken CancellationToken => TestContext.Current.CancellationToken;
 }
