@@ -267,4 +267,26 @@ public partial class ODataClient
 		return await response.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
 			?? throw new ODataClientException("Failed to deserialize replaced entity");
 	}
+
+	/// <summary>
+	/// Deletes an entity by its full URL path.
+	/// </summary>
+	/// <param name="url">The full URL path to the entity (e.g., "Products(123)").</param>
+	/// <param name="headers">Optional additional headers.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <remarks>
+	/// This method is primarily for internal use and legacy compatibility.
+	/// Prefer using <see cref="DeleteAsync(string, object, IReadOnlyDictionary{string, string}?, CancellationToken)"/> instead.
+	/// </remarks>
+	internal async Task DeleteByUrlAsync(
+		string url,
+		IReadOnlyDictionary<string, string>? headers = null,
+		CancellationToken cancellationToken = default)
+	{
+		_logger.LogDebug("DeleteByUrlAsync - URL: {Url}", url);
+
+		var request = CreateRequest(HttpMethod.Delete, url, headers);
+		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+	}
 }

@@ -79,7 +79,7 @@ public class ODataClientBatchTests : IDisposable
 
 		// Assert
 		opId.Should().NotBeNullOrEmpty();
-		batch.Items.Should().HaveCount(1);
+		batch.Items.Should().ContainSingle();
 	}
 
 	/// <summary>
@@ -97,7 +97,7 @@ public class ODataClientBatchTests : IDisposable
 
 		// Assert
 		opId.Should().NotBeNullOrEmpty();
-		batch.Items.Should().HaveCount(1);
+		batch.Items.Should().ContainSingle();
 	}
 
 	/// <summary>
@@ -114,7 +114,7 @@ public class ODataClientBatchTests : IDisposable
 
 		// Assert
 		opId.Should().NotBeNullOrEmpty();
-		batch.Items.Should().HaveCount(1);
+		batch.Items.Should().ContainSingle();
 	}
 
 	/// <summary>
@@ -131,7 +131,7 @@ public class ODataClientBatchTests : IDisposable
 
 		// Assert
 		opId.Should().NotBeNullOrEmpty();
-		batch.Items.Should().HaveCount(1);
+		batch.Items.Should().ContainSingle();
 	}
 
 	/// <summary>
@@ -192,7 +192,7 @@ public class ODataClientBatchTests : IDisposable
 
 		// Assert
 		opId.Should().NotBeNullOrEmpty();
-		batch.Items.Should().HaveCount(1); // One changeset
+		batch.Items.Should().ContainSingle(); // One changeset
 	}
 
 	/// <summary>
@@ -211,7 +211,7 @@ public class ODataClientBatchTests : IDisposable
 		changeset.Delete("Products", 2);
 
 		// Assert
-		batch.Items.Should().HaveCount(1); // One changeset containing all operations
+		batch.Items.Should().ContainSingle(); // One changeset containing all operations
 		batch.GetAllOperations().Should().HaveCount(3); // Three operations total
 	}
 
@@ -357,7 +357,7 @@ public class ODataClientBatchTests : IDisposable
 
 		// Assert
 		result.AllSucceeded.Should().BeFalse();
-		result.FailedResults.Should().HaveCount(1);
+		result.FailedResults.Should().ContainSingle();
 		result.FailedResults.First().StatusCode.Should().Be(404);
 	}
 

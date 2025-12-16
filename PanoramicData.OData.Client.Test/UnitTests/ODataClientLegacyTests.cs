@@ -42,6 +42,8 @@ public class ODataClientLegacyTests : IDisposable
 		GC.SuppressFinalize(this);
 	}
 
+	#region ODataClient.Legacy Tests
+
 	/// <summary>
 	/// Tests that For(string) creates a dynamic query builder.
 	/// </summary>
@@ -246,23 +248,22 @@ public class ODataClientLegacyTests : IDisposable
 		// Assert
 		response.Should().NotBeNull();
 		response.Document.Should().NotBeNull();
-		
+
 		var entries = response.GetEntries().ToList();
-		entries.Should().HaveCount(1);
+		entries.Should().ContainSingle();
 	}
 
 	/// <summary>
 	/// Tests that ClearODataClientMetaDataCache can be called (static method).
 	/// </summary>
 	[Fact]
-	public void ClearODataClientMetaDataCache_CanBeCalled()
-	{
+	public void ClearODataClientMetaDataCache_CanBeCalled() =>
 		// This is a static method for backward compatibility
 		// It doesn't actually do anything useful since it can't access instance state
 #pragma warning disable CS0618 // Type or member is obsolete
 		ODataClient.ClearODataClientMetaDataCache();
 #pragma warning restore CS0618
+	// No exception means success
 
-		// No exception means success
-	}
+	#endregion
 }
