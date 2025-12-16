@@ -1,11 +1,11 @@
-using System.Net;
-using System.Net.Http.Headers;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Moq.Protected;
 using PanoramicData.OData.Client.Exceptions;
 using PanoramicData.OData.Client.Test.Models;
+using System.Net;
+using System.Net.Http.Headers;
 
 namespace PanoramicData.OData.Client.Test.UnitTests;
 
@@ -224,7 +224,7 @@ public class ODataClientSingletonTests : IDisposable
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
-		capturedRequest!.Headers.IfMatch.Should().HaveCount(1);
+		capturedRequest!.Headers.IfMatch.Should().ContainSingle();
 		capturedRequest.Headers.IfMatch.First().ToString().Should().Be("W/\"v1\"");
 	}
 

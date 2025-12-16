@@ -1,11 +1,11 @@
-using System.Net;
-using System.Net.Http.Headers;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Moq.Protected;
 using PanoramicData.OData.Client.Exceptions;
 using PanoramicData.OData.Client.Test.Models;
+using System.Net;
+using System.Net.Http.Headers;
 
 namespace PanoramicData.OData.Client.Test.UnitTests;
 
@@ -132,7 +132,7 @@ public class ODataClientETagTests : IDisposable
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
-		capturedRequest!.Headers.IfMatch.Should().HaveCount(1);
+		capturedRequest!.Headers.IfMatch.Should().ContainSingle();
 		capturedRequest.Headers.IfMatch.First().ToString().Should().Be("W/\"abc123\"");
 	}
 
@@ -221,7 +221,7 @@ public class ODataClientETagTests : IDisposable
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
-		capturedRequest!.Headers.IfMatch.Should().HaveCount(1);
+		capturedRequest!.Headers.IfMatch.Should().ContainSingle();
 		capturedRequest.Headers.IfMatch.First().ToString().Should().Be("W/\"abc123\"");
 	}
 
@@ -281,7 +281,7 @@ public class ODataClientETagTests : IDisposable
 
 		// Assert
 		result.ETag.Should().Be("W/\"collection123\"");
-		result.Value.Should().HaveCount(1);
+		result.Value.Should().ContainSingle();
 	}
 
 	#endregion
@@ -337,7 +337,7 @@ public class ODataClientETagTests : IDisposable
 		// Assert
 		etag.Should().Be("W/\"v1\"");
 		updateRequest.Should().NotBeNull();
-		updateRequest!.Headers.IfMatch.Should().HaveCount(1);
+		updateRequest!.Headers.IfMatch.Should().ContainSingle();
 		updateRequest.Headers.IfMatch.First().ToString().Should().Be("W/\"v1\"");
 		updated.Name.Should().Be("Updated Widget");
 	}

@@ -1,9 +1,9 @@
-using System.Net;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Moq.Protected;
 using PanoramicData.OData.Client.Test.Models;
+using System.Net;
 
 namespace PanoramicData.OData.Client.Test.UnitTests;
 
@@ -109,7 +109,7 @@ public class ODataClientDeltaTests : IDisposable
 		var result = await _client.GetDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=abc123", cancellationToken: CancellationToken.None);
 
 		// Assert
-		result.Value.Should().HaveCount(1);
+		result.Value.Should().ContainSingle();
 		result.Value[0].Name.Should().Be("Widget 1");
 		result.Deleted.Should().HaveCount(2);
 		result.Deleted[0].Id.Should().Be("Products(2)");
@@ -147,7 +147,7 @@ public class ODataClientDeltaTests : IDisposable
 
 		// Assert
 		result.Value.Should().BeEmpty();
-		result.Deleted.Should().HaveCount(1);
+		result.Deleted.Should().ContainSingle();
 		result.Deleted[0].Id.Should().Be("Products(5)");
 	}
 
@@ -316,7 +316,7 @@ public class ODataClientDeltaTests : IDisposable
 		var result = await _client.GetAllDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=init", cancellationToken: CancellationToken.None);
 
 		// Assert
-		result.Value.Should().HaveCount(1);
+		result.Value.Should().ContainSingle();
 		result.Deleted.Should().HaveCount(2);
 		result.Deleted[0].Id.Should().Be("Products(10)");
 		result.Deleted[1].Id.Should().Be("Products(20)");
@@ -426,11 +426,11 @@ public class ODataClientDeltaTests : IDisposable
 		var deltaResponse = await _client.GetDeltaAsync<Product>(deltaLink!, cancellationToken: CancellationToken.None);
 
 		// Assert
-		initialResponse.Value.Should().HaveCount(1);
+		initialResponse.Value.Should().ContainSingle();
 		deltaLink.Should().Contain("deltatoken=v1");
 
 		deltaResponse.Value.Should().HaveCount(2);
-		deltaResponse.Deleted.Should().HaveCount(1);
+		deltaResponse.Deleted.Should().ContainSingle();
 		deltaResponse.DeltaLink.Should().Contain("deltatoken=v2");
 	}
 
