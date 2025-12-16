@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 
 	<PropertyGroup>
@@ -30,7 +30,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="..\README.md" Pack="true" PackagePath="\" />
 		<None Include="Panoramic Data.png" Pack="true" PackagePath="icon.png" />
 	</ItemGroup>
 

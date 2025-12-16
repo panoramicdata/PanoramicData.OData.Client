@@ -1,5 +1,18 @@
 <Solution>
 	<Folder Name="/Documentation/">
+		<File Path="Documentation/async-operations.md" />
+		<File Path="Documentation/batch.md" />
+		<File Path="Documentation/cross-join.md" />
+		<File Path="Documentation/crud.md" />
+		<File Path="Documentation/delta.md" />
+		<File Path="Documentation/etag-concurrency.md" />
+		<File Path="Documentation/functions-actions.md" />
+		<File Path="Documentation/metadata.md" />
+		<File Path="Documentation/open-types.md" />
+		<File Path="Documentation/querying.md" />
+		<File Path="Documentation/references.md" />
+		<File Path="Documentation/singletons.md" />
+		<File Path="Documentation/streams.md" />
 		<File Path="README.md" />
 	</Folder>
 	<Folder Name="/Solution Items/">

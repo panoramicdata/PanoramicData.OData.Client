@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using PanoramicData.OData.Client.Exceptions;
 using System.Net;
 using System.Text.Json;
 
@@ -12,14 +13,9 @@ namespace PanoramicData.OData.Client;
 public class ODataAsyncOperation<T>
 {
 	private readonly HttpClient _httpClient;
-	private readonly string _monitorUrl;
 	private readonly JsonSerializerOptions _jsonOptions;
 	private readonly ILogger _logger;
 	private readonly TimeSpan _pollInterval;
-
-	private ODataAsyncOperationStatus _status = ODataAsyncOperationStatus.Pending;
-	private T? _result;
-	private string? _errorMessage;
 
 	internal ODataAsyncOperation(
 		HttpClient httpClient,
@@ -29,7 +25,7 @@ public class ODataAsyncOperation<T>
 		TimeSpan? pollInterval = null)
 	{
 		_httpClient = httpClient;
-		_monitorUrl = monitorUrl;
+		MonitorUrl = monitorUrl;
 		_jsonOptions = jsonOptions;
 		_logger = logger;
 		_pollInterval = pollInterval ?? TimeSpan.FromSeconds(5);
@@ -38,27 +34,27 @@ public class ODataAsyncOperation<T>
 	/// <summary>
 	/// Gets the URL used to monitor the operation status.
 	/// </summary>
-	public string MonitorUrl => _monitorUrl;
+	public string MonitorUrl { get; }
 
 	/// <summary>
 	/// Gets the current status of the operation.
 	/// </summary>
-	public ODataAsyncOperationStatus Status => _status;
+	public ODataAsyncOperationStatus Status { get; private set; } = ODataAsyncOperationStatus.Pending;
 
 	/// <summary>
 	/// Gets the result of the operation once completed.
 	/// </summary>
-	public T? Result => _result;
+	public T? Result { get; private set; }
 
 	/// <summary>
 	/// Gets the error message if the operation failed.
 	/// </summary>
-	public string? ErrorMessage => _errorMessage;
+	public string? ErrorMessage { get; private set; }
 
 	/// <summary>
 	/// Gets whether the operation has completed (successfully or with error).
 	/// </summary>
-	public bool IsCompleted => _status is ODataAsyncOperationStatus.Completed or ODataAsyncOperationStatus.Failed;
+	public bool IsCompleted => Status is ODataAsyncOperationStatus.Completed or ODataAsyncOperationStatus.Failed;
 
 	/// <summary>
 	/// Polls the operation status once and updates the status.
@@ -72,9 +68,9 @@ public class ODataAsyncOperation<T>
 			return false;
 		}
 
-		_logger.LogDebug("ODataAsyncOperation - Polling status at {Url}", _monitorUrl);
+		_logger.LogDebug("ODataAsyncOperation - Polling status at {Url}", MonitorUrl);
 
-		var request = new HttpRequestMessage(HttpMethod.Get, _monitorUrl);
+		var request = new HttpRequestMessage(HttpMethod.Get, MonitorUrl);
 		var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
 		_logger.LogDebug("ODataAsyncOperation - Poll response: {StatusCode}", response.StatusCode);
@@ -82,7 +78,7 @@ public class ODataAsyncOperation<T>
 		if (response.StatusCode == HttpStatusCode.Accepted)
 		{
 			// Still running
-			_status = ODataAsyncOperationStatus.Running;
+			Status = ODataAsyncOperationStatus.Running;
 
 			// Check for updated location
 			if (response.Headers.Location is not null)
@@ -96,14 +92,14 @@ public class ODataAsyncOperation<T>
 		if (response.IsSuccessStatusCode)
 		{
 			// Completed successfully
-			_status = ODataAsyncOperationStatus.Completed;
+			Status = ODataAsyncOperationStatus.Completed;
 			var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
 			if (!string.IsNullOrEmpty(content))
 			{
 				try
 				{
-					_result = JsonSerializer.Deserialize<T>(content, _jsonOptions);
+					Result = JsonSerializer.Deserialize<T>(content, _jsonOptions);
 				}
 				catch (JsonException ex)
 				{
@@ -116,9 +112,9 @@ public class ODataAsyncOperation<T>
 		}
 
 		// Failed
-		_status = ODataAsyncOperationStatus.Failed;
-		_errorMessage = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-		_logger.LogWarning("ODataAsyncOperation - Operation failed: {Error}", _errorMessage);
+		Status = ODataAsyncOperationStatus.Failed;
+		ErrorMessage = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+		_logger.LogWarning("ODataAsyncOperation - Operation failed: {Error}", ErrorMessage);
 		return false;
 	}
 
@@ -155,12 +151,12 @@ public class ODataAsyncOperation<T>
 			}
 		}
 
-		if (_status == ODataAsyncOperationStatus.Failed)
+		if (Status == ODataAsyncOperationStatus.Failed)
 		{
-			throw new ODataAsyncOperationException("Async operation failed", _monitorUrl, _errorMessage);
+			throw new ODataAsyncOperationException("Async operation failed", MonitorUrl, ErrorMessage);
 		}
 
-		return _result;
+		return Result;
 	}
 
 	/// <summary>
@@ -175,14 +171,14 @@ public class ODataAsyncOperation<T>
 			return false;
 		}
 
-		_logger.LogDebug("ODataAsyncOperation - Attempting to cancel at {Url}", _monitorUrl);
+		_logger.LogDebug("ODataAsyncOperation - Attempting to cancel at {Url}", MonitorUrl);
 
-		var request = new HttpRequestMessage(HttpMethod.Delete, _monitorUrl);
+		var request = new HttpRequestMessage(HttpMethod.Delete, MonitorUrl);
 		var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
 		if (response.IsSuccessStatusCode)
 		{
-			_status = ODataAsyncOperationStatus.Cancelled;
+			Status = ODataAsyncOperationStatus.Cancelled;
 			_logger.LogDebug("ODataAsyncOperation - Cancellation accepted");
 			return true;
 		}
@@ -190,61 +186,4 @@ public class ODataAsyncOperation<T>
 		_logger.LogWarning("ODataAsyncOperation - Cancellation not accepted: {StatusCode}", response.StatusCode);
 		return false;
 	}
-}
-
-/// <summary>
-/// Status of an async OData operation.
-/// </summary>
-public enum ODataAsyncOperationStatus
-{
-	/// <summary>
-	/// The operation has been submitted but not yet started.
-	/// </summary>
-	Pending,
-
-	/// <summary>
-	/// The operation is currently running.
-	/// </summary>
-	Running,
-
-	/// <summary>
-	/// The operation completed successfully.
-	/// </summary>
-	Completed,
-
-	/// <summary>
-	/// The operation failed.
-	/// </summary>
-	Failed,
-
-	/// <summary>
-	/// The operation was cancelled.
-	/// </summary>
-	Cancelled
-}
-
-/// <summary>
-/// Exception thrown when an async OData operation fails.
-/// </summary>
-public class ODataAsyncOperationException : Exception
-{
-	/// <summary>
-	/// Creates a new async operation exception.
-	/// </summary>
-	public ODataAsyncOperationException(string message, string monitorUrl, string? errorDetails)
-		: base(message)
-	{
-		MonitorUrl = monitorUrl;
-		ErrorDetails = errorDetails;
-	}
-
-	/// <summary>
-	/// Gets the monitor URL for the failed operation.
-	/// </summary>
-	public string MonitorUrl { get; }
-
-	/// <summary>
-	/// Gets the error details from the server.
-	/// </summary>
-	public string? ErrorDetails { get; }
 }

@@ -1,4 +1,4 @@
-# PanoramicData.OData.Client
+﻿# PanoramicData.OData.Client
 
 A lightweight, modern OData V4 client library for .NET 10.
 
@@ -7,60 +7,60 @@ A lightweight, modern OData V4 client library for .NET 10.
 | Feature | Status | Documentation |
 |---------|--------|---------------|
 | **Querying** | | |
-| $filter | ? Supported | [Querying](docs/querying.md#filtering-filter) |
-| $select | ? Supported | [Querying](docs/querying.md#selecting-fields-select) |
-| $expand | ? Supported | [Querying](docs/querying.md#expanding-related-entities-expand) |
-| $orderby | ? Supported | [Querying](docs/querying.md#ordering-results-orderby) |
-| $top / $skip | ? Supported | [Querying](docs/querying.md#paging-skip-top) |
-| $count | ? Supported | [Querying](docs/querying.md#counting-results-count) |
-| $search | ? Supported | [Querying](docs/querying.md#searching-search) |
-| $apply (Aggregations) | ? Supported | [Querying](docs/querying.md#aggregations-apply) |
-| $compute | ? Supported | [Querying](docs/querying.md#computed-properties-compute) |
-| Lambda operators (any/all) | ? Supported | [Querying](docs/querying.md#filtering-filter) |
-| Type casting (derived types) | ? Supported | [Querying](docs/querying.md#derived-types-type-casting) |
+| $filter | ✅ Supported | [Querying](Documentation/querying.md#filtering-filter) |
+| $select | ✅ Supported | [Querying](Documentation/querying.md#selecting-fields-select) |
+| $expand | ✅ Supported | [Querying](Documentation/querying.md#expanding-related-entities-expand) |
+| $orderby | ✅ Supported | [Querying](Documentation/querying.md#ordering-results-orderby) |
+| $top / $skip | ✅ Supported | [Querying](Documentation/querying.md#paging-skip-top) |
+| $count | ✅ Supported | [Querying](Documentation/querying.md#counting-results-count) |
+| $search | ✅ Supported | [Querying](Documentation/querying.md#searching-search) |
+| $apply (Aggregations) | ✅ Supported | [Querying](Documentation/querying.md#aggregations-apply) |
+| $compute | ✅ Supported | [Querying](Documentation/querying.md#computed-properties-compute) |
+| Lambda operators (any/all) | ✅ Supported | [Querying](Documentation/querying.md#filtering-filter) |
+| Type casting (derived types) | ✅ Supported | [Querying](Documentation/querying.md#derived-types-type-casting) |
 | **CRUD Operations** | | |
-| Create (POST) | ? Supported | [CRUD](docs/crud.md#creating-entities) |
-| Read (GET) | ? Supported | [CRUD](docs/crud.md#reading-entities) |
-| Update (PATCH) | ? Supported | [CRUD](docs/crud.md#updating-entities-patch) |
-| Replace (PUT) | ? Supported | [CRUD](docs/crud.md#replacing-entities-put) |
-| Delete (DELETE) | ? Supported | [CRUD](docs/crud.md#deleting-entities) |
+| Create (POST) | ✅ Supported | [CRUD](Documentation/crud.md#creating-entities) |
+| Read (GET) | ✅ Supported | [CRUD](Documentation/crud.md#reading-entities) |
+| Update (PATCH) | ✅ Supported | [CRUD](Documentation/crud.md#updating-entities-patch) |
+| Replace (PUT) | ✅ Supported | [CRUD](Documentation/crud.md#replacing-entities-put) |
+| Delete (DELETE) | ✅ Supported | [CRUD](Documentation/crud.md#deleting-entities) |
 | **Batch Operations** | | |
-| Batch requests | ? Supported | [Batch](docs/batch.md#creating-a-batch) |
-| Changesets (atomic) | ? Supported | [Batch](docs/batch.md#changesets-atomic-transactions) |
+| Batch requests | ✅ Supported | [Batch](Documentation/batch.md#creating-a-batch) |
+| Changesets (atomic) | ✅ Supported | [Batch](Documentation/batch.md#changesets-atomic-transactions) |
 | **Singleton Entities** | | |
-| Get singleton | ? Supported | [Singletons](docs/singletons.md#getting-a-singleton) |
-| Update singleton | ? Supported | [Singletons](docs/singletons.md#updating-a-singleton) |
+| Get singleton | ✅ Supported | [Singletons](Documentation/singletons.md#getting-a-singleton) |
+| Update singleton | ✅ Supported | [Singletons](Documentation/singletons.md#updating-a-singleton) |
 | **Media Entities & Streams** | | |
-| Get stream ($value) | ? Supported | [Streams](docs/streams.md#media-entities) |
-| Set stream | ? Supported | [Streams](docs/streams.md#setting-stream-content) |
-| Named stream properties | ? Supported | [Streams](docs/streams.md#named-stream-properties) |
+| Get stream ($value) | ✅ Supported | [Streams](Documentation/streams.md#media-entities) |
+| Set stream | ✅ Supported | [Streams](Documentation/streams.md#setting-stream-content) |
+| Named stream properties | ✅ Supported | [Streams](Documentation/streams.md#named-stream-properties) |
 | **Entity References ($ref)** | | |
-| Add reference | ? Supported | [References](docs/references.md#adding-references-collection) |
-| Remove reference | ? Supported | [References](docs/references.md#removing-references-collection) |
-| Set reference | ? Supported | [References](docs/references.md#setting-references-single-valued) |
-| Delete reference | ? Supported | [References](docs/references.md#deleting-references-single-valued) |
+| Add reference | ✅ Supported | [References](Documentation/references.md#adding-references-collection) |
+| Remove reference | ✅ Supported | [References](Documentation/references.md#removing-references-collection) |
+| Set reference | ✅ Supported | [References](Documentation/references.md#setting-references-single-valued) |
+| Delete reference | ✅ Supported | [References](Documentation/references.md#deleting-references-single-valued) |
 | **Delta Queries** | | |
-| Delta tracking | ? Supported | [Delta](docs/delta.md#overview) |
-| Deleted entities | ? Supported | [Delta](docs/delta.md#understanding-delta-responses) |
-| Delta pagination | ? Supported | [Delta](docs/delta.md#getting-changes) |
+| Delta tracking | ✅ Supported | [Delta](Documentation/delta.md#overview) |
+| Deleted entities | ✅ Supported | [Delta](Documentation/delta.md#understanding-delta-responses) |
+| Delta pagination | ✅ Supported | [Delta](Documentation/delta.md#getting-changes) |
 | **Service Metadata** | | |
-| $metadata | ? Supported | [Metadata](docs/metadata.md#retrieving-metadata) |
-| Service document | ? Supported | [Metadata](docs/metadata.md#service-document) |
+| $metadata | ✅ Supported | [Metadata](Documentation/metadata.md#retrieving-metadata) |
+| Service document | ✅ Supported | [Metadata](Documentation/metadata.md#service-document) |
 | **Functions & Actions** | | |
-| Bound functions | ? Supported | [Functions & Actions](docs/functions-actions.md#bound-functions-entity-set) |
-| Unbound functions | ? Supported | [Functions & Actions](docs/functions-actions.md#unbound-functions) |
-| Bound actions | ? Supported | [Functions & Actions](docs/functions-actions.md#calling-actions) |
-| Unbound actions | ? Supported | [Functions & Actions](docs/functions-actions.md#unbound-action) |
+| Bound functions | ✅ Supported | [Functions & Actions](Documentation/functions-actions.md#bound-functions-entity-set) |
+| Unbound functions | ✅ Supported | [Functions & Actions](Documentation/functions-actions.md#unbound-functions) |
+| Bound actions | ✅ Supported | [Functions & Actions](Documentation/functions-actions.md#calling-actions) |
+| Unbound actions | ✅ Supported | [Functions & Actions](Documentation/functions-actions.md#unbound-action) |
 | **Async Operations** | | |
-| Prefer: respond-async | ? Supported | [Async](docs/async-operations.md#async-action-calls) |
-| Status polling | ? Supported | [Async](docs/async-operations.md#polling-for-completion) |
+| Prefer: respond-async | ✅ Supported | [Async](Documentation/async-operations.md#async-action-calls) |
+| Status polling | ✅ Supported | [Async](Documentation/async-operations.md#polling-for-completion) |
 | **Advanced Features** | | |
-| Cross-join ($crossjoin) | ? Supported | [Cross-Join](docs/cross-join.md#overview) |
-| Open types | ? Supported | [Open Types](docs/open-types.md#overview) |
-| ETag concurrency | ? Supported | [ETag & Concurrency](docs/etag-concurrency.md#overview) |
-| Server-driven paging | ? Supported | [Querying](docs/querying.md#server-driven-paging) |
-| Retry logic | ? Supported | [Configuration](#configuration-options) |
-| Custom headers | ? Supported | [Querying](docs/querying.md#custom-headers) |
+| Cross-join ($crossjoin) | ✅ Supported | [Cross-Join](Documentation/cross-join.md#overview) |
+| Open types | ✅ Supported | [Open Types](Documentation/open-types.md#overview) |
+| ETag concurrency | ✅ Supported | [ETag & Concurrency](Documentation/etag-concurrency.md#overview) |
+| Server-driven paging | ✅ Supported | [Querying](Documentation/querying.md#server-driven-paging) |
+| Retry logic | ✅ Supported | [Configuration](#configuration-options) |
+| Custom headers | ✅ Supported | [Querying](Documentation/querying.md#custom-headers) |
 
 ## Installation
 
@@ -342,21 +342,21 @@ const string TripPinV4ReadWriteUri = "https://services.odata.org/V4/TripPinServi
 
 ## Documentation
 
-For detailed documentation on each feature, see the [docs](docs/) folder:
+For detailed documentation on each feature, see the Documentation folder:
 
-- [Querying Data](docs/querying.md) - Filter, select, expand, order, page, search, aggregate
-- [CRUD Operations](docs/crud.md) - Create, read, update, delete entities
-- [Batch Operations](docs/batch.md) - Multiple operations in single request
-- [Singletons](docs/singletons.md) - Single-instance entities like /Me
-- [Media & Streams](docs/streams.md) - Binary data and media entities
-- [Entity References](docs/references.md) - Managing relationships with $ref
-- [Delta Queries](docs/delta.md) - Change tracking and synchronization
-- [Service Metadata](docs/metadata.md) - Discovery and schema information
-- [Functions & Actions](docs/functions-actions.md) - Custom operations
-- [Async Operations](docs/async-operations.md) - Long-running operations
-- [Cross-Join](docs/cross-join.md) - Combining multiple entity sets
-- [Open Types](docs/open-types.md) - Dynamic properties
-- [ETag & Concurrency](docs/etag-concurrency.md) - Optimistic concurrency control
+- [Querying Data](Documentation/querying.md) - Filter, select, expand, order, page, search, aggregate
+- [CRUD Operations](Documentation/crud.md) - Create, read, update, delete entities
+- [Batch Operations](Documentation/batch.md) - Multiple operations in single request
+- [Singletons](Documentation/singletons.md) - Single-instance entities like /Me
+- [Media & Streams](Documentation/streams.md) - Binary data and media entities
+- [Entity References](Documentation/references.md) - Managing relationships with $ref
+- [Delta Queries](Documentation/delta.md) - Change tracking and synchronization
+- [Service Metadata](Documentation/metadata.md) - Discovery and schema information
+- [Functions & Actions](Documentation/functions-actions.md) - Custom operations
+- [Async Operations](Documentation/async-operations.md) - Long-running operations
+- [Cross-Join](Documentation/cross-join.md) - Combining multiple entity sets
+- [Open Types](Documentation/open-types.md) - Dynamic properties
+- [ETag & Concurrency](Documentation/etag-concurrency.md) - Optimistic concurrency control
 
 ## License
 
