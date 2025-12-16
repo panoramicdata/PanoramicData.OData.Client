@@ -45,10 +45,10 @@ public class ODataClientLegacyTests : IDisposable
 	#region ODataClient.Legacy Tests
 
 	/// <summary>
-	/// Tests that For(string) creates a dynamic query builder.
+	/// Tests that For(string) creates a fluent query builder.
 	/// </summary>
 	[Fact]
-	public void For_WithEntitySetName_CreatesDynamicQueryBuilder()
+	public void For_WithEntitySetName_CreatesFluentQueryBuilder()
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
 		var builder = _client.For("Products");
@@ -74,6 +74,157 @@ public class ODataClientLegacyTests : IDisposable
 		url.Should().Contain("Products");
 		url.Should().Contain("$filter=");
 		url.Should().Contain("$top=10");
+	}
+
+	/// <summary>
+	/// Tests that For(string).GetAsync() returns results fluently.
+	/// </summary>
+	[Fact]
+	public async Task For_GetAsync_ReturnsResultsFluently()
+	{
+		// Arrange
+		var responseJson = """
+		{
+			"value": [
+				{ "ID": 1, "Name": "Product 1" },
+				{ "ID": 2, "Name": "Product 2" }
+			]
+		}
+		""";
+
+		_mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new StringContent(responseJson)
+			});
+
+		// Act - This is the fluent pattern!
+#pragma warning disable CS0618 // Type or member is obsolete
+		var response = await _client.For("Products")
+			.Top(10)
+			.GetAsync(CancellationToken.None);
+#pragma warning restore CS0618
+
+		// Assert
+		response.Should().NotBeNull();
+		response.Value.Should().HaveCount(2);
+		response.Value[0]["ID"].Should().Be(1L);
+		response.Value[1]["ID"].Should().Be(2L);
+	}
+
+	/// <summary>
+	/// Tests that For(string).GetAllAsync() returns all pages fluently.
+	/// </summary>
+	[Fact]
+	public async Task For_GetAllAsync_ReturnsAllPagesFluently()
+	{
+		// Arrange
+		var responseJson = """
+		{
+			"value": [
+				{ "ID": 1, "Name": "Product 1" }
+			]
+		}
+		""";
+
+		_mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new StringContent(responseJson)
+			});
+
+		// Act
+#pragma warning disable CS0618 // Type or member is obsolete
+		var response = await _client.For("Products")
+			.Filter("Price gt 100")
+			.GetAllAsync(CancellationToken.None);
+#pragma warning restore CS0618
+
+		// Assert
+		response.Should().NotBeNull();
+		response.Value.Should().ContainSingle();
+	}
+
+	/// <summary>
+	/// Tests that For(string).Key().GetEntryAsync() returns a single entity.
+	/// </summary>
+	[Fact]
+	public async Task For_Key_GetEntryAsync_ReturnsSingleEntity()
+	{
+		// Arrange
+		var responseJson = """
+		{
+			"ID": 123,
+			"Name": "Widget"
+		}
+		""";
+
+		_mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new StringContent(responseJson)
+			});
+
+		// Act
+#pragma warning disable CS0618 // Type or member is obsolete
+		var entry = await _client.For("Products")
+			.Key(123)
+			.GetEntryAsync(CancellationToken.None);
+#pragma warning restore CS0618
+
+		// Assert
+		entry.Should().NotBeNull();
+		entry!["ID"].Should().Be(123L);
+		entry["Name"].Should().Be("Widget");
+	}
+
+	/// <summary>
+	/// Tests that For(string).GetFirstOrDefaultAsync() returns the first match.
+	/// </summary>
+	[Fact]
+	public async Task For_GetFirstOrDefaultAsync_ReturnsFirstMatch()
+	{
+		// Arrange
+		var responseJson = """
+		{
+			"value": [
+				{ "ID": 1, "Name": "First Product" }
+			]
+		}
+		""";
+
+		_mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new StringContent(responseJson)
+			});
+
+		// Act
+#pragma warning disable CS0618 // Type or member is obsolete
+		var entry = await _client.For("Products")
+			.Filter("Name eq 'First Product'")
+			.GetFirstOrDefaultAsync(CancellationToken.None);
+#pragma warning restore CS0618
+
+		// Assert
+		entry.Should().NotBeNull();
+		entry!["Name"].Should().Be("First Product");
 	}
 
 	/// <summary>
@@ -264,6 +415,111 @@ public class ODataClientLegacyTests : IDisposable
 		ODataClient.ClearODataClientMetaDataCache();
 #pragma warning restore CS0618
 	// No exception means success
+
+	#endregion
+
+	#region FluentODataQueryBuilder Tests
+
+	/// <summary>
+	/// Tests that FluentODataQueryBuilder builds URL with all query options.
+	/// </summary>
+	[Fact]
+	public void FluentQueryBuilder_BuildsUrlWithAllOptions()
+	{
+#pragma warning disable CS0618 // Type or member is obsolete
+		var builder = _client.For("Products")
+			.Filter("Price gt 100")
+			.Select("ID,Name,Price")
+			.Expand("Category")
+			.OrderBy("Name")
+			.Skip(10)
+			.Top(5)
+			.Count();
+#pragma warning restore CS0618
+
+		var url = builder.BuildUrl();
+
+		url.Should().StartWith("Products?");
+		url.Should().Contain("$filter=");
+		url.Should().Contain("$select=ID,Name,Price");
+		url.Should().Contain("$expand=Category");
+		url.Should().Contain("$orderby=Name");
+		url.Should().Contain("$skip=10");
+		url.Should().Contain("$top=5");
+		url.Should().Contain("$count=true");
+	}
+
+	/// <summary>
+	/// Tests that FluentODataQueryBuilder builds URL with key.
+	/// </summary>
+	[Fact]
+	public void FluentQueryBuilder_BuildsUrlWithIntKey()
+	{
+#pragma warning disable CS0618 // Type or member is obsolete
+		var builder = _client.For("Products").Key(123);
+#pragma warning restore CS0618
+
+		var url = builder.BuildUrl();
+		url.Should().Be("Products(123)");
+	}
+
+	/// <summary>
+	/// Tests that FluentODataQueryBuilder builds URL with string key.
+	/// </summary>
+	[Fact]
+	public void FluentQueryBuilder_BuildsUrlWithStringKey()
+	{
+#pragma warning disable CS0618 // Type or member is obsolete
+		var builder = _client.For("Products").Key("abc-123");
+#pragma warning restore CS0618
+
+		var url = builder.BuildUrl();
+		url.Should().Be("Products('abc-123')");
+	}
+
+	/// <summary>
+	/// Tests that FluentODataQueryBuilder builds URL with GUID key.
+	/// </summary>
+	[Fact]
+	public void FluentQueryBuilder_BuildsUrlWithGuidKey()
+	{
+		var guid = Guid.Parse("12345678-1234-1234-1234-123456789012");
+#pragma warning disable CS0618 // Type or member is obsolete
+		var builder = _client.For("Products").Key(guid);
+#pragma warning restore CS0618
+
+		var url = builder.BuildUrl();
+		url.Should().Be("Products(12345678-1234-1234-1234-123456789012)");
+	}
+
+	/// <summary>
+	/// Tests that FluentODataQueryBuilder OrderByDescending works.
+	/// </summary>
+	[Fact]
+	public void FluentQueryBuilder_OrderByDescending_BuildsCorrectUrl()
+	{
+#pragma warning disable CS0618 // Type or member is obsolete
+		var builder = _client.For("Products").OrderByDescending("Price");
+#pragma warning restore CS0618
+
+		var url = builder.BuildUrl();
+		url.Should().Contain("$orderby=Price desc");
+	}
+
+	/// <summary>
+	/// Tests that FluentODataQueryBuilder Search works.
+	/// </summary>
+	[Fact]
+	public void FluentQueryBuilder_Search_BuildsCorrectUrl()
+	{
+#pragma warning disable CS0618 // Type or member is obsolete
+		var builder = _client.For("Products").Search("widget");
+#pragma warning restore CS0618
+
+		var url = builder.BuildUrl();
+		url.Should().Contain("$search=");
+		url.Should().Contain("widget");
+	}
 
 	#endregion
 }

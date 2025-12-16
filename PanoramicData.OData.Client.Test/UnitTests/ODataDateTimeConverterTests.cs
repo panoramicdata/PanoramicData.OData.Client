@@ -76,7 +76,7 @@ public class ODataDateTimeConverterTests
 		var result = JsonSerializer.Deserialize<DateTime>(json, _options);
 
 		// Assert
-		result.Should().Be(default(DateTime));
+		result.Should().Be(default);
 	}
 
 	/// <summary>
@@ -92,7 +92,7 @@ public class ODataDateTimeConverterTests
 		var result = JsonSerializer.Deserialize<DateTime>(json, _options);
 
 		// Assert
-		result.Should().Be(default(DateTime));
+		result.Should().Be(default);
 	}
 
 	/// <summary>

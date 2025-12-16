@@ -24,18 +24,24 @@ public partial class ODataClient
 	}
 
 	/// <summary>
-	/// Creates a dynamic query builder for the specified entity set.
+	/// Creates a fluent query builder for the specified entity set that supports legacy-style execution.
 	/// </summary>
 	/// <param name="entitySetName">The name of the entity set.</param>
-	/// <returns>A dynamic query builder.</returns>
+	/// <returns>A fluent query builder with execution methods.</returns>
 	/// <remarks>
-	/// This method is provided for backward compatibility.
-	/// For new code, use <c>For&lt;T&gt;(entitySetName)</c> with a strongly-typed entity,
-	/// or use <c>For&lt;Dictionary&lt;string, object?&gt;&gt;(entitySetName)</c> for dynamic scenarios.
+	/// <para>This method provides backward compatibility with Simple.OData.Client's fluent API pattern.</para>
+	/// <para><b>New API pattern (recommended):</b></para>
+	/// <code>
+	/// // Typed approach (recommended):
+	/// var query = client.For&lt;Incident&gt;("incidents").Top(10);
+	/// var response = await client.GetAsync(query, cancellationToken);
+	/// var incidents = response.Value;
+	/// </code>
 	/// </remarks>
-	[Obsolete("Use For<T>(entitySetName) with a typed entity, or For<Dictionary<string, object?>>(entitySetName) for dynamic scenarios.")]
-	public ODataQueryBuilder<Dictionary<string, object?>> For(string entitySetName)
-		=> new(entitySetName, _logger);
+	[Obsolete("Use For<T>(entitySetName) with a typed entity for better type safety. " +
+		"Example: var query = client.For<Incident>(\"incidents\").Top(10); var response = await client.GetAsync(query, ct);")]
+	public FluentODataQueryBuilder For(string entitySetName)
+		=> new(this, entitySetName, _logger);
 
 	/// <summary>
 	/// Finds entries matching the specified query and returns them as dictionaries.
@@ -49,7 +55,7 @@ public partial class ODataClient
 	/// or use <see cref="GetRawAsync(string, IReadOnlyDictionary{string, string}?, CancellationToken)"/>
 	/// and parse the JSON yourself for full control.
 	/// </remarks>
-	[Obsolete("Use GetAsync<T>(query, cancellationToken) with a typed entity, or GetRawAsync(url, cancellationToken) for raw JSON access.")]
+	[Obsolete("Use For<T>().GetAsync() with a typed entity. Example: var response = await client.For<Product>().Top(10).GetAsync(ct);")]
 	public async Task<IEnumerable<IDictionary<string, object?>>> FindEntriesAsync(
 		string query,
 		CancellationToken cancellationToken)
@@ -69,7 +75,7 @@ public partial class ODataClient
 	/// For new code, use <see cref="GetByKeyAsync{T, TKey}(TKey, ODataQueryBuilder{T}?, CancellationToken)"/>
 	/// or <see cref="GetFirstOrDefaultAsync{T}(ODataQueryBuilder{T}, CancellationToken)"/> with a typed entity.
 	/// </remarks>
-	[Obsolete("Use GetByKeyAsync<T, TKey>(key, cancellationToken) or GetFirstOrDefaultAsync<T>(query, cancellationToken) with a typed entity.")]
+	[Obsolete("Use For<T>().Key(id).GetEntryAsync() or client.GetByKeyAsync<T, TKey>(key, ct) with a typed entity.")]
 	public async Task<IDictionary<string, object?>?> FindEntryAsync(
 		string query,
 		CancellationToken cancellationToken)
@@ -102,6 +108,120 @@ public partial class ODataClient
 		var jsonDocument = JsonDocument.Parse(content);
 
 		return new ODataRawResponse(jsonDocument);
+	}
+
+	/// <summary>
+	/// Executes a query built by a FluentODataQueryBuilder and returns results as dictionaries.
+	/// </summary>
+	internal async Task<ODataResponse<Dictionary<string, object?>>> GetFluentAsync(
+		FluentODataQueryBuilder query,
+		CancellationToken cancellationToken)
+	{
+		var url = query.BuildUrl();
+		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
+		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+
+		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+		using var doc = JsonDocument.Parse(content);
+		var result = new ODataResponse<Dictionary<string, object?>>();
+
+		// Parse value array
+		if (doc.RootElement.TryGetProperty("value", out var valueElement))
+		{
+			result.Value = [];
+			foreach (var item in valueElement.EnumerateArray())
+			{
+				result.Value.Add(LegacyJsonElementToDictionary(item));
+			}
+		}
+
+		// Parse count
+		if (doc.RootElement.TryGetProperty("@odata.count", out var countElement))
+		{
+			result.Count = countElement.GetInt64();
+		}
+
+		// Parse nextLink
+		if (doc.RootElement.TryGetProperty("@odata.nextLink", out var nextLinkElement))
+		{
+			result.NextLink = nextLinkElement.GetString();
+		}
+
+		return result;
+	}
+
+	/// <summary>
+	/// Executes a query built by a FluentODataQueryBuilder and returns all pages as dictionaries.
+	/// </summary>
+	internal async Task<ODataResponse<Dictionary<string, object?>>> GetAllFluentAsync(
+		FluentODataQueryBuilder query,
+		CancellationToken cancellationToken)
+	{
+		var allResults = new ODataResponse<Dictionary<string, object?>>();
+		var url = query.BuildUrl();
+
+		do
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+
+			var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
+			var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+			await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+
+			var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+			using var doc = JsonDocument.Parse(content);
+
+			// Parse value array
+			if (doc.RootElement.TryGetProperty("value", out var valueElement))
+			{
+				foreach (var item in valueElement.EnumerateArray())
+				{
+					allResults.Value.Add(LegacyJsonElementToDictionary(item));
+				}
+			}
+
+			// Parse count (only from first page)
+			if (!allResults.Count.HasValue && doc.RootElement.TryGetProperty("@odata.count", out var countElement))
+			{
+				allResults.Count = countElement.GetInt64();
+			}
+
+			// Parse nextLink
+			url = doc.RootElement.TryGetProperty("@odata.nextLink", out var nextLinkElement)
+				? nextLinkElement.GetString()
+				: null;
+		}
+		while (!string.IsNullOrEmpty(url));
+
+		return allResults;
+	}
+
+	/// <summary>
+	/// Gets a single entry by URL and returns it as a dictionary.
+	/// </summary>
+	internal async Task<Dictionary<string, object?>?> GetEntryFluentAsync(
+		string url,
+		IReadOnlyDictionary<string, string>? headers,
+		CancellationToken cancellationToken)
+	{
+		var request = CreateRequest(HttpMethod.Get, url, headers);
+		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+
+		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+		using var doc = JsonDocument.Parse(content);
+
+		// Single entity response
+		if (doc.RootElement.ValueKind == JsonValueKind.Object)
+		{
+			return LegacyJsonElementToDictionary(doc.RootElement);
+		}
+
+		return null;
 	}
 }
 
@@ -172,7 +292,10 @@ public class ODataRawResponse(JsonDocument document) : IDisposable
 		return null;
 	}
 
-	private static Dictionary<string, object?> JsonElementToDictionary(JsonElement element)
+	/// <summary>
+	/// Converts a JsonElement to a dictionary.
+	/// </summary>
+	internal static Dictionary<string, object?> JsonElementToDictionary(JsonElement element)
 	{
 		var dict = new Dictionary<string, object?>();
 
