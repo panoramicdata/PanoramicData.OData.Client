@@ -163,6 +163,205 @@ public class ODataOpenTypeTests
 		entity.HasDynamicProperty("NonExistent").Should().BeFalse();
 	}
 
+	[Fact]
+	public void OpenType_GetDynamicLong_ShouldParseLong()
+	{
+		// Arrange
+		var json = """{ "Id": 1, "Name": "Test", "BigNumber": 9999999999999 }""";
+
+		// Act
+		var entity = JsonSerializer.Deserialize<TestOpenEntity>(json)!;
+		var value = entity.GetDynamicLong("BigNumber");
+
+		// Assert
+		value.Should().HaveValue();
+		value!.Value.Should().Be(9999999999999L);
+	}
+
+	[Fact]
+	public void OpenType_GetDynamicLong_NonNumber_ReturnsNull()
+	{
+		// Arrange
+		var json = """{ "Id": 1, "Name": "Test", "Text": "not a number" }""";
+
+		// Act
+		var entity = JsonSerializer.Deserialize<TestOpenEntity>(json)!;
+		var value = entity.GetDynamicLong("Text");
+
+		// Assert
+		value.Should().BeNull();
+	}
+
+	[Fact]
+	public void OpenType_GetDynamicDouble_ShouldParseDouble()
+	{
+		// Arrange
+		var json = """{ "Id": 1, "Name": "Test", "Rate": 3.14159 }""";
+
+		// Act
+		var entity = JsonSerializer.Deserialize<TestOpenEntity>(json)!;
+		var value = entity.GetDynamicDouble("Rate");
+
+		// Assert
+		value.Should().HaveValue();
+		value!.Value.Should().BeApproximately(3.14159, 0.00001);
+	}
+
+	[Fact]
+	public void OpenType_GetDynamicDouble_NonNumber_ReturnsNull()
+	{
+		// Arrange
+		var json = """{ "Id": 1, "Name": "Test", "Text": "not a number" }""";
+
+		// Act
+		var entity = JsonSerializer.Deserialize<TestOpenEntity>(json)!;
+		var value = entity.GetDynamicDouble("Text");
+
+		// Assert
+		value.Should().BeNull();
+	}
+
+	[Fact]
+	public void OpenType_GetDynamicDateTimeOffset_ShouldParse()
+	{
+		// Arrange
+		var json = """{ "Id": 1, "Name": "Test", "ModifiedAt": "2024-01-15T10:30:00+02:00" }""";
+
+		// Act
+		var entity = JsonSerializer.Deserialize<TestOpenEntity>(json)!;
+		var value = entity.GetDynamicDateTimeOffset("ModifiedAt");
+
+		// Assert
+		value.Should().HaveValue();
+		value!.Value.Year.Should().Be(2024);
+		value.Value.Month.Should().Be(1);
+		value.Value.Day.Should().Be(15);
+	}
+
+	[Fact]
+	public void OpenType_GetDynamicDateTimeOffset_Invalid_ReturnsNull()
+	{
+		// Arrange
+		var json = """{ "Id": 1, "Name": "Test", "Number": 123 }""";
+
+		// Act
+		var entity = JsonSerializer.Deserialize<TestOpenEntity>(json)!;
+		var value = entity.GetDynamicDateTimeOffset("Number");
+
+		// Assert
+		value.Should().BeNull();
+	}
+
+	[Fact]
+	public void OpenType_GetDynamicBool_False_ReturnsFalse()
+	{
+		// Arrange
+		var json = """{ "Id": 1, "Name": "Test", "IsActive": false }""";
+
+		// Act
+		var entity = JsonSerializer.Deserialize<TestOpenEntity>(json)!;
+		var value = entity.GetDynamicBool("IsActive");
+
+		// Assert
+		value.Should().HaveValue();
+		value!.Value.Should().BeFalse();
+	}
+
+	[Fact]
+	public void OpenType_GetDynamicBool_NonBool_ReturnsNull()
+	{
+		// Arrange
+		var json = """{ "Id": 1, "Name": "Test", "Number": 1 }""";
+
+		// Act
+		var entity = JsonSerializer.Deserialize<TestOpenEntity>(json)!;
+		var value = entity.GetDynamicBool("Number");
+
+		// Assert
+		value.Should().BeNull();
+	}
+
+	[Fact]
+	public void OpenType_GetDynamicInt_NonNumber_ReturnsNull()
+	{
+		// Arrange
+		var json = """{ "Id": 1, "Name": "Test", "Text": "not a number" }""";
+
+		// Act
+		var entity = JsonSerializer.Deserialize<TestOpenEntity>(json)!;
+		var value = entity.GetDynamicInt("Text");
+
+		// Assert
+		value.Should().BeNull();
+	}
+
+	[Fact]
+	public void OpenType_GetDynamicDateTime_Invalid_ReturnsNull()
+	{
+		// Arrange
+		var json = """{ "Id": 1, "Name": "Test", "Number": 123 }""";
+
+		// Act
+		var entity = JsonSerializer.Deserialize<TestOpenEntity>(json)!;
+		var value = entity.GetDynamicDateTime("Number");
+
+		// Assert
+		value.Should().BeNull();
+	}
+
+	[Fact]
+	public void OpenType_GetDynamicGuid_Invalid_ReturnsNull()
+	{
+		// Arrange
+		var json = """{ "Id": 1, "Name": "Test", "Number": 123 }""";
+
+		// Act
+		var entity = JsonSerializer.Deserialize<TestOpenEntity>(json)!;
+		var value = entity.GetDynamicGuid("Number");
+
+		// Assert
+		value.Should().BeNull();
+	}
+
+	[Fact]
+	public void OpenType_GetDynamicProperty_NotFound_ReturnsDefault()
+	{
+		// Arrange
+		var entity = new TestOpenEntity { Id = 1, Name = "Test" };
+
+		// Act
+		var value = entity.GetDynamicProperty<TestAddress>("NonExistent");
+
+		// Assert
+		value.Should().BeNull();
+	}
+
+	[Fact]
+	public void OpenType_RemoveDynamicProperty_NotExists_ReturnsFalse()
+	{
+		// Arrange
+		var entity = new TestOpenEntity { Id = 1, Name = "Test" };
+
+		// Act
+		var result = entity.RemoveDynamicProperty("NonExistent");
+
+		// Assert
+		result.Should().BeFalse();
+	}
+
+	[Fact]
+	public void OpenType_GetDynamicPropertyNames_Empty_ReturnsEmpty()
+	{
+		// Arrange
+		var entity = new TestOpenEntity { Id = 1, Name = "Test" };
+
+		// Act
+		var names = entity.GetDynamicPropertyNames().ToList();
+
+		// Assert
+		names.Should().BeEmpty();
+	}
+
 	// Test entity that inherits from ODataOpenType
 	public class TestOpenEntity : ODataOpenType
 	{

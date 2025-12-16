@@ -46,7 +46,7 @@ public partial class ODataClient
 	/// <remarks>
 	/// This method is provided for backward compatibility.
 	/// For new code, use <see cref="GetAsync{T}(ODataQueryBuilder{T}, CancellationToken)"/> with a typed entity,
-	/// or use <see cref="GetRawAsync(string, IReadOnlyDictionary{string, string}?, CancellationToken)"/> 
+	/// or use <see cref="GetRawAsync(string, IReadOnlyDictionary{string, string}?, CancellationToken)"/>
 	/// and parse the JSON yourself for full control.
 	/// </remarks>
 	[Obsolete("Use GetAsync<T>(query, cancellationToken) with a typed entity, or GetRawAsync(url, cancellationToken) for raw JSON access.")]
@@ -66,7 +66,7 @@ public partial class ODataClient
 	/// <returns>A dictionary representing the entity, or null if not found.</returns>
 	/// <remarks>
 	/// This method is provided for backward compatibility.
-	/// For new code, use <see cref="GetByKeyAsync{T, TKey}(TKey, ODataQueryBuilder{T}?, CancellationToken)"/> 
+	/// For new code, use <see cref="GetByKeyAsync{T, TKey}(TKey, ODataQueryBuilder{T}?, CancellationToken)"/>
 	/// or <see cref="GetFirstOrDefaultAsync{T}(ODataQueryBuilder{T}, CancellationToken)"/> with a typed entity.
 	/// </remarks>
 	[Obsolete("Use GetByKeyAsync<T, TKey>(key, cancellationToken) or GetFirstOrDefaultAsync<T>(query, cancellationToken) with a typed entity.")]
@@ -112,25 +112,19 @@ public partial class ODataClient
 /// This class is provided for backward compatibility with SimpleODataClient.
 /// For new code, use <see cref="JsonDocument"/> directly via <see cref="ODataClient.GetRawAsync"/>.
 /// </remarks>
+/// <remarks>
+/// Initializes a new instance of the <see cref="ODataRawResponse"/> class.
+/// </remarks>
+/// <param name="document">The JSON document.</param>
 [Obsolete("Use JsonDocument from GetRawAsync() for new code.")]
-public class ODataRawResponse : IDisposable
+public class ODataRawResponse(JsonDocument document) : IDisposable
 {
-	private readonly JsonDocument _document;
 	private bool _disposed;
-
-	/// <summary>
-	/// Initializes a new instance of the <see cref="ODataRawResponse"/> class.
-	/// </summary>
-	/// <param name="document">The JSON document.</param>
-	public ODataRawResponse(JsonDocument document)
-	{
-		_document = document;
-	}
 
 	/// <summary>
 	/// Gets the raw JSON document.
 	/// </summary>
-	public JsonDocument Document => _document;
+	public JsonDocument Document => document;
 
 	/// <summary>
 	/// Gets the entries from the response as dictionaries.
@@ -138,7 +132,7 @@ public class ODataRawResponse : IDisposable
 	/// <returns>A collection of dictionaries representing the entities.</returns>
 	public IEnumerable<IDictionary<string, object?>> GetEntries()
 	{
-		if (_document.RootElement.TryGetProperty("value", out var valueElement) && 
+		if (document.RootElement.TryGetProperty("value", out var valueElement) &&
 			valueElement.ValueKind == JsonValueKind.Array)
 		{
 			foreach (var item in valueElement.EnumerateArray())
@@ -155,7 +149,7 @@ public class ODataRawResponse : IDisposable
 	public IDictionary<string, object?>? GetEntry()
 	{
 		// Check if it's a collection response
-		if (_document.RootElement.TryGetProperty("value", out var valueElement))
+		if (document.RootElement.TryGetProperty("value", out var valueElement))
 		{
 			if (valueElement.ValueKind == JsonValueKind.Array)
 			{
@@ -170,9 +164,9 @@ public class ODataRawResponse : IDisposable
 		}
 
 		// Single entity response
-		if (_document.RootElement.ValueKind == JsonValueKind.Object)
+		if (document.RootElement.ValueKind == JsonValueKind.Object)
 		{
-			return JsonElementToDictionary(_document.RootElement);
+			return JsonElementToDictionary(document.RootElement);
 		}
 
 		return null;
@@ -190,24 +184,21 @@ public class ODataRawResponse : IDisposable
 		return dict;
 	}
 
-	private static object? JsonElementToObject(JsonElement element)
+	private static object? JsonElementToObject(JsonElement element) => element.ValueKind switch
 	{
-		return element.ValueKind switch
-		{
-			JsonValueKind.Null => null,
-			JsonValueKind.True => true,
-			JsonValueKind.False => false,
-			JsonValueKind.Number when element.TryGetInt64(out var l) => l,
-			JsonValueKind.Number when element.TryGetDouble(out var d) => d,
-			JsonValueKind.Number => element.GetDecimal(),
-			JsonValueKind.String when element.TryGetDateTime(out var dt) => dt,
-			JsonValueKind.String when element.TryGetGuid(out var g) => g,
-			JsonValueKind.String => element.GetString(),
-			JsonValueKind.Array => element.EnumerateArray().Select(JsonElementToObject).ToList(),
-			JsonValueKind.Object => JsonElementToDictionary(element),
-			_ => element.GetRawText()
-		};
-	}
+		JsonValueKind.Null => null,
+		JsonValueKind.True => true,
+		JsonValueKind.False => false,
+		JsonValueKind.Number when element.TryGetInt64(out var l) => l,
+		JsonValueKind.Number when element.TryGetDouble(out var d) => d,
+		JsonValueKind.Number => element.GetDecimal(),
+		JsonValueKind.String when element.TryGetDateTime(out var dt) => dt,
+		JsonValueKind.String when element.TryGetGuid(out var g) => g,
+		JsonValueKind.String => element.GetString(),
+		JsonValueKind.Array => element.EnumerateArray().Select(JsonElementToObject).ToList(),
+		JsonValueKind.Object => JsonElementToDictionary(element),
+		_ => element.GetRawText()
+	};
 
 	/// <summary>
 	/// Releases the resources used by this instance.
@@ -216,7 +207,7 @@ public class ODataRawResponse : IDisposable
 	{
 		if (!_disposed)
 		{
-			_document.Dispose();
+			document.Dispose();
 			_disposed = true;
 		}
 

@@ -62,6 +62,11 @@ public abstract class ODataOpenType
 			return null;
 		}
 
+		if (element.ValueKind != JsonValueKind.Number)
+		{
+			return null;
+		}
+
 		if (element.TryGetInt32(out var value))
 		{
 			return value;
@@ -82,6 +87,11 @@ public abstract class ODataOpenType
 			return null;
 		}
 
+		if (element.ValueKind != JsonValueKind.Number)
+		{
+			return null;
+		}
+
 		if (element.TryGetInt64(out var value))
 		{
 			return value;
@@ -98,6 +108,11 @@ public abstract class ODataOpenType
 	public double? GetDynamicDouble(string propertyName)
 	{
 		if (!DynamicProperties.TryGetValue(propertyName, out var element))
+		{
+			return null;
+		}
+
+		if (element.ValueKind != JsonValueKind.Number)
 		{
 			return null;
 		}
@@ -142,6 +157,11 @@ public abstract class ODataOpenType
 			return null;
 		}
 
+		if (element.ValueKind != JsonValueKind.String)
+		{
+			return null;
+		}
+
 		if (element.TryGetDateTime(out var value))
 		{
 			return value;
@@ -162,6 +182,11 @@ public abstract class ODataOpenType
 			return null;
 		}
 
+		if (element.ValueKind != JsonValueKind.String)
+		{
+			return null;
+		}
+
 		if (element.TryGetDateTimeOffset(out var value))
 		{
 			return value;
@@ -178,6 +203,11 @@ public abstract class ODataOpenType
 	public Guid? GetDynamicGuid(string propertyName)
 	{
 		if (!DynamicProperties.TryGetValue(propertyName, out var element))
+		{
+			return null;
+		}
+
+		if (element.ValueKind != JsonValueKind.String)
 		{
 			return null;
 		}
