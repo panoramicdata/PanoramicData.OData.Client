@@ -23,7 +23,8 @@ public class QueryBuilderCollectionLambdaTests
 			.Filter("Emails/any(e: e eq 'john@example.com')")
 			.BuildUrl();
 
-		url.Should().Contain("Emails%2Fany(e%3A");
+		// URL encoding: / becomes %2F, ( becomes %28, : becomes %3A
+		url.Should().Contain("Emails%2Fany%28e%3A");
 	}
 
 	/// <summary>
@@ -37,7 +38,7 @@ public class QueryBuilderCollectionLambdaTests
 			.Filter("Emails/any()")
 			.BuildUrl();
 
-		url.Should().Contain("Emails%2Fany()");
+		url.Should().Contain("Emails%2Fany%28%29");
 	}
 
 	/// <summary>
@@ -51,7 +52,7 @@ public class QueryBuilderCollectionLambdaTests
 			.Filter("Emails/all(e: endswith(e, '@example.com'))")
 			.BuildUrl();
 
-		url.Should().Contain("Emails%2Fall(e%3A");
+		url.Should().Contain("Emails%2Fall%28e%3A");
 	}
 
 	/// <summary>
@@ -65,7 +66,7 @@ public class QueryBuilderCollectionLambdaTests
 			.Filter("Friends/any(f: f/FirstName eq 'John')")
 			.BuildUrl();
 
-		url.Should().Contain("Friends%2Fany(f%3A");
+		url.Should().Contain("Friends%2Fany%28f%3A");
 	}
 
 	/// <summary>
@@ -79,7 +80,7 @@ public class QueryBuilderCollectionLambdaTests
 			.Filter("Trips/any(t: t/Budget gt 1000 and t/Name eq 'Paris Trip')")
 			.BuildUrl();
 
-		url.Should().Contain("Trips%2Fany(t%3A");
+		url.Should().Contain("Trips%2Fany%28t%3A");
 	}
 
 	#endregion
@@ -97,7 +98,7 @@ public class QueryBuilderCollectionLambdaTests
 			.Filter("cast(Price, 'Edm.Int32') gt 100")
 			.BuildUrl();
 
-		url.Should().Contain("cast(Price");
+		url.Should().Contain("cast%28Price");
 	}
 
 	/// <summary>
@@ -111,7 +112,7 @@ public class QueryBuilderCollectionLambdaTests
 			.Filter("isof(HomeAddress, 'Microsoft.OData.SampleService.Models.TripPin.EventLocation')")
 			.BuildUrl();
 
-		url.Should().Contain("isof(HomeAddress");
+		url.Should().Contain("isof%28HomeAddress");
 	}
 
 	/// <summary>
@@ -207,7 +208,8 @@ public class QueryBuilderCollectionLambdaTests
 			.Filter("tolower(FirstName) eq tolower('john')")
 			.BuildUrl();
 
-		url.Should().Contain("tolower(FirstName)");
+		// URL encoding: ( becomes %28, ) becomes %29
+		url.Should().Contain("tolower%28FirstName%29");
 	}
 
 	#endregion

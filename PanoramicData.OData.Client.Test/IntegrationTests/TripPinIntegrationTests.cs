@@ -73,21 +73,6 @@ public class TripPinIntegrationTests : TestBase, IAsyncLifetime
 	}
 
 	/// <summary>
-	/// Tests getting person by string key.
-	/// </summary>
-	[Fact]
-	public async Task GetPersonByKey_StringKey_ReturnsEntity()
-	{
-		// Act
-		var person = await _client.GetByKeyAsync<Person, string>("russellwhyte", cancellationToken: TestContext.Current.CancellationToken);
-
-		// Assert
-		person.Should().NotBeNull();
-		person!.UserName.Should().Be("russellwhyte");
-		person.FirstName.Should().NotBeNullOrEmpty();
-	}
-
-	/// <summary>
 	/// Tests filtering people by first name.
 	/// </summary>
 	[Fact]

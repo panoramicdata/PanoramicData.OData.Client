@@ -181,7 +181,8 @@ public class QueryBuilderQueryOptionsTests
 			.OrderBy("Price desc")
 			.BuildUrl();
 
-		url.Should().Contain("$orderby=Price%20desc");
+		// $orderby is NOT URL-encoded (unlike $filter)
+		url.Should().Contain("$orderby=Price desc");
 	}
 
 	/// <summary>
@@ -207,7 +208,7 @@ public class QueryBuilderQueryOptionsTests
 			.OrderBy(p => p.Price, descending: true)
 			.BuildUrl();
 
-		url.Should().Contain("$orderby=Price%20desc");
+		url.Should().Contain("$orderby=Price desc");
 	}
 
 	/// <summary>
@@ -221,7 +222,7 @@ public class QueryBuilderQueryOptionsTests
 			.OrderBy("Price desc")
 			.BuildUrl();
 
-		url.Should().Contain("$orderby=Name,Price%20desc");
+		url.Should().Contain("$orderby=Name,Price desc");
 	}
 
 	#endregion
@@ -556,7 +557,7 @@ public class QueryBuilderQueryOptionsTests
 		url.Should().Contain("Products?");
 		url.Should().Contain("$filter=");
 		url.Should().Contain("$select=ID,Name,Price");
-		url.Should().Contain("$orderby=Price%20desc");
+		url.Should().Contain("$orderby=Price desc");
 		url.Should().Contain("$skip=10");
 		url.Should().Contain("$top=5");
 		url.Should().Contain("$count=true");

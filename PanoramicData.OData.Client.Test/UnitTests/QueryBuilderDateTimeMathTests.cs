@@ -23,7 +23,8 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("year(ReleaseDate) eq 2024")
 			.BuildUrl();
 
-		url.Should().Contain("year(ReleaseDate)");
+		// URL encoding: ( becomes %28, ) becomes %29
+		url.Should().Contain("year%28ReleaseDate%29");
 	}
 
 	/// <summary>
@@ -37,7 +38,7 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("month(ReleaseDate) eq 6")
 			.BuildUrl();
 
-		url.Should().Contain("month(ReleaseDate)");
+		url.Should().Contain("month%28ReleaseDate%29");
 	}
 
 	/// <summary>
@@ -51,7 +52,7 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("day(ReleaseDate) eq 15")
 			.BuildUrl();
 
-		url.Should().Contain("day(ReleaseDate)");
+		url.Should().Contain("day%28ReleaseDate%29");
 	}
 
 	/// <summary>
@@ -65,7 +66,7 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("hour(ReleaseDate) eq 14")
 			.BuildUrl();
 
-		url.Should().Contain("hour(ReleaseDate)");
+		url.Should().Contain("hour%28ReleaseDate%29");
 	}
 
 	/// <summary>
@@ -79,7 +80,7 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("minute(ReleaseDate) eq 30")
 			.BuildUrl();
 
-		url.Should().Contain("minute(ReleaseDate)");
+		url.Should().Contain("minute%28ReleaseDate%29");
 	}
 
 	/// <summary>
@@ -93,7 +94,7 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("second(ReleaseDate) eq 0")
 			.BuildUrl();
 
-		url.Should().Contain("second(ReleaseDate)");
+		url.Should().Contain("second%28ReleaseDate%29");
 	}
 
 	/// <summary>
@@ -107,7 +108,7 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("fractionalseconds(ReleaseDate) lt 0.5")
 			.BuildUrl();
 
-		url.Should().Contain("fractionalseconds(ReleaseDate)");
+		url.Should().Contain("fractionalseconds%28ReleaseDate%29");
 	}
 
 	/// <summary>
@@ -121,7 +122,7 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("date(ReleaseDate) eq 2024-06-15")
 			.BuildUrl();
 
-		url.Should().Contain("date(ReleaseDate)");
+		url.Should().Contain("date%28ReleaseDate%29");
 	}
 
 	/// <summary>
@@ -135,7 +136,7 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("time(ReleaseDate) eq 14:30:00")
 			.BuildUrl();
 
-		url.Should().Contain("time(ReleaseDate)");
+		url.Should().Contain("time%28ReleaseDate%29");
 	}
 
 	/// <summary>
@@ -149,7 +150,7 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("ReleaseDate lt now()")
 			.BuildUrl();
 
-		url.Should().Contain("now()");
+		url.Should().Contain("now%28%29");
 	}
 
 	/// <summary>
@@ -163,7 +164,7 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("ReleaseDate ne mindatetime()")
 			.BuildUrl();
 
-		url.Should().Contain("mindatetime()");
+		url.Should().Contain("mindatetime%28%29");
 	}
 
 	/// <summary>
@@ -177,7 +178,7 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("ReleaseDate ne maxdatetime()")
 			.BuildUrl();
 
-		url.Should().Contain("maxdatetime()");
+		url.Should().Contain("maxdatetime%28%29");
 	}
 
 	/// <summary>
@@ -191,7 +192,7 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("totaloffsetminutes(ReleaseDate) eq 0")
 			.BuildUrl();
 
-		url.Should().Contain("totaloffsetminutes(ReleaseDate)");
+		url.Should().Contain("totaloffsetminutes%28ReleaseDate%29");
 	}
 
 	#endregion
@@ -209,7 +210,7 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("round(Price) eq 100")
 			.BuildUrl();
 
-		url.Should().Contain("round(Price)");
+		url.Should().Contain("round%28Price%29");
 	}
 
 	/// <summary>
@@ -223,7 +224,7 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("floor(Price) eq 99")
 			.BuildUrl();
 
-		url.Should().Contain("floor(Price)");
+		url.Should().Contain("floor%28Price%29");
 	}
 
 	/// <summary>
@@ -237,7 +238,7 @@ public class QueryBuilderDateTimeMathTests
 			.Filter("ceiling(Price) eq 100")
 			.BuildUrl();
 
-		url.Should().Contain("ceiling(Price)");
+		url.Should().Contain("ceiling%28Price%29");
 	}
 
 	#endregion

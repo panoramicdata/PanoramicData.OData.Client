@@ -106,12 +106,20 @@ public class ODataClient : IDisposable
 		var pageCount = 0;
 		do
 		{
+			// Check for cancellation at the start of each iteration
+			cancellationToken.ThrowIfCancellationRequested();
+
 			pageCount++;
 			_logger.LogDebug("GetAllAsync<{Type}> - Fetching page {Page}, URL: {Url}", typeof(T).Name, pageCount, url);
 
 			var response = await GetAsync<T>(url, query.CustomHeaders, cancellationToken).ConfigureAwait(false);
 			allResults.Value.AddRange(response.Value);
-			allResults.Count = response.Count;
+
+			// Only set count from first page (or if a later page has count and first didn't)
+			if (response.Count.HasValue && !allResults.Count.HasValue)
+			{
+				allResults.Count = response.Count;
+			}
 
 			_logger.LogDebug("GetAllAsync<{Type}> - Page {Page} returned {Count} items, total so far: {Total}",
 				typeof(T).Name, pageCount, response.Value.Count, allResults.Value.Count);
@@ -424,52 +432,15 @@ public class ODataClient : IDisposable
 
 		while (retryCount <= _options.RetryCount)
 		{
-			try
+			var result = await TrySendRequestAsync(request, retryCount, cancellationToken).ConfigureAwait(false);
+			if (result.ShouldReturn)
 			{
-				// Clone the request for retries (request can only be sent once)
-				var requestToSend = retryCount == 0 ? request : await CloneRequestAsync(request).ConfigureAwait(false);
-
-				_logger.LogDebug("SendWithRetryAsync - Sending {Method} request to {Url} (attempt {Attempt})",
-					requestToSend.Method, requestToSend.RequestUri, retryCount + 1);
-
-				lastResponse = await _httpClient.SendAsync(requestToSend, cancellationToken).ConfigureAwait(false);
-
-				_logger.LogDebug("SendWithRetryAsync - Received {StatusCode} from {Url}",
-					lastResponse.StatusCode, request.RequestUri);
-
-				// Don't retry on success or client errors (4xx)
-				if (lastResponse.IsSuccessStatusCode || (int)lastResponse.StatusCode < 500)
-				{
-					return lastResponse;
-				}
-
-				_logger.LogWarning(
-					"Request to {Url} failed with {StatusCode}, attempt {Attempt}/{MaxRetries}",
-					request.RequestUri,
-					lastResponse.StatusCode,
-					retryCount + 1,
-					_options.RetryCount + 1);
-			}
-			catch (HttpRequestException ex) when (retryCount < _options.RetryCount)
-			{
-				_logger.LogWarning(
-					ex,
-					"Request to {Url} failed with exception, attempt {Attempt}/{MaxRetries}",
-					request.RequestUri,
-					retryCount + 1,
-					_options.RetryCount + 1);
-			}
-			catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested && retryCount < _options.RetryCount)
-			{
-				_logger.LogWarning(
-					ex,
-					"Request to {Url} timed out, attempt {Attempt}/{MaxRetries}",
-					request.RequestUri,
-					retryCount + 1,
-					_options.RetryCount + 1);
+				return result.Response!;
 			}
 
+			lastResponse = result.Response;
 			retryCount++;
+
 			if (retryCount <= _options.RetryCount)
 			{
 				await Task.Delay(_options.RetryDelay, cancellationToken).ConfigureAwait(false);
@@ -478,6 +449,60 @@ public class ODataClient : IDisposable
 
 		return lastResponse ?? throw new ODataClientException("Request failed after all retries");
 	}
+
+	private async Task<(bool ShouldReturn, HttpResponseMessage? Response)> TrySendRequestAsync(
+		HttpRequestMessage request,
+		int retryCount,
+		CancellationToken cancellationToken)
+	{
+		try
+		{
+			var requestToSend = retryCount == 0 ? request : await CloneRequestAsync(request).ConfigureAwait(false);
+
+			_logger.LogDebug("SendWithRetryAsync - Sending {Method} request to {Url} (attempt {Attempt})",
+				requestToSend.Method, requestToSend.RequestUri, retryCount + 1);
+
+			var response = await _httpClient.SendAsync(requestToSend, cancellationToken).ConfigureAwait(false);
+
+			_logger.LogDebug("SendWithRetryAsync - Received {StatusCode} from {Url}",
+				response.StatusCode, request.RequestUri);
+
+			if (response.IsSuccessStatusCode || (int)response.StatusCode < 500)
+			{
+				return (true, response);
+			}
+
+			LogRetryWarning(request, response.StatusCode, retryCount);
+			return (false, response);
+		}
+		catch (HttpRequestException ex) when (retryCount < _options.RetryCount)
+		{
+			LogRetryException(request, ex, retryCount, "failed with exception");
+		}
+		catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested && retryCount < _options.RetryCount)
+		{
+			LogRetryException(request, ex, retryCount, "timed out");
+		}
+
+		return (false, null);
+	}
+
+	private void LogRetryWarning(HttpRequestMessage request, HttpStatusCode statusCode, int retryCount) =>
+		_logger.LogWarning(
+			"Request to {Url} failed with {StatusCode}, attempt {Attempt}/{MaxRetries}",
+			request.RequestUri,
+			statusCode,
+			retryCount + 1,
+			_options.RetryCount + 1);
+
+	private void LogRetryException(HttpRequestMessage request, Exception ex, int retryCount, string reason) =>
+		_logger.LogWarning(
+			ex,
+			"Request to {Url} {Reason}, attempt {Attempt}/{MaxRetries}",
+			request.RequestUri,
+			reason,
+			retryCount + 1,
+			_options.RetryCount + 1);
 
 	private static async Task<HttpRequestMessage> CloneRequestAsync(HttpRequestMessage request)
 	{

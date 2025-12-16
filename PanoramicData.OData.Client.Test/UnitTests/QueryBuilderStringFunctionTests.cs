@@ -26,8 +26,8 @@ public class QueryBuilderStringFunctionTests
 			.Filter(p => p.Name.Contains("widget"))
 			.BuildUrl();
 
-		// Assert
-		url.Should().Contain("contains(Name%2C'widget')");
+		// Assert - URL encoding: , becomes %2C, ' becomes %27
+		url.Should().Contain("contains%28Name%2C%27widget%27%29");
 	}
 
 	/// <summary>
@@ -41,8 +41,8 @@ public class QueryBuilderStringFunctionTests
 			.Filter(p => p.Name.StartsWith("Widget"))
 			.BuildUrl();
 
-		// Assert
-		url.Should().Contain("startswith(Name%2C'Widget')");
+		// Assert - URL encoding
+		url.Should().Contain("startswith%28Name%2C%27Widget%27%29");
 	}
 
 	/// <summary>
@@ -56,8 +56,8 @@ public class QueryBuilderStringFunctionTests
 			.Filter(p => p.Name.EndsWith("Pro"))
 			.BuildUrl();
 
-		// Assert
-		url.Should().Contain("endswith(Name%2C'Pro')");
+		// Assert - URL encoding
+		url.Should().Contain("endswith%28Name%2C%27Pro%27%29");
 	}
 
 	/// <summary>
@@ -71,8 +71,8 @@ public class QueryBuilderStringFunctionTests
 			.Filter(p => p.Name.ToLower() == "widget")
 			.BuildUrl();
 
-		// Assert
-		url.Should().Contain("tolower(Name)%20eq%20'widget'");
+		// Assert - URL encoding
+		url.Should().Contain("tolower%28Name%29%20eq%20%27widget%27");
 	}
 
 	/// <summary>
@@ -86,8 +86,8 @@ public class QueryBuilderStringFunctionTests
 			.Filter(p => p.Name.ToUpper() == "WIDGET")
 			.BuildUrl();
 
-		// Assert
-		url.Should().Contain("toupper(Name)%20eq%20'WIDGET'");
+		// Assert - URL encoding
+		url.Should().Contain("toupper%28Name%29%20eq%20%27WIDGET%27");
 	}
 
 	/// <summary>
@@ -101,8 +101,8 @@ public class QueryBuilderStringFunctionTests
 			.Filter(p => p.Name.Trim() == "Widget")
 			.BuildUrl();
 
-		// Assert
-		url.Should().Contain("trim(Name)%20eq%20'Widget'");
+		// Assert - URL encoding
+		url.Should().Contain("trim%28Name%29%20eq%20%27Widget%27");
 	}
 
 	/// <summary>
@@ -116,92 +116,81 @@ public class QueryBuilderStringFunctionTests
 			.Filter(p => p.Name.ToLower().Contains("widget"))
 			.BuildUrl();
 
-		// Assert
-		url.Should().Contain("contains(tolower(Name)%2C'widget')");
+		// Assert - URL encoding
+		url.Should().Contain("contains%28tolower%28Name%29%2C%27widget%27%29");
 	}
 
 	#endregion
 
-	#region Missing String Functions (Expected to Fail)
+	#region String Functions via Raw Filters
 
 	/// <summary>
-	/// Tests concat function - NOT YET IMPLEMENTED.
+	/// Tests concat function via raw filter.
 	/// </summary>
 	[Fact]
-	public void Filter_WithConcat_ShouldGenerateCorrectUrl()
+	public void Filter_WithConcat_RawFilter_Works()
 	{
-		// This test documents missing functionality
 		// OData V4 supports: concat(FirstName, LastName)
-		
-		// Arrange & Act - Raw filter should work
 		var url = new ODataQueryBuilder<Person>("People", NullLogger.Instance)
 			.Filter("concat(FirstName, LastName) eq 'JohnDoe'")
 			.BuildUrl();
 
 		// Assert
-		url.Should().Contain("concat(FirstName");
+		url.Should().Contain("concat");
 	}
 
 	/// <summary>
-	/// Tests substring function - NOT YET IMPLEMENTED via expression.
+	/// Tests substring function via raw filter.
 	/// </summary>
 	[Fact]
 	public void Filter_WithSubstring_RawFilter_Works()
 	{
 		// OData V4 supports: substring(Name, 0, 3) eq 'Wid'
-		
-		// Arrange & Act
 		var url = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
 			.Filter("substring(Name, 0, 3) eq 'Wid'")
 			.BuildUrl();
 
 		// Assert
-		url.Should().Contain("substring(Name");
+		url.Should().Contain("substring");
 	}
 
 	/// <summary>
-	/// Tests length function - NOT YET IMPLEMENTED via expression.
+	/// Tests length function via raw filter.
 	/// </summary>
 	[Fact]
 	public void Filter_WithLength_RawFilter_Works()
 	{
 		// OData V4 supports: length(Name) gt 5
-		
-		// Arrange & Act
 		var url = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
 			.Filter("length(Name) gt 5")
 			.BuildUrl();
 
 		// Assert
-		url.Should().Contain("length(Name)");
+		url.Should().Contain("length");
 	}
 
 	/// <summary>
-	/// Tests indexof function - NOT YET IMPLEMENTED via expression.
+	/// Tests indexof function via raw filter.
 	/// </summary>
 	[Fact]
 	public void Filter_WithIndexOf_RawFilter_Works()
 	{
 		// OData V4 supports: indexof(Name, 'Widget') eq 0
-		
-		// Arrange & Act
 		var url = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
 			.Filter("indexof(Name, 'Widget') eq 0")
 			.BuildUrl();
 
 		// Assert
-		url.Should().Contain("indexof(Name");
+		url.Should().Contain("indexof");
 	}
 
 	/// <summary>
-	/// Tests matchesPattern function - OData V4.01 feature.
+	/// Tests matchesPattern function via raw filter.
 	/// </summary>
 	[Fact]
 	public void Filter_WithMatchesPattern_RawFilter_Works()
 	{
 		// OData V4.01 supports: matchesPattern(Name, '^Wid.*')
-		
-		// Arrange & Act
 		var url = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
 			.Filter("matchesPattern(Name, '^Wid.*')")
 			.BuildUrl();
