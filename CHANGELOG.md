@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [vNext]
 
+## [10.0.43] - 2025-12-17
+
 ### Added
 - Add fluent execution methods (GetAsync, GetAllAsync, GetFirstOrDefaultAsync, GetSingleAsync, GetSingleOrDefaultAsync, GetCountAsync) directly on ODataQueryBuilder<T> for streamlined query execution
 - CODE_COVERAGE.md with comprehensive test coverage plan for full code coverage
@@ -54,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ETag-based optimistic concurrency
 - Comprehensive logging via `ILogger`
 - Fluent and typed query APIs
+
 
 
 
