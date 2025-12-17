@@ -29,25 +29,17 @@ public static class BenchmarkProgram
 	/// <summary>
 	/// Runs QueryBuilder benchmarks only.
 	/// </summary>
-	public static void RunQueryBuilderBenchmarks()
-	{
-		BenchmarkRunner.Run<QueryBuilderBenchmarks>(GetConfig());
-	}
+	public static void RunQueryBuilderBenchmarks() => BenchmarkRunner.Run<QueryBuilderBenchmarks>(GetConfig());
 
 	/// <summary>
 	/// Runs JSON Serialization benchmarks only.
 	/// </summary>
-	public static void RunJsonBenchmarks()
-	{
-		BenchmarkRunner.Run<JsonSerializationBenchmarks>(GetConfig());
-	}
+	public static void RunJsonBenchmarks() => BenchmarkRunner.Run<JsonSerializationBenchmarks>(GetConfig());
 
 	/// <summary>
 	/// Creates a configuration with memory diagnostics and profiling.
 	/// </summary>
-	private static ManualConfig GetConfig()
-	{
-		return ManualConfig.Create(DefaultConfig.Instance)
+	private static ManualConfig GetConfig() => ManualConfig.Create(DefaultConfig.Instance)
 			// Memory allocation tracking
 			.AddDiagnoser(MemoryDiagnoser.Default)
 			// Thread contention diagnostics (useful for async code)
@@ -59,7 +51,6 @@ public static class BenchmarkProgram
 			.AddJob(Job.ShortRun
 				.WithWarmupCount(3)
 				.WithIterationCount(5));
-	}
 
 	/// <summary>
 	/// Creates a detailed profiling configuration with ETW events (Windows only).

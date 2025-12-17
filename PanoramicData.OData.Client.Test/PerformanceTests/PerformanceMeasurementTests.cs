@@ -1,9 +1,9 @@
-using System.Diagnostics;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using PanoramicData.OData.Client.Test.Models;
+using System.Diagnostics;
 
-namespace PanoramicData.OData.Client.Test.UnitTests;
+namespace PanoramicData.OData.Client.Test.PerformanceTests;
 
 /// <summary>
 /// Performance measurement tests for identifying hotspots.
@@ -71,18 +71,18 @@ public class PerformanceMeasurementTests
 
 		// Verify basic operations are reasonably fast
 		rawFilterTime.Should().BeLessThan(baseline * 5, "Raw filter should not be >5x slower than baseline");
-		
+
 		// Expression operations are expected to be slower due to tree walking
 		// Just verify they complete (not regression test for absolute time)
-		expressionFilterTime.Should().BeGreaterThan(0);
-		capturedVarTime.Should().BeGreaterThan(0);
-		
+		expressionFilterTime.Should().BePositive();
+		capturedVarTime.Should().BePositive();
+
 		// Complex expressions should complete
-		complexExprTime.Should().BeGreaterThan(0);
-		orPrecedenceTime.Should().BeGreaterThan(0);
-		
+		complexExprTime.Should().BePositive();
+		orPrecedenceTime.Should().BePositive();
+
 		// Function with reflection should complete
-		functionTime.Should().BeGreaterThan(0);
+		functionTime.Should().BePositive();
 	}
 
 	/// <summary>
@@ -138,8 +138,8 @@ public class PerformanceMeasurementTests
 				.Function("Search", new { Term = "test", Max = 10 }).BuildUrl());
 
 		// Function calls should complete - we're documenting the overhead exists
-		functionTime.Should().BeGreaterThan(0);
-		
+		functionTime.Should().BePositive();
+
 		// Document: Functions are expected to be slower due to reflection
 		// This is acceptable for the flexibility they provide
 	}

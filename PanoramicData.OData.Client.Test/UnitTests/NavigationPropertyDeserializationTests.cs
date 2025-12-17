@@ -17,7 +17,7 @@ public class NavigationPropertyDeserializationTests : IDisposable
 	private readonly Mock<HttpMessageHandler> _mockHandler;
 	private readonly HttpClient _httpClient;
 	private readonly ODataClient _client;
-	private static readonly JsonSerializerOptions s_jsonOptions = new()
+	private static readonly JsonSerializerOptions _jsonOptions = new()
 	{
 		PropertyNameCaseInsensitive = true
 	};
@@ -295,7 +295,7 @@ public class NavigationPropertyDeserializationTests : IDisposable
 		""";
 
 		// Act
-		var reportJob = JsonSerializer.Deserialize<ReportJob>(json, s_jsonOptions);
+		var reportJob = JsonSerializer.Deserialize<ReportJob>(json, _jsonOptions);
 
 		// Assert
 		reportJob.Should().NotBeNull();
@@ -337,9 +337,7 @@ public class NavigationPropertyDeserializationTests : IDisposable
 		reportJob.ReportBatchJob.ReportScheduleId.Should().Be(123);
 	}
 
-	private void SetupMockResponse(string responseJson)
-	{
-		_mockHandler.Protected()
+	private void SetupMockResponse(string responseJson) => _mockHandler.Protected()
 			.Setup<Task<HttpResponseMessage>>(
 				"SendAsync",
 				ItExpr.IsAny<HttpRequestMessage>(),
@@ -348,5 +346,4 @@ public class NavigationPropertyDeserializationTests : IDisposable
 			{
 				Content = new StringContent(responseJson, System.Text.Encoding.UTF8, "application/json")
 			});
-	}
 }

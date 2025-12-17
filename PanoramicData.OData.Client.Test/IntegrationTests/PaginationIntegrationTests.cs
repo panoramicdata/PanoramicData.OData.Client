@@ -84,10 +84,8 @@ public class PaginationIntegrationTests(ODataClientFixture fixture) : TestBase, 
 		var query = fixture.Client.For<Product>("Products");
 
 		// Act & Assert
-		await Assert.ThrowsAsync<OperationCanceledException>(async () =>
-		{
-			await fixture.Client.GetAllAsync(query, cts.Token);
-		});
+		var act = async () => await fixture.Client.GetAllAsync(query, cts.Token);
+		await act.Should().ThrowAsync<OperationCanceledException>();
 	}
 
 	#endregion
