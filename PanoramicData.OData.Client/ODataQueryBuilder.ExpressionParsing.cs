@@ -9,12 +9,15 @@ namespace PanoramicData.OData.Client;
 /// </summary>
 public partial class ODataQueryBuilder<T> where T : class
 {
-	private static string ExpressionToODataFilter(Expression expression) => expression switch
+	private static string ExpressionToODataFilter(Expression expression) =>
+		ExpressionToODataFilter(expression, parentOperator: null);
+
+	private static string ExpressionToODataFilter(Expression expression, ExpressionType? parentOperator) => expression switch
 	{
-		BinaryExpression binary => ParseBinaryExpression(binary),
+		BinaryExpression binary => ParseBinaryExpression(binary, parentOperator),
 		MethodCallExpression methodCall => ParseMethodCallExpression(methodCall),
-		UnaryExpression unary when unary.NodeType == ExpressionType.Not => $"not ({ExpressionToODataFilter(unary.Operand)})",
-		UnaryExpression unary when unary.NodeType == ExpressionType.Convert => ExpressionToODataFilter(unary.Operand),
+		UnaryExpression unary when unary.NodeType == ExpressionType.Not => $"not ({ExpressionToODataFilter(unary.Operand, parentOperator)})",
+		UnaryExpression unary when unary.NodeType == ExpressionType.Convert => ExpressionToODataFilter(unary.Operand, parentOperator),
 		MemberExpression member when member.Type == typeof(bool) && !ShouldEvaluate(member) => GetMemberPath(member),
 		MemberExpression member when ShouldEvaluate(member) => FormatValue(EvaluateExpression(member)),
 		MemberExpression member => GetMemberPath(member),
@@ -50,10 +53,11 @@ public partial class ODataQueryBuilder<T> where T : class
 		return getter();
 	}
 
-	private static string ParseBinaryExpression(BinaryExpression binary)
+	private static string ParseBinaryExpression(BinaryExpression binary, ExpressionType? parentOperator)
 	{
-		var left = ExpressionToODataFilter(binary.Left);
-		var right = ExpressionToODataFilter(binary.Right);
+		// Pass the current operator as parent to child expressions
+		var left = ExpressionToODataFilter(binary.Left, binary.NodeType);
+		var right = ExpressionToODataFilter(binary.Right, binary.NodeType);
 
 		var op = binary.NodeType switch
 		{
@@ -68,7 +72,16 @@ public partial class ODataQueryBuilder<T> where T : class
 			_ => throw new NotSupportedException($"Binary operator {binary.NodeType} is not supported")
 		};
 
-		return $"{left} {op} {right}";
+		var result = $"{left} {op} {right}";
+
+		// Wrap OR expressions in parentheses when they are operands of AND
+		// This preserves correct operator precedence since AND has higher precedence than OR in OData
+		if (binary.NodeType == ExpressionType.OrElse && parentOperator == ExpressionType.AndAlso)
+		{
+			return $"({result})";
+		}
+
+		return result;
 	}
 
 	private static string ParseMethodCallExpression(MethodCallExpression methodCall)

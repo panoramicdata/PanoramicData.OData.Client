@@ -31,7 +31,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		}
 
 		var parameterName = predicateLambda.Parameters[0].Name ?? "x";
-		var predicateBody = ParseLambdaBody(predicateLambda.Body, predicateLambda.Parameters[0], parameterName);
+		var predicateBody = ParseLambdaBody(predicateLambda.Body, predicateLambda.Parameters[0], parameterName, parentOperator: null);
 
 		return $"{collectionPath}/{odataMethodName}({parameterName}: {predicateBody})";
 	}
@@ -80,22 +80,23 @@ public partial class ODataQueryBuilder<T> where T : class
 		_ => string.Empty
 	};
 
-	private static string ParseLambdaBody(Expression body, ParameterExpression lambdaParam, string odataParamName) => body switch
+	private static string ParseLambdaBody(Expression body, ParameterExpression lambdaParam, string odataParamName, ExpressionType? parentOperator) => body switch
 	{
-		BinaryExpression binary => ParseLambdaBinaryExpression(binary, lambdaParam, odataParamName),
+		BinaryExpression binary => ParseLambdaBinaryExpression(binary, lambdaParam, odataParamName, parentOperator),
 		MethodCallExpression methodCall => ParseLambdaMethodCall(methodCall, lambdaParam, odataParamName),
-		UnaryExpression u when u.NodeType == ExpressionType.Not => $"not ({ParseLambdaBody(u.Operand, lambdaParam, odataParamName)})",
-		UnaryExpression u when u.NodeType == ExpressionType.Convert => ParseLambdaBody(u.Operand, lambdaParam, odataParamName),
+		UnaryExpression u when u.NodeType == ExpressionType.Not => $"not ({ParseLambdaBody(u.Operand, lambdaParam, odataParamName, parentOperator)})",
+		UnaryExpression u when u.NodeType == ExpressionType.Convert => ParseLambdaBody(u.Operand, lambdaParam, odataParamName, parentOperator),
 		MemberExpression member => GetLambdaMemberPath(member, lambdaParam, odataParamName),
 		ConstantExpression constant => FormatValue(constant.Value),
 		ParameterExpression param when param == lambdaParam => odataParamName,
 		_ => throw new NotSupportedException($"Expression type {body.NodeType} is not supported in lambda body")
 	};
 
-	private static string ParseLambdaBinaryExpression(BinaryExpression binary, ParameterExpression lambdaParam, string odataParamName)
+	private static string ParseLambdaBinaryExpression(BinaryExpression binary, ParameterExpression lambdaParam, string odataParamName, ExpressionType? parentOperator)
 	{
-		var left = ParseLambdaBody(binary.Left, lambdaParam, odataParamName);
-		var right = ParseLambdaBody(binary.Right, lambdaParam, odataParamName);
+		// Pass the current operator as parent to child expressions
+		var left = ParseLambdaBody(binary.Left, lambdaParam, odataParamName, binary.NodeType);
+		var right = ParseLambdaBody(binary.Right, lambdaParam, odataParamName, binary.NodeType);
 
 		var op = binary.NodeType switch
 		{
@@ -110,7 +111,16 @@ public partial class ODataQueryBuilder<T> where T : class
 			_ => throw new NotSupportedException($"Binary operator {binary.NodeType} is not supported in lambda")
 		};
 
-		return $"{left} {op} {right}";
+		var result = $"{left} {op} {right}";
+
+		// Wrap OR expressions in parentheses when they are operands of AND
+		// This preserves correct operator precedence since AND has higher precedence than OR in OData
+		if (binary.NodeType == ExpressionType.OrElse && parentOperator == ExpressionType.AndAlso)
+		{
+			return $"({result})";
+		}
+
+		return result;
 	}
 
 	private static string ParseLambdaMethodCall(MethodCallExpression methodCall, ParameterExpression lambdaParam, string odataParamName)
@@ -173,7 +183,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		}
 
 		var innerParamName = predicateLambda.Parameters[0].Name ?? "x";
-		var predicateBody = ParseLambdaBody(predicateLambda.Body, predicateLambda.Parameters[0], innerParamName);
+		var predicateBody = ParseLambdaBody(predicateLambda.Body, predicateLambda.Parameters[0], innerParamName, parentOperator: null);
 
 		return $"{collectionPath}/{odataMethodName}({innerParamName}: {predicateBody})";
 	}
