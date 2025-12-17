@@ -25,7 +25,7 @@ public partial class ODataClient
 		CancellationToken cancellationToken = default)
 	{
 		var url = $"{entitySet}({FormatKey(key)})/$value";
-		_logger.LogDebug("GetStreamAsync - URL: {Url}", url);
+		LoggerMessages.GetStreamAsync(_logger, url);
 
 		var request = CreateRequest(HttpMethod.Get, url, headers);
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
@@ -53,7 +53,7 @@ public partial class ODataClient
 		CancellationToken cancellationToken = default)
 	{
 		var url = $"{entitySet}({FormatKey(key)})/$value";
-		_logger.LogDebug("SetStreamAsync - URL: {Url}, ContentType: {ContentType}", url, contentType);
+		LoggerMessages.SetStreamAsync(_logger, url, contentType);
 
 		var request = CreateRequest(HttpMethod.Put, url, headers);
 		request.Content = new StreamContent(stream);
@@ -82,7 +82,7 @@ public partial class ODataClient
 		CancellationToken cancellationToken = default)
 	{
 		var url = $"{entitySet}({FormatKey(key)})/{propertyName}";
-		_logger.LogDebug("GetStreamPropertyAsync - URL: {Url}", url);
+		LoggerMessages.GetStreamPropertyAsync(_logger, url);
 
 		var request = CreateRequest(HttpMethod.Get, url, headers);
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
@@ -112,7 +112,7 @@ public partial class ODataClient
 		CancellationToken cancellationToken = default)
 	{
 		var url = $"{entitySet}({FormatKey(key)})/{propertyName}";
-		_logger.LogDebug("SetStreamPropertyAsync - URL: {Url}, ContentType: {ContentType}", url, contentType);
+		LoggerMessages.SetStreamPropertyAsync(_logger, url, contentType);
 
 		var request = CreateRequest(HttpMethod.Put, url, headers);
 		request.Content = new StreamContent(stream);

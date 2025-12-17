@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
 
 namespace PanoramicData.OData.Client;
@@ -38,17 +37,17 @@ public partial class ODataClient
 			var cacheAge = DateTime.UtcNow - _metadataCacheTime;
 			if (cacheAge < _options.MetadataCacheDuration.Value)
 			{
-				_logger.LogDebug("GetMetadataAsync - Returning cached metadata (age: {Age})", cacheAge);
+				LoggerMessages.GetMetadataAsyncCached(_logger, cacheAge);
 				return _cachedMetadata;
 			}
 		}
 
-		_logger.LogDebug("GetMetadataAsync - Fetching metadata from $metadata");
+		LoggerMessages.GetMetadataAsyncFetching(_logger);
 
 		// Fetch XML (this will also update the XML cache)
 		var content = await GetMetadataXmlAsync(cacheHandling, cancellationToken).ConfigureAwait(false);
 
-		_logger.LogDebug("GetMetadataAsync - Parsing metadata, content length: {Length}", content.Length);
+		LoggerMessages.GetMetadataAsyncParsing(_logger, content.Length);
 
 		var metadata = ODataMetadataParser.Parse(content);
 
@@ -88,12 +87,12 @@ public partial class ODataClient
 			var cacheAge = DateTime.UtcNow - _metadataCacheTime;
 			if (cacheAge < _options.MetadataCacheDuration.Value)
 			{
-				_logger.LogDebug("GetMetadataXmlAsync - Returning cached metadata XML (age: {Age})", cacheAge);
+				LoggerMessages.GetMetadataXmlAsyncCached(_logger, cacheAge);
 				return _cachedMetadataXml;
 			}
 		}
 
-		_logger.LogDebug("GetMetadataXmlAsync - Fetching metadata from $metadata");
+		LoggerMessages.GetMetadataXmlAsyncFetching(_logger);
 
 		var request = CreateRequest(HttpMethod.Get, "$metadata");
 		request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xml"));
@@ -119,7 +118,7 @@ public partial class ODataClient
 	/// </summary>
 	public void InvalidateMetadataCache()
 	{
-		_logger.LogDebug("InvalidateMetadataCache - Clearing cached metadata");
+		LoggerMessages.InvalidateMetadataCache(_logger);
 		_cachedMetadata = null;
 		_cachedMetadataXml = null;
 	}

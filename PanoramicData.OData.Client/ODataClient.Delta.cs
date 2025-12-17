@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
 namespace PanoramicData.OData.Client;
@@ -21,7 +20,8 @@ public partial class ODataClient
 		IReadOnlyDictionary<string, string>? headers = null,
 		CancellationToken cancellationToken = default) where T : class
 	{
-		_logger.LogDebug("GetDeltaAsync<{Type}> - DeltaLink: {DeltaLink}", typeof(T).Name, deltaLink);
+		var typeName = typeof(T).Name;
+		LoggerMessages.GetDeltaAsync(_logger, typeName, deltaLink);
 
 		var request = CreateRequest(HttpMethod.Get, deltaLink, headers);
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
@@ -29,7 +29,7 @@ public partial class ODataClient
 
 		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
-		_logger.LogDebug("GetDeltaAsync<{Type}> - Response received, content length: {Length}", typeof(T).Name, content.Length);
+		LoggerMessages.GetDeltaAsyncResponseReceived(_logger, typeName, content.Length);
 
 		return ParseDeltaResponse<T>(content);
 	}
@@ -49,8 +49,9 @@ public partial class ODataClient
 	{
 		var allResults = new ODataDeltaResponse<T>();
 		var url = deltaLink;
+		var typeName = typeof(T).Name;
 
-		_logger.LogDebug("GetAllDeltaAsync<{Type}> - Initial DeltaLink: {DeltaLink}", typeof(T).Name, deltaLink);
+		LoggerMessages.GetAllDeltaAsyncInitial(_logger, typeName, deltaLink);
 
 		var pageCount = 0;
 		do
@@ -58,7 +59,7 @@ public partial class ODataClient
 			cancellationToken.ThrowIfCancellationRequested();
 
 			pageCount++;
-			_logger.LogDebug("GetAllDeltaAsync<{Type}> - Fetching page {Page}, URL: {Url}", typeof(T).Name, pageCount, url);
+			LoggerMessages.GetAllDeltaAsyncFetchingPage(_logger, typeName, pageCount, url);
 
 			var response = await GetDeltaAsync<T>(url, headers, cancellationToken).ConfigureAwait(false);
 			allResults.Value.AddRange(response.Value);
@@ -76,15 +77,13 @@ public partial class ODataClient
 				allResults.DeltaLink = response.DeltaLink;
 			}
 
-			_logger.LogDebug("GetAllDeltaAsync<{Type}> - Page {Page} returned {Count} items, {Deleted} deleted",
-				typeof(T).Name, pageCount, response.Value.Count, response.Deleted.Count);
+			LoggerMessages.GetAllDeltaAsyncPageReturned(_logger, typeName, pageCount, response.Value.Count, response.Deleted.Count);
 
 			url = response.NextLink;
 		}
 		while (!string.IsNullOrEmpty(url));
 
-		_logger.LogDebug("GetAllDeltaAsync<{Type}> - Complete. Total items: {Total}, Total deleted: {Deleted}",
-			typeof(T).Name, allResults.Value.Count, allResults.Deleted.Count);
+		LoggerMessages.GetAllDeltaAsyncComplete(_logger, typeName, allResults.Value.Count, allResults.Deleted.Count);
 
 		return allResults;
 	}
@@ -93,6 +92,7 @@ public partial class ODataClient
 	{
 		using var doc = JsonDocument.Parse(content);
 		var result = new ODataDeltaResponse<T>();
+		var typeName = typeof(T).Name;
 
 		// Parse value array, separating normal entities from deleted ones
 		if (doc.RootElement.TryGetProperty("value", out var valueElement))
@@ -122,8 +122,7 @@ public partial class ODataClient
 					}
 
 					result.Deleted.Add(deletedEntity);
-					_logger.LogDebug("ParseDeltaResponse - Found deleted entity: {Id}, Reason: {Reason}",
-						deletedEntity.Id, deletedEntity.Reason);
+					LoggerMessages.ParseDeltaResponseDeletedEntity(_logger, deletedEntity.Id, deletedEntity.Reason);
 				}
 				else
 				{
@@ -136,8 +135,7 @@ public partial class ODataClient
 				}
 			}
 
-			_logger.LogDebug("ParseDeltaResponse<{Type}> - Parsed {Count} entities, {Deleted} deleted",
-				typeof(T).Name, result.Value.Count, result.Deleted.Count);
+			LoggerMessages.ParseDeltaResponseComplete(_logger, typeName, result.Value.Count, result.Deleted.Count);
 		}
 
 		// Parse count

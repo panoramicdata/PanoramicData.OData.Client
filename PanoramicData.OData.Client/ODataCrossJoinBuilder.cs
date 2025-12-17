@@ -163,7 +163,7 @@ public class ODataCrossJoinBuilder
 		sb.Append(string.Join(",", _entitySets));
 		sb.Append(')');
 
-		_logger.LogDebug("ODataCrossJoinBuilder.BuildUrl() - EntitySets: {EntitySets}", string.Join(",", _entitySets));
+		LoggerMessages.CrossJoinBuilderBuildUrl(_logger, string.Join(",", _entitySets));
 
 		var queryParams = BuildQueryParameters();
 
@@ -174,7 +174,7 @@ public class ODataCrossJoinBuilder
 		}
 
 		var url = sb.ToString();
-		_logger.LogDebug("ODataCrossJoinBuilder.BuildUrl() - Final URL: {Url}", url);
+		LoggerMessages.CrossJoinBuilderFinalUrl(_logger, url);
 
 		return url;
 	}

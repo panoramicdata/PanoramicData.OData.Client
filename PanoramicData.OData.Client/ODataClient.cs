@@ -56,13 +56,13 @@ public partial class ODataClient : IDisposable
 		_options = options ?? throw new ArgumentNullException(nameof(options));
 		_logger = options.Logger ?? NullLogger.Instance;
 
-		_logger.LogDebug("ODataClient initialized with BaseUrl: {BaseUrl}", options.BaseUrl);
+		LoggerMessages.ClientInitialized(_logger, options.BaseUrl);
 
 		if (options.HttpClient is not null)
 		{
 			_httpClient = options.HttpClient;
 			_ownsHttpClient = false;
-			_logger.LogDebug("Using provided HttpClient with BaseAddress: {BaseAddress}", _httpClient.BaseAddress);
+			LoggerMessages.UsingProvidedHttpClient(_logger, _httpClient.BaseAddress);
 		}
 		else
 		{
@@ -72,7 +72,7 @@ public partial class ODataClient : IDisposable
 				Timeout = options.Timeout
 			};
 			_ownsHttpClient = true;
-			_logger.LogDebug("Created new HttpClient with BaseAddress: {BaseAddress}", _httpClient.BaseAddress);
+			LoggerMessages.CreatedHttpClient(_logger, _httpClient.BaseAddress);
 		}
 
 		_jsonOptions = options.JsonSerializerOptions ?? _jsonOptions;
@@ -87,7 +87,7 @@ public partial class ODataClient : IDisposable
 	{
 		var request = new HttpRequestMessage(method, url);
 
-		_logger.LogDebug("CreateRequest - {Method} {Url}", method, url);
+		LoggerMessages.CreateRequest(_logger, method, url);
 
 		// Apply custom headers from options
 		_options.ConfigureRequest?.Invoke(request);
@@ -98,7 +98,7 @@ public partial class ODataClient : IDisposable
 			foreach (var header in headers)
 			{
 				request.Headers.TryAddWithoutValidation(header.Key, header.Value);
-				_logger.LogDebug("CreateRequest - Adding header: {Key}={Value}", header.Key, header.Value);
+				LoggerMessages.AddingHeader(_logger, header.Key, header.Value);
 			}
 		}
 
@@ -112,7 +112,7 @@ public partial class ODataClient : IDisposable
 		var retryCount = 0;
 		HttpResponseMessage? lastResponse = null;
 
-		_logger.LogDebug("SendWithRetryAsync - Starting request to {Url}", request.RequestUri);
+		LoggerMessages.StartingRequest(_logger, request.RequestUri);
 
 		while (retryCount <= _options.RetryCount)
 		{
@@ -143,16 +143,14 @@ public partial class ODataClient : IDisposable
 		{
 			var requestToSend = retryCount == 0 ? request : await CloneRequestAsync(request).ConfigureAwait(false);
 
-			_logger.LogDebug("SendWithRetryAsync - Sending {Method} request to {Url} (attempt {Attempt})",
-				requestToSend.Method, requestToSend.RequestUri, retryCount + 1);
+			LoggerMessages.SendingRequest(_logger, requestToSend.Method, requestToSend.RequestUri, retryCount + 1);
 
 			// Log full request details at Trace level
 			await LogRequestTraceAsync(requestToSend, cancellationToken).ConfigureAwait(false);
 
 			var response = await _httpClient.SendAsync(requestToSend, cancellationToken).ConfigureAwait(false);
 
-			_logger.LogDebug("SendWithRetryAsync - Received {StatusCode} from {Url}",
-				response.StatusCode, request.RequestUri);
+			LoggerMessages.ReceivedResponse(_logger, response.StatusCode, request.RequestUri);
 
 			// Log full response details at Trace level
 			await LogResponseTraceAsync(response, cancellationToken).ConfigureAwait(false);
@@ -162,16 +160,16 @@ public partial class ODataClient : IDisposable
 				return (true, response);
 			}
 
-			LogRetryWarning(request, response.StatusCode, retryCount);
+			LoggerMessages.RetryWarning(_logger, request.RequestUri, response.StatusCode, retryCount + 1, _options.RetryCount + 1);
 			return (false, response);
 		}
 		catch (HttpRequestException ex) when (retryCount < _options.RetryCount)
 		{
-			LogRetryException(request, ex, retryCount, "failed with exception");
+			LoggerMessages.RetryException(_logger, ex, request.RequestUri, "failed with exception", retryCount + 1, _options.RetryCount + 1);
 		}
 		catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested && retryCount < _options.RetryCount)
 		{
-			LogRetryException(request, ex, retryCount, "timed out");
+			LoggerMessages.RetryException(_logger, ex, request.RequestUri, "timed out", retryCount + 1, _options.RetryCount + 1);
 		}
 
 		return (false, null);
@@ -206,7 +204,7 @@ public partial class ODataClient : IDisposable
 			sb.AppendLine(body);
 		}
 
-		_logger.LogTrace("{RequestDetails}", sb.ToString());
+		LoggerMessages.LogRequestTrace(_logger, sb.ToString());
 	}
 
 	private async Task LogResponseTraceAsync(HttpResponseMessage response, CancellationToken cancellationToken)
@@ -235,25 +233,8 @@ public partial class ODataClient : IDisposable
 		var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 		sb.AppendLine(body);
 
-		_logger.LogTrace("{ResponseDetails}", sb.ToString());
+		LoggerMessages.LogResponseTrace(_logger, sb.ToString());
 	}
-
-	private void LogRetryWarning(HttpRequestMessage request, HttpStatusCode statusCode, int retryCount) =>
-		_logger.LogWarning(
-			"Request to {Url} failed with {StatusCode}, attempt {Attempt}/{MaxRetries}",
-			request.RequestUri,
-			statusCode,
-			retryCount + 1,
-			_options.RetryCount + 1);
-
-	private void LogRetryException(HttpRequestMessage request, Exception ex, int retryCount, string reason) =>
-		_logger.LogWarning(
-			ex,
-			"Request to {Url} {Reason}, attempt {Attempt}/{MaxRetries}",
-			request.RequestUri,
-			reason,
-			retryCount + 1,
-			_options.RetryCount + 1);
 
 	private static async Task<HttpRequestMessage> CloneRequestAsync(HttpRequestMessage request)
 	{
@@ -303,8 +284,7 @@ public partial class ODataClient : IDisposable
 		int statusCode,
 		string responseBody)
 	{
-		_logger.LogError("Request to {Url} failed with status {StatusCode}: {ResponseBody}",
-			requestUrl, response.StatusCode, responseBody);
+		LoggerMessages.RequestFailed(_logger, requestUrl, response.StatusCode, responseBody);
 
 		if (response.StatusCode == HttpStatusCode.PreconditionFailed)
 		{
@@ -343,9 +323,7 @@ public partial class ODataClient : IDisposable
 		{
 			var preview = responseBody.Length > 500 ? responseBody[..500] + "..." : responseBody;
 
-			_logger.LogError(
-				"Request to {Url} returned HTML content instead of JSON (Content-Type: {ContentType}). Response preview: {Preview}",
-				requestUrl, contentType, preview);
+			LoggerMessages.UnexpectedHtmlResponse(_logger, requestUrl, contentType, preview);
 
 			throw new ODataClientException(
 				$"Expected JSON response but received HTML. The server may have returned an error page, login redirect, or the endpoint doesn't exist. Content-Type: {contentType}, URL: {requestUrl}",

@@ -21,7 +21,8 @@ public partial class ODataClient
 		CancellationToken cancellationToken = default) where T : class
 	{
 		var url = entitySet;
-		_logger.LogDebug("CreateAsync<{Type}> - EntitySet: {EntitySet}", typeof(T).Name, entitySet);
+		var typeName = typeof(T).Name;
+		LoggerMessages.CreateAsync(_logger, typeName, entitySet);
 
 		var request = CreateRequest(HttpMethod.Post, url, headers);
 		request.Content = JsonContent.Create(entity, options: _jsonOptions);
@@ -30,7 +31,7 @@ public partial class ODataClient
 		if (_logger.IsEnabled(LogLevel.Debug))
 		{
 			var requestBody = await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-			_logger.LogDebug("CreateAsync<{Type}> - Request body: {RequestBody}", typeof(T).Name, requestBody);
+			LoggerMessages.CreateAsyncRequestBody(_logger, typeName, requestBody);
 		}
 
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
@@ -104,7 +105,8 @@ public partial class ODataClient
 		CancellationToken cancellationToken = default) where T : class
 	{
 		var url = $"{entitySet}({FormatKey(key)})";
-		_logger.LogDebug("UpdateAsync<{Type}> - URL: {Url}, ETag: {ETag}", typeof(T).Name, url, etag ?? "(none)");
+		var typeName = typeof(T).Name;
+		LoggerMessages.UpdateAsync(_logger, typeName, url, etag ?? "(none)");
 
 		var request = CreateRequest(new HttpMethod("PATCH"), url, headers);
 		request.Content = JsonContent.Create(patchValues, options: _jsonOptions);
@@ -113,7 +115,7 @@ public partial class ODataClient
 		if (!string.IsNullOrEmpty(etag))
 		{
 			request.Headers.TryAddWithoutValidation("If-Match", etag);
-			_logger.LogDebug("UpdateAsync<{Type}> - Added If-Match header: {ETag}", typeof(T).Name, etag);
+			LoggerMessages.UpdateAsyncIfMatch(_logger, typeName, etag);
 		}
 
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
@@ -122,7 +124,7 @@ public partial class ODataClient
 		// Handle 204 No Content response by fetching the updated entity
 		if (response.StatusCode == HttpStatusCode.NoContent)
 		{
-			_logger.LogDebug("UpdateAsync<{Type}> - Received 204 No Content, fetching updated entity", typeof(T).Name);
+			LoggerMessages.UpdateAsyncNoContentRefetch(_logger, typeName);
 			var getRequest = CreateRequest(HttpMethod.Get, url, headers);
 			var getResponse = await SendWithRetryAsync(getRequest, cancellationToken).ConfigureAwait(false);
 			await EnsureSuccessAsync(getResponse, url, cancellationToken).ConfigureAwait(false);
@@ -161,7 +163,7 @@ public partial class ODataClient
 		CancellationToken cancellationToken = default)
 	{
 		var url = $"{entitySet}({FormatKey(key)})";
-		_logger.LogDebug("DeleteAsync - EntitySet: {EntitySet}, Key: {Key}, URL: {Url}, ETag: {ETag}", entitySet, key, url, etag ?? "(none)");
+		LoggerMessages.DeleteAsync(_logger, entitySet, key, url, etag ?? "(none)");
 
 		var request = CreateRequest(HttpMethod.Delete, url, headers);
 
@@ -169,7 +171,7 @@ public partial class ODataClient
 		if (!string.IsNullOrEmpty(etag))
 		{
 			request.Headers.TryAddWithoutValidation("If-Match", etag);
-			_logger.LogDebug("DeleteAsync - Added If-Match header: {ETag}", etag);
+			LoggerMessages.DeleteAsyncIfMatch(_logger, etag);
 		}
 
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
@@ -238,7 +240,8 @@ public partial class ODataClient
 		CancellationToken cancellationToken = default) where T : class
 	{
 		var url = $"{entitySet}({FormatKey(key)})";
-		_logger.LogDebug("ReplaceAsync<{Type}> - URL: {Url}, ETag: {ETag}", typeof(T).Name, url, etag ?? "(none)");
+		var typeName = typeof(T).Name;
+		LoggerMessages.ReplaceAsync(_logger, typeName, url, etag ?? "(none)");
 
 		var request = CreateRequest(HttpMethod.Put, url, headers);
 		request.Content = JsonContent.Create(entity, options: _jsonOptions);
@@ -247,7 +250,7 @@ public partial class ODataClient
 		if (!string.IsNullOrEmpty(etag))
 		{
 			request.Headers.TryAddWithoutValidation("If-Match", etag);
-			_logger.LogDebug("ReplaceAsync<{Type}> - Added If-Match header: {ETag}", typeof(T).Name, etag);
+			LoggerMessages.ReplaceAsyncIfMatch(_logger, typeName, etag);
 		}
 
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
@@ -256,7 +259,7 @@ public partial class ODataClient
 		// Handle 204 No Content response by fetching the updated entity
 		if (response.StatusCode == HttpStatusCode.NoContent)
 		{
-			_logger.LogDebug("ReplaceAsync<{Type}> - Received 204 No Content, fetching replaced entity", typeof(T).Name);
+			LoggerMessages.ReplaceAsyncNoContentRefetch(_logger, typeName);
 			var getRequest = CreateRequest(HttpMethod.Get, url, headers);
 			var getResponse = await SendWithRetryAsync(getRequest, cancellationToken).ConfigureAwait(false);
 			await EnsureSuccessAsync(getResponse, url, cancellationToken).ConfigureAwait(false);
@@ -283,7 +286,7 @@ public partial class ODataClient
 		IReadOnlyDictionary<string, string>? headers = null,
 		CancellationToken cancellationToken = default)
 	{
-		_logger.LogDebug("DeleteByUrlAsync - URL: {Url}", url);
+		LoggerMessages.DeleteByUrlAsync(_logger, url);
 
 		var request = CreateRequest(HttpMethod.Delete, url, headers);
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);

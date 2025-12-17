@@ -31,8 +31,9 @@ public partial class ODataClient
 	{
 		var allResults = new ODataResponse<T>();
 		var url = query.BuildUrl();
+		var typeName = typeof(T).Name;
 
-		_logger.LogDebug("GetAllAsync<{Type}> - Initial URL: {Url}", typeof(T).Name, url);
+		LoggerMessages.GetAllAsyncInitial(_logger, typeName, url);
 
 		var pageCount = 0;
 		do
@@ -41,7 +42,7 @@ public partial class ODataClient
 			cancellationToken.ThrowIfCancellationRequested();
 
 			pageCount++;
-			_logger.LogDebug("GetAllAsync<{Type}> - Fetching page {Page}, URL: {Url}", typeof(T).Name, pageCount, url);
+			LoggerMessages.GetAllAsyncFetchingPage(_logger, typeName, pageCount, url);
 
 			var response = await GetAsync<T>(url, query.CustomHeaders, cancellationToken).ConfigureAwait(false);
 			allResults.Value.AddRange(response.Value);
@@ -52,15 +53,13 @@ public partial class ODataClient
 				allResults.Count = response.Count;
 			}
 
-			_logger.LogDebug("GetAllAsync<{Type}> - Page {Page} returned {Count} items, total so far: {Total}",
-				typeof(T).Name, pageCount, response.Value.Count, allResults.Value.Count);
+			LoggerMessages.GetAllAsyncPageReturned(_logger, typeName, pageCount, response.Value.Count, allResults.Value.Count);
 
 			url = response.NextLink;
 		}
 		while (!string.IsNullOrEmpty(url));
 
-		_logger.LogDebug("GetAllAsync<{Type}> - Complete. Total items: {Total}, Count header: {Count}",
-			typeof(T).Name, allResults.Value.Count, allResults.Count);
+		LoggerMessages.GetAllAsyncComplete(_logger, typeName, allResults.Value.Count, allResults.Count);
 
 		return allResults;
 	}
@@ -73,7 +72,7 @@ public partial class ODataClient
 		CancellationToken cancellationToken = default) where T : class
 	{
 		var url = query.BuildUrl();
-		_logger.LogDebug("GetAsync<{Type}> - URL: {Url}", typeof(T).Name, url);
+		LoggerMessages.GetAsync(_logger, typeof(T).Name, url);
 		return await GetAsync<T>(url, query.CustomHeaders, cancellationToken).ConfigureAwait(false);
 	}
 
@@ -89,7 +88,7 @@ public partial class ODataClient
 		query.Key(key);
 
 		var url = query.BuildUrl();
-		_logger.LogDebug("GetByKeyAsync<{Type}> - Key: {Key}, URL: {Url}", typeof(T).Name, key, url);
+		LoggerMessages.GetByKeyAsync(_logger, typeof(T).Name, key!, url);
 
 		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
 
@@ -117,7 +116,8 @@ public partial class ODataClient
 		query.Key(key);
 
 		var url = query.BuildUrl();
-		_logger.LogDebug("GetByKeyWithETagAsync<{Type}> - Key: {Key}, URL: {Url}", typeof(T).Name, key, url);
+		var typeName = typeof(T).Name;
+		LoggerMessages.GetByKeyWithETagAsync(_logger, typeName, key!, url);
 
 		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
 
@@ -133,7 +133,7 @@ public partial class ODataClient
 		if (response.Headers.ETag is not null)
 		{
 			result.ETag = response.Headers.ETag.ToString();
-			_logger.LogDebug("GetByKeyWithETagAsync<{Type}> - ETag: {ETag}", typeof(T).Name, result.ETag);
+			LoggerMessages.GetByKeyWithETagResult(_logger, typeName, result.ETag);
 		}
 
 		return result;
@@ -147,7 +147,7 @@ public partial class ODataClient
 		CancellationToken cancellationToken = default) where T : class
 	{
 		var url = query.BuildUrl();
-		_logger.LogDebug("CallFunctionAsync<{Type}, {ResultType}> - URL: {Url}", typeof(T).Name, typeof(TResult).Name, url);
+		LoggerMessages.CallFunctionAsync(_logger, typeof(T).Name, typeof(TResult).Name, url);
 
 		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
 
@@ -155,7 +155,7 @@ public partial class ODataClient
 		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
 
 		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-		_logger.LogDebug("CallFunctionAsync - Response content length: {Length}", content.Length);
+		LoggerMessages.CallFunctionAsyncResponseLength(_logger, content.Length);
 
 		// Try to parse as OData response first
 		try
@@ -165,17 +165,17 @@ public partial class ODataClient
 			// Check if it's a collection result
 			if (doc.RootElement.TryGetProperty("value", out var valueElement))
 			{
-				_logger.LogDebug("CallFunctionAsync - Parsing 'value' property from response");
+				LoggerMessages.CallFunctionAsyncParsingValue(_logger);
 				return JsonSerializer.Deserialize<TResult>(valueElement.GetRawText(), _jsonOptions);
 			}
 
 			// Otherwise deserialize the whole thing
-			_logger.LogDebug("CallFunctionAsync - Parsing entire response as {ResultType}", typeof(TResult).Name);
+			LoggerMessages.CallFunctionAsyncParsingEntire(_logger, typeof(TResult).Name);
 			return JsonSerializer.Deserialize<TResult>(content, _jsonOptions);
 		}
-		catch (Exception ex)
+		catch (Exception)
 		{
-			_logger.LogDebug(ex, "CallFunctionAsync - Failed to parse as OData, trying direct deserialization");
+			LoggerMessages.CallFunctionAsyncFallback(_logger);
 			return JsonSerializer.Deserialize<TResult>(content, _jsonOptions);
 		}
 	}
@@ -189,7 +189,7 @@ public partial class ODataClient
 		IReadOnlyDictionary<string, string>? headers = null,
 		CancellationToken cancellationToken = default)
 	{
-		_logger.LogDebug("CallActionAsync<{ResultType}> - URL: {Url}", typeof(TResult).Name, actionUrl);
+		LoggerMessages.CallActionAsync(_logger, typeof(TResult).Name, actionUrl);
 
 		var request = CreateRequest(HttpMethod.Post, actionUrl, headers);
 
@@ -204,7 +204,7 @@ public partial class ODataClient
 
 		if (response.StatusCode == HttpStatusCode.NoContent)
 		{
-			_logger.LogDebug("CallActionAsync - Received NoContent response");
+			LoggerMessages.CallActionAsyncNoContent(_logger);
 			return default;
 		}
 
@@ -237,8 +237,9 @@ public partial class ODataClient
 		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
 
 		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+		var typeName = typeof(T).Name;
 
-		_logger.LogDebug("GetAsync<{Type}> - Response received, content length: {Length}", typeof(T).Name, content.Length);
+		LoggerMessages.GetAsyncResponseReceived(_logger, typeName, content.Length);
 
 		using var doc = JsonDocument.Parse(content);
 		var result = new ODataResponse<T>();
@@ -247,21 +248,21 @@ public partial class ODataClient
 		if (doc.RootElement.TryGetProperty("value", out var valueElement))
 		{
 			result.Value = JsonSerializer.Deserialize<List<T>>(valueElement.GetRawText(), _jsonOptions) ?? [];
-			_logger.LogDebug("GetAsync<{Type}> - Parsed {Count} items from 'value' array", typeof(T).Name, result.Value.Count);
+			LoggerMessages.GetAsyncParsedItems(_logger, typeName, result.Value.Count);
 		}
 
 		// Parse count
 		if (doc.RootElement.TryGetProperty("@odata.count", out var countElement))
 		{
 			result.Count = countElement.GetInt64();
-			_logger.LogDebug("GetAsync<{Type}> - @odata.count: {Count}", typeof(T).Name, result.Count);
+			LoggerMessages.GetAsyncODataCount(_logger, typeName, result.Count.Value);
 		}
 
 		// Parse nextLink
 		if (doc.RootElement.TryGetProperty("@odata.nextLink", out var nextLinkElement))
 		{
 			result.NextLink = nextLinkElement.GetString();
-			_logger.LogDebug("GetAsync<{Type}> - @odata.nextLink: {NextLink}", typeof(T).Name, result.NextLink);
+			LoggerMessages.GetAsyncNextLink(_logger, typeName, result.NextLink);
 		}
 
 		// Parse deltaLink
@@ -274,7 +275,7 @@ public partial class ODataClient
 		if (response.Headers.ETag is not null)
 		{
 			result.ETag = response.Headers.ETag.ToString();
-			_logger.LogDebug("GetAsync<{Type}> - ETag: {ETag}", typeof(T).Name, result.ETag);
+			LoggerMessages.GetAsyncETag(_logger, typeName, result.ETag);
 		}
 
 		return result;
@@ -303,13 +304,14 @@ public partial class ODataClient
 	{
 		query ??= For<T>();
 		var baseUrl = query.BuildUrl();
+		var typeName = typeof(T).Name;
 
 		// Append /$count to the entity set path
 		var url = baseUrl.Contains('?')
 			? baseUrl.Replace("?", "/$count?")
 			: baseUrl + "/$count";
 
-		_logger.LogDebug("GetCountAsync<{Type}> - URL: {Url}", typeof(T).Name, url);
+		LoggerMessages.GetCountAsync(_logger, typeName, url);
 
 		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
 
@@ -320,7 +322,7 @@ public partial class ODataClient
 
 		if (long.TryParse(content.Trim(), out var count))
 		{
-			_logger.LogDebug("GetCountAsync<{Type}> - Count: {Count}", typeof(T).Name, count);
+			LoggerMessages.GetCountAsyncResult(_logger, typeName, count);
 			return count;
 		}
 

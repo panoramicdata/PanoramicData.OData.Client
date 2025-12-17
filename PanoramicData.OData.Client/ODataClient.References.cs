@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging;
-using System.Globalization;
 using System.Text;
 
 namespace PanoramicData.OData.Client;
@@ -33,7 +31,7 @@ public partial class ODataClient
 		var url = $"{entitySet}({FormatKey(key)})/{navigationProperty}/$ref";
 		var targetUrl = $"{targetEntitySet}({FormatKey(targetKey)})";
 
-		_logger.LogDebug("AddReferenceAsync - URL: {Url}, Target: {Target}", url, targetUrl);
+		LoggerMessages.AddReferenceAsync(_logger, url, targetUrl);
 
 		var request = CreateRequest(HttpMethod.Post, url, headers);
 
@@ -69,7 +67,7 @@ public partial class ODataClient
 		var encodedTargetUrl = Uri.EscapeDataString(targetUrl);
 		var url = $"{entitySet}({FormatKey(key)})/{navigationProperty}/$ref?$id={encodedTargetUrl}";
 
-		_logger.LogDebug("RemoveReferenceAsync - URL: {Url}", url);
+		LoggerMessages.RemoveReferenceAsync(_logger, url);
 
 		var request = CreateRequest(HttpMethod.Delete, url, headers);
 
@@ -101,7 +99,7 @@ public partial class ODataClient
 		var url = $"{entitySet}({FormatKey(key)})/{navigationProperty}/$ref";
 		var targetUrl = $"{targetEntitySet}({FormatKey(targetKey)})";
 
-		_logger.LogDebug("SetReferenceAsync - URL: {Url}, Target: {Target}", url, targetUrl);
+		LoggerMessages.SetReferenceAsync(_logger, url, targetUrl);
 
 		var request = CreateRequest(HttpMethod.Put, url, headers);
 		var refBody = $"{{\"@odata.id\": \"{targetUrl}\"}}";
@@ -129,7 +127,7 @@ public partial class ODataClient
 	{
 		var url = $"{entitySet}({FormatKey(key)})/{navigationProperty}/$ref";
 
-		_logger.LogDebug("DeleteReferenceAsync - URL: {Url}", url);
+		LoggerMessages.DeleteReferenceAsync(_logger, url);
 
 		var request = CreateRequest(HttpMethod.Delete, url, headers);
 

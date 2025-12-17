@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
 namespace PanoramicData.OData.Client;
@@ -16,7 +15,7 @@ public partial class ODataClient
 	/// <returns>A cross-join query builder.</returns>
 	public ODataCrossJoinBuilder CrossJoin(params string[] entitySets)
 	{
-		_logger.LogDebug("CrossJoin - Creating cross-join for entity sets: {EntitySets}", string.Join(", ", entitySets));
+		LoggerMessages.CrossJoinCreating(_logger, string.Join(", ", entitySets));
 		return new ODataCrossJoinBuilder(entitySets, _logger);
 	}
 
@@ -31,7 +30,7 @@ public partial class ODataClient
 		CancellationToken cancellationToken = default)
 	{
 		var url = crossJoin.BuildUrl();
-		_logger.LogDebug("GetCrossJoinAsync - URL: {Url}", url);
+		LoggerMessages.GetCrossJoinAsync(_logger, url);
 
 		var request = CreateRequest(HttpMethod.Get, url, crossJoin.CustomHeaders);
 
@@ -40,7 +39,7 @@ public partial class ODataClient
 
 		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
-		_logger.LogDebug("GetCrossJoinAsync - Response received, content length: {Length}", content.Length);
+		LoggerMessages.GetCrossJoinAsyncResponse(_logger, content.Length);
 
 		return ParseCrossJoinResponse(content);
 	}
@@ -58,7 +57,7 @@ public partial class ODataClient
 		var allResults = new ODataCrossJoinResponse();
 		var url = crossJoin.BuildUrl();
 
-		_logger.LogDebug("GetAllCrossJoinAsync - Initial URL: {Url}", url);
+		LoggerMessages.GetAllCrossJoinAsyncInitial(_logger, url);
 
 		var pageCount = 0;
 		do
@@ -66,7 +65,7 @@ public partial class ODataClient
 			cancellationToken.ThrowIfCancellationRequested();
 
 			pageCount++;
-			_logger.LogDebug("GetAllCrossJoinAsync - Fetching page {Page}, URL: {Url}", pageCount, url);
+			LoggerMessages.GetAllCrossJoinAsyncFetchingPage(_logger, pageCount, url);
 
 			var request = CreateRequest(HttpMethod.Get, url, crossJoin.CustomHeaders);
 			var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
@@ -83,13 +82,13 @@ public partial class ODataClient
 				allResults.Count = pageResult.Count;
 			}
 
-			_logger.LogDebug("GetAllCrossJoinAsync - Page {Page} returned {Count} rows", pageCount, pageResult.Value.Count);
+			LoggerMessages.GetAllCrossJoinAsyncPageReturned(_logger, pageCount, pageResult.Value.Count);
 
 			url = pageResult.NextLink;
 		}
 		while (!string.IsNullOrEmpty(url));
 
-		_logger.LogDebug("GetAllCrossJoinAsync - Complete. Total rows: {Total}", allResults.Value.Count);
+		LoggerMessages.GetAllCrossJoinAsyncComplete(_logger, allResults.Value.Count);
 
 		return allResults;
 	}
@@ -115,7 +114,7 @@ public partial class ODataClient
 				result.Value.Add(row);
 			}
 
-			_logger.LogDebug("ParseCrossJoinResponse - Parsed {Count} rows", result.Value.Count);
+			LoggerMessages.ParseCrossJoinResponseComplete(_logger, result.Value.Count);
 		}
 
 		// Parse count

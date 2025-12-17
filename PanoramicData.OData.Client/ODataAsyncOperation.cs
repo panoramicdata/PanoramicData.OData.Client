@@ -68,12 +68,12 @@ public class ODataAsyncOperation<T>
 			return false;
 		}
 
-		_logger.LogDebug("ODataAsyncOperation - Polling status at {Url}", MonitorUrl);
+		LoggerMessages.AsyncOperationPolling(_logger, MonitorUrl);
 
 		var request = new HttpRequestMessage(HttpMethod.Get, MonitorUrl);
 		var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-		_logger.LogDebug("ODataAsyncOperation - Poll response: {StatusCode}", response.StatusCode);
+		LoggerMessages.AsyncOperationPollResponse(_logger, response.StatusCode);
 
 		if (response.StatusCode == HttpStatusCode.Accepted)
 		{
@@ -83,7 +83,7 @@ public class ODataAsyncOperation<T>
 			// Check for updated location
 			if (response.Headers.Location is not null)
 			{
-				_logger.LogDebug("ODataAsyncOperation - Updated monitor URL: {Url}", response.Headers.Location);
+				LoggerMessages.AsyncOperationUpdatedUrl(_logger, response.Headers.Location);
 			}
 
 			return true;
@@ -103,18 +103,18 @@ public class ODataAsyncOperation<T>
 				}
 				catch (JsonException ex)
 				{
-					_logger.LogWarning(ex, "ODataAsyncOperation - Failed to deserialize result");
+					LoggerMessages.AsyncOperationDeserializeFailed(_logger, ex);
 				}
 			}
 
-			_logger.LogDebug("ODataAsyncOperation - Operation completed successfully");
+			LoggerMessages.AsyncOperationCompleted(_logger);
 			return false;
 		}
 
 		// Failed
 		Status = ODataAsyncOperationStatus.Failed;
 		ErrorMessage = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-		_logger.LogWarning("ODataAsyncOperation - Operation failed: {Error}", ErrorMessage);
+		LoggerMessages.AsyncOperationFailed(_logger, ErrorMessage);
 		return false;
 	}
 
@@ -132,7 +132,7 @@ public class ODataAsyncOperation<T>
 	{
 		var startTime = DateTime.UtcNow;
 
-		_logger.LogDebug("ODataAsyncOperation - Waiting for completion, timeout: {Timeout}", timeout?.ToString() ?? "indefinite");
+		LoggerMessages.AsyncOperationWaiting(_logger, timeout?.ToString() ?? "indefinite");
 
 		while (!IsCompleted)
 		{
@@ -171,7 +171,7 @@ public class ODataAsyncOperation<T>
 			return false;
 		}
 
-		_logger.LogDebug("ODataAsyncOperation - Attempting to cancel at {Url}", MonitorUrl);
+		LoggerMessages.AsyncOperationCancelling(_logger, MonitorUrl);
 
 		var request = new HttpRequestMessage(HttpMethod.Delete, MonitorUrl);
 		var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
@@ -179,11 +179,11 @@ public class ODataAsyncOperation<T>
 		if (response.IsSuccessStatusCode)
 		{
 			Status = ODataAsyncOperationStatus.Cancelled;
-			_logger.LogDebug("ODataAsyncOperation - Cancellation accepted");
+			LoggerMessages.AsyncOperationCancelled(_logger);
 			return true;
 		}
 
-		_logger.LogWarning("ODataAsyncOperation - Cancellation not accepted: {StatusCode}", response.StatusCode);
+		LoggerMessages.AsyncOperationCancelNotAccepted(_logger, response.StatusCode);
 		return false;
 	}
 }

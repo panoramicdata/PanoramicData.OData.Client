@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Http.Json;
 
@@ -27,7 +26,7 @@ public partial class ODataClient
 		IReadOnlyDictionary<string, string>? headers = null,
 		CancellationToken cancellationToken = default)
 	{
-		_logger.LogDebug("CallActionAsyncWithPreferAsync<{ResultType}> - URL: {Url}", typeof(TResult).Name, actionUrl);
+		LoggerMessages.CallActionAsyncWithPreferAsync(_logger, typeof(TResult).Name, actionUrl);
 
 		var request = CreateRequest(HttpMethod.Post, actionUrl, headers);
 
@@ -48,11 +47,11 @@ public partial class ODataClient
 
 			if (string.IsNullOrEmpty(monitorUrl))
 			{
-				_logger.LogWarning("CallActionAsyncWithPreferAsync - 202 Accepted but no Location header");
+				LoggerMessages.CallActionAsyncNoLocationHeader(_logger);
 				throw new InvalidOperationException("Server accepted async request but did not provide a monitor URL");
 			}
 
-			_logger.LogDebug("CallActionAsyncWithPreferAsync - Async operation started, monitor URL: {Url}", monitorUrl);
+			LoggerMessages.CallActionAsyncMonitorUrl(_logger, monitorUrl);
 
 			var asyncOp = new ODataAsyncOperation<TResult>(
 				_httpClient,
@@ -77,7 +76,7 @@ public partial class ODataClient
 			result = await response.Content.ReadFromJsonAsync<TResult>(_jsonOptions, cancellationToken).ConfigureAwait(false);
 		}
 
-		_logger.LogDebug("CallActionAsyncWithPreferAsync - Completed synchronously");
+		LoggerMessages.CallActionAsyncCompletedSync(_logger);
 
 		return new ODataAsyncOperationResult<TResult>
 		{
@@ -135,7 +134,7 @@ public partial class ODataClient
 	{
 		var batchBoundary = $"batch_{Guid.NewGuid():N}";
 
-		_logger.LogDebug("ExecuteBatchAsyncWithPreferAsync - Executing batch with {Count} items", batch.Items.Count);
+		LoggerMessages.ExecuteBatchAsyncWithPreferAsync(_logger, batch.Items.Count);
 
 		var content = BuildBatchContent(batch, batchBoundary);
 
@@ -161,7 +160,7 @@ public partial class ODataClient
 				throw new InvalidOperationException("Server accepted async request but did not provide a monitor URL");
 			}
 
-			_logger.LogDebug("ExecuteBatchAsyncWithPreferAsync - Async operation started, monitor URL: {Url}", monitorUrl);
+			LoggerMessages.ExecuteBatchAsyncMonitorUrl(_logger, monitorUrl);
 
 			var asyncOp = new ODataAsyncOperation<ODataBatchResponse>(
 				_httpClient,

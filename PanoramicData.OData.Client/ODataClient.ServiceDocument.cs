@@ -19,7 +19,7 @@ public partial class ODataClient
 		IReadOnlyDictionary<string, string>? headers = null,
 		CancellationToken cancellationToken = default)
 	{
-		_logger.LogDebug("GetServiceDocumentAsync - Fetching service document");
+		LoggerMessages.GetServiceDocumentAsyncFetching(_logger);
 
 		var request = CreateRequest(HttpMethod.Get, "", headers);
 
@@ -28,7 +28,7 @@ public partial class ODataClient
 
 		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
-		_logger.LogDebug("GetServiceDocumentAsync - Parsing service document, content length: {Length}", content.Length);
+		LoggerMessages.GetServiceDocumentAsyncParsing(_logger, content.Length);
 
 		return ParseServiceDocument(content);
 	}
@@ -48,7 +48,7 @@ public partial class ODataClient
 			ParseServiceResources(valueElement, result);
 		}
 
-		_logger.LogDebug("ParseServiceDocument - Parsed {Count} resources", result.Resources.Count);
+		LoggerMessages.ParseServiceDocumentComplete(_logger, result.Resources.Count);
 
 		return result;
 	}
@@ -59,7 +59,7 @@ public partial class ODataClient
 		{
 			var resource = ParseServiceResource(item);
 			result.Resources.Add(resource);
-			_logger.LogDebug("ParseServiceDocument - Found resource: {Name} ({Kind})", resource.Name, resource.Kind);
+			LoggerMessages.ParseServiceDocumentResource(_logger, resource.Name, resource.Kind);
 		}
 	}
 

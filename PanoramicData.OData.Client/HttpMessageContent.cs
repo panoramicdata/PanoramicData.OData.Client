@@ -27,10 +27,7 @@ internal sealed class HttpMessageContent : HttpContent
 	/// <inheritdoc/>
 	protected override async Task SerializeToStreamAsync(Stream stream, TransportContext? context)
 	{
-		if (_content is null)
-		{
-			_content = await BuildContentAsync().ConfigureAwait(false);
-		}
+		_content ??= await BuildContentAsync().ConfigureAwait(false);
 
 		await stream.WriteAsync(_content).ConfigureAwait(false);
 	}

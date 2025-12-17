@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -17,7 +16,7 @@ public partial class ODataClient
 	/// <returns>A batch builder for adding operations.</returns>
 	public ODataBatchBuilder CreateBatch()
 	{
-		_logger.LogDebug("CreateBatch - Creating new batch request builder");
+		LoggerMessages.CreateBatch(_logger);
 		return new ODataBatchBuilder(this, _jsonOptions);
 	}
 
@@ -33,8 +32,7 @@ public partial class ODataClient
 	{
 		var batchBoundary = $"batch_{Guid.NewGuid():N}";
 
-		_logger.LogDebug("ExecuteBatchAsync - Executing batch with {Count} items, boundary: {Boundary}",
-			batch.Items.Count, batchBoundary);
+		LoggerMessages.ExecuteBatchAsync(_logger, batch.Items.Count, batchBoundary);
 
 		// Build the multipart content
 		var content = BuildBatchContent(batch, batchBoundary);
@@ -52,8 +50,7 @@ public partial class ODataClient
 		var responseContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 		var contentType = response.Content.Headers.ContentType?.ToString() ?? "";
 
-		_logger.LogDebug("ExecuteBatchAsync - Response received, content length: {Length}, content-type: {ContentType}",
-			responseContent.Length, contentType);
+		LoggerMessages.ExecuteBatchAsyncResponse(_logger, responseContent.Length, contentType);
 
 		return ParseBatchResponse(responseContent, contentType, batch);
 	}
@@ -141,7 +138,7 @@ public partial class ODataClient
 		var boundaryMatch = Regex.Match(contentType, @"boundary=([^;\s]+)");
 		if (!boundaryMatch.Success)
 		{
-			_logger.LogWarning("ParseBatchResponse - Could not find boundary in content-type: {ContentType}", contentType);
+			LoggerMessages.ParseBatchResponseNoBoundary(_logger, contentType);
 			return ParseJsonBatchResponse(content, batch);
 		}
 
@@ -151,7 +148,7 @@ public partial class ODataClient
 
 		var result = ParseBatchParts(parts, allOperations);
 
-		_logger.LogDebug("ParseBatchResponse - Parsed {Count} operation results", result.Results.Count);
+		LoggerMessages.ParseBatchResponseComplete(_logger, result.Results.Count);
 		return result;
 	}
 
@@ -282,7 +279,7 @@ public partial class ODataClient
 		}
 		catch (JsonException ex)
 		{
-			_logger.LogDebug(ex, "ParseOperationResponse - Failed to deserialize response body for operation {Id}", result.OperationId);
+			LoggerMessages.ParseOperationResponseDeserializeFailed(_logger, ex, result.OperationId);
 		}
 	}
 
@@ -303,12 +300,12 @@ public partial class ODataClient
 			using var doc = JsonDocument.Parse(content);
 			if (doc.RootElement.TryGetProperty("responses", out var responsesElement))
 			{
-				ParseJsonResponses(responsesElement, batch.GetAllOperations().ToList(), result);
+				ParseJsonResponses(responsesElement, [.. batch.GetAllOperations()], result);
 			}
 		}
 		catch (JsonException ex)
 		{
-			_logger.LogWarning(ex, "ParseJsonBatchResponse - Failed to parse JSON batch response");
+			LoggerMessages.ParseJsonBatchResponseFailed(_logger, ex);
 		}
 
 		return result;
@@ -381,7 +378,7 @@ public partial class ODataClient
 		}
 		catch (JsonException ex)
 		{
-			_logger.LogDebug(ex, "ParseJsonBatchResponse - Failed to deserialize response for operation {Id}", opResult.OperationId);
+			LoggerMessages.ParseJsonBatchResponseDeserializeFailed(_logger, ex, opResult.OperationId);
 		}
 	}
 }

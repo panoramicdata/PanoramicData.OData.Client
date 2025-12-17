@@ -23,7 +23,7 @@ public partial class ODataClient
 		IReadOnlyDictionary<string, string>? headers = null,
 		CancellationToken cancellationToken = default) where T : class
 	{
-		_logger.LogDebug("GetSingletonAsync<{Type}> - Singleton: {Singleton}", typeof(T).Name, singletonName);
+		LoggerMessages.GetSingletonAsync(_logger, typeof(T).Name, singletonName);
 
 		var request = CreateRequest(HttpMethod.Get, singletonName, headers);
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
@@ -45,7 +45,8 @@ public partial class ODataClient
 		IReadOnlyDictionary<string, string>? headers = null,
 		CancellationToken cancellationToken = default) where T : class
 	{
-		_logger.LogDebug("GetSingletonWithETagAsync<{Type}> - Singleton: {Singleton}", typeof(T).Name, singletonName);
+		var typeName = typeof(T).Name;
+		LoggerMessages.GetSingletonWithETagAsync(_logger, typeName, singletonName);
 
 		var request = CreateRequest(HttpMethod.Get, singletonName, headers);
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
@@ -59,7 +60,7 @@ public partial class ODataClient
 		if (response.Headers.ETag is not null)
 		{
 			result.ETag = response.Headers.ETag.ToString();
-			_logger.LogDebug("GetSingletonWithETagAsync<{Type}> - ETag: {ETag}", typeof(T).Name, result.ETag);
+			LoggerMessages.GetSingletonWithETagResult(_logger, typeName, result.ETag);
 		}
 
 		return result;
@@ -99,7 +100,8 @@ public partial class ODataClient
 		IReadOnlyDictionary<string, string>? headers = null,
 		CancellationToken cancellationToken = default) where T : class
 	{
-		_logger.LogDebug("UpdateSingletonAsync<{Type}> - Singleton: {Singleton}, ETag: {ETag}", typeof(T).Name, singletonName, etag ?? "(none)");
+		var typeName = typeof(T).Name;
+		LoggerMessages.UpdateSingletonAsync(_logger, typeName, singletonName, etag ?? "(none)");
 
 		var request = CreateRequest(new HttpMethod("PATCH"), singletonName, headers);
 		request.Content = JsonContent.Create(patchValues, options: _jsonOptions);
@@ -115,7 +117,7 @@ public partial class ODataClient
 		// Handle 204 No Content response by fetching the updated entity
 		if (response.StatusCode == HttpStatusCode.NoContent)
 		{
-			_logger.LogDebug("UpdateSingletonAsync<{Type}> - Received 204 No Content, fetching updated singleton", typeof(T).Name);
+			LoggerMessages.UpdateSingletonAsyncNoContentRefetch(_logger, typeName);
 			var getRequest = CreateRequest(HttpMethod.Get, singletonName, headers);
 			var getResponse = await SendWithRetryAsync(getRequest, cancellationToken).ConfigureAwait(false);
 			await EnsureSuccessAsync(getResponse, singletonName, cancellationToken).ConfigureAwait(false);
