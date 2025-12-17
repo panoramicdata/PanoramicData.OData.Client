@@ -16,6 +16,9 @@ namespace PanoramicData.OData.Client.Test.Benchmarks;
 [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "BenchmarkDotNet requires instance methods")]
 public class QueryBuilderBenchmarks
 {
+	// Pre-allocated array for IN clause benchmark
+	private static readonly int[] _preAllocatedIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
 	/// <summary>
 	/// Benchmark for simple query with no options.
 	/// </summary>
@@ -39,12 +42,26 @@ public class QueryBuilderBenchmarks
 
 	/// <summary>
 	/// Benchmark for query with expression filter.
+	/// This shows the cost of expression compilation.
 	/// </summary>
 	[Benchmark]
 	public string QueryWithExpressionFilter()
 	{
 		var builder = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
 			.Filter(p => p.Price > 100);
+		return builder.BuildUrl();
+	}
+
+	/// <summary>
+	/// Benchmark comparing expression with captured variable vs constant.
+	/// Captured variables require expression compilation.
+	/// </summary>
+	[Benchmark]
+	public string ExpressionWithCapturedVariable()
+	{
+		var minPrice = 100m;
+		var builder = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
+			.Filter(p => p.Price > minPrice);
 		return builder.BuildUrl();
 	}
 
@@ -141,6 +158,7 @@ public class QueryBuilderBenchmarks
 
 	/// <summary>
 	/// Benchmark for query with function call.
+	/// This tests reflection-based parameter formatting.
 	/// </summary>
 	[Benchmark]
 	public string QueryWithFunction()
@@ -163,6 +181,7 @@ public class QueryBuilderBenchmarks
 
 	/// <summary>
 	/// Benchmark for expression filter with string contains.
+	/// Tests string method parsing.
 	/// </summary>
 	[Benchmark]
 	public string ExpressionFilterWithContains()
@@ -174,6 +193,7 @@ public class QueryBuilderBenchmarks
 
 	/// <summary>
 	/// Benchmark for expression filter with complex condition.
+	/// Tests multiple binary expressions.
 	/// </summary>
 	[Benchmark]
 	public string ExpressionFilterComplex()
@@ -184,14 +204,62 @@ public class QueryBuilderBenchmarks
 	}
 
 	/// <summary>
-	/// Benchmark for collection Contains (IN clause).
+	/// Benchmark for collection Contains (IN clause) with pre-allocated array.
+	/// Tests expression compilation with collection.
 	/// </summary>
 	[Benchmark]
-	public string ExpressionFilterWithIn()
+	public string ExpressionFilterWithInPreAllocated()
+	{
+		var builder = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
+			.Filter(p => _preAllocatedIds.Contains(p.Id));
+		return builder.BuildUrl();
+	}
+
+	/// <summary>
+	/// Benchmark for collection Contains (IN clause) with new array each time.
+	/// Shows overhead of array allocation + expression compilation.
+	/// </summary>
+	[Benchmark]
+	public string ExpressionFilterWithInNewArray()
 	{
 		var ids = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 		var builder = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
 			.Filter(p => ids.Contains(p.Id));
+		return builder.BuildUrl();
+	}
+
+	/// <summary>
+	/// Benchmark for OR precedence expression (tests new parentheses logic).
+	/// </summary>
+	[Benchmark]
+	public string ExpressionFilterWithOrPrecedence()
+	{
+		var builder = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
+			.Filter(p => p.Price > 100 && (p.Rating == 4 || p.Rating == 5));
+		return builder.BuildUrl();
+	}
+
+	/// <summary>
+	/// Benchmark for expression with Select.
+	/// Tests member expression parsing.
+	/// </summary>
+	[Benchmark]
+	public string ExpressionSelect()
+	{
+		var builder = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
+			.Select(p => new { p.Id, p.Name, p.Price });
+		return builder.BuildUrl();
+	}
+
+	/// <summary>
+	/// Benchmark for expression with OrderBy.
+	/// </summary>
+	[Benchmark]
+	public string ExpressionOrderBy()
+	{
+		var builder = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
+			.OrderBy(p => p.Price, descending: true)
+			.OrderBy(p => p.Name);
 		return builder.BuildUrl();
 	}
 }
