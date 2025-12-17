@@ -70,7 +70,7 @@ if ($gitStatus) {
 }
 Write-Success "Working directory is clean."
 
-# Step 2: Check if CHANGELOG.md has [vNext] placeholder
+# Step 2: Check if CHANGELOG.md has [vNext] placeholder with content
 Write-Step "Checking CHANGELOG.md for [vNext] placeholder..."
 
 $changelogPath = Join-Path $solutionRoot "CHANGELOG.md"
@@ -79,12 +79,22 @@ if (-not (Test-Path $changelogPath)) {
 }
 
 $changelogContent = Get-Content $changelogPath -Raw
-if ($changelogContent -notmatch '\[vNext\]') {
+
+# Check if [vNext] exists and has content (not just followed by another ## section or EOF)
+$vNextMatch = [regex]::Match($changelogContent, '## \[vNext\]\s*\r?\n(.*?)(?=\r?\n## \[|$)', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+
+if (-not $vNextMatch.Success) {
     Write-Host "   No [vNext] placeholder found - changelog already up to date." -ForegroundColor Yellow
     $needsChangelogUpdate = $false
 } else {
-    $needsChangelogUpdate = $true
-    Write-Success "Found [vNext] placeholder to update."
+    $vNextContent = $vNextMatch.Groups[1].Value.Trim()
+    if ([string]::IsNullOrWhiteSpace($vNextContent)) {
+        Write-Host "   [vNext] section is empty - nothing to release." -ForegroundColor Yellow
+        $needsChangelogUpdate = $false
+    } else {
+        $needsChangelogUpdate = $true
+        Write-Success "Found [vNext] placeholder with content to release."
+    }
 }
 
 # Step 3: Get current version and update changelog if needed
@@ -97,26 +107,8 @@ if ($needsChangelogUpdate) {
     $currentHeight = [int]$currentVersionInfo.GitCommitHeight
     $nextHeight = $currentHeight + 1
     
-    # Calculate what the version will be after the changelog commit
-    # The version format from nbgv is typically: Major.Minor.Height-prerelease
-    $baseVersion = $currentVersionInfo.Version
-    $prereleaseSuffix = ""
-    if ($currentVersionInfo.NuGetPackageVersion -match '-(.+)$') {
-        $prereleaseSuffix = "-$($Matches[1])"
-        # Update the height in the prerelease suffix if it contains the height
-        $prereleaseSuffix = $prereleaseSuffix -replace "\.$currentHeight\.", ".$nextHeight."
-        $prereleaseSuffix = $prereleaseSuffix -replace "\.$currentHeight$", ".$nextHeight"
-    }
-    
-    # Reconstruct the version - for nbgv, the patch version often IS the height
-    $versionParts = $currentVersionInfo.SimpleVersion -split '\.'
-    if ($versionParts.Count -ge 3) {
-        $versionParts[2] = $nextHeight.ToString()
-    }
-    $predictedVersion = ($versionParts -join '.') + $prereleaseSuffix
-    
     # For NuGet, use the predicted NuGet version format
-    $nugetVersion = $currentVersionInfo.NuGetPackageVersion -replace "\.$currentHeight", ".$nextHeight"
+    $nugetVersion = $currentVersionInfo.NuGetPackageVersion -replace "\.${currentHeight}(-|$)", ".$nextHeight`$1"
     
     Write-Host "   Current version: $($currentVersionInfo.NuGetPackageVersion)" -ForegroundColor Gray
     Write-Host "   Predicted post-commit version: $nugetVersion" -ForegroundColor Gray
@@ -125,14 +117,9 @@ if ($needsChangelogUpdate) {
     Write-Step "Updating CHANGELOG.md with version $nugetVersion..."
     
     $today = Get-Date -Format "yyyy-MM-dd"
-    $newChangelogContent = $changelogContent -replace '\[vNext\]', "[$nugetVersion] - $today"
     
-    # Also add a new [vNext] section at the top for future changes
-    $newVNextSection = @"
-## [vNext]
-
-"@
-    $newChangelogContent = $newChangelogContent -replace '(## \[[\d\.]+-?\w*\] - \d{4}-\d{2}-\d{2})', "$newVNextSection`$1"
+    # Replace [vNext] with versioned header, keeping a new empty [vNext] at the top
+    $newChangelogContent = $changelogContent -replace '## \[vNext\]', "## [vNext]`n`n## [$nugetVersion] - $today"
     
     Set-Content $changelogPath $newChangelogContent -Encoding UTF8
     Write-Success "CHANGELOG.md updated with version $nugetVersion"

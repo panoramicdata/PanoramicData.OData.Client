@@ -6,7 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [vNext]
-## [10.1.39-beta] - 2025-12-17
+
+## [10.0.40-beta] - 2025-01-20
 
 ### Added
 - NestedExpandBuilder for configuring nested expand options (select, expand, filter, orderby, top, skip)
@@ -30,7 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - Non-fluent batch API methods that returned operation IDs
 
-## [vNext]
 ## [10.0.36-beta] - 2025-01-15
 
 ### Added
@@ -50,4 +50,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ETag-based optimistic concurrency
 - Comprehensive logging via `ILogger`
 - Fluent and typed query APIs
+
+
 
