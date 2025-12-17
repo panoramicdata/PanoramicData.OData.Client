@@ -1,0 +1,20 @@
+## Fixed in commit c1a9e10
+
+The OR operator precedence issue has been fixed. OR expressions are now properly wrapped in parentheses when they appear as operands of AND expressions.
+
+### Changes Made
+
+1. Modified `ParseBinaryExpression` in `ODataQueryBuilder.ExpressionParsing.cs` to track parent operator context
+2. OR expressions are wrapped in parentheses when their parent operator is AND
+3. Same fix applied to lambda parsing in `ODataQueryBuilder.LambdaParsing.cs` for Any/All expressions
+
+### Example
+
+Input: `e.Status == "Active" && (e.Name.Contains("foo") || e.Name.Contains("bar"))`
+
+Before: `Status eq 'Active' and contains(Name,'foo') or contains(Name,'bar')` (incorrect precedence)
+After: `Status eq 'Active' and (contains(Name,'foo') or contains(Name,'bar'))` (correct)
+
+### Tests
+
+All 348 unit tests pass, including 10 new tests specifically for OR precedence scenarios.

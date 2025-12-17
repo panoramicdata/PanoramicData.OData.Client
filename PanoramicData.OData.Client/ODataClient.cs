@@ -116,13 +116,13 @@ public partial class ODataClient : IDisposable
 
 		while (retryCount <= _options.RetryCount)
 		{
-			var result = await TrySendRequestAsync(request, retryCount, cancellationToken).ConfigureAwait(false);
-			if (result.ShouldReturn)
+			var (ShouldReturn, Response) = await TrySendRequestAsync(request, retryCount, cancellationToken).ConfigureAwait(false);
+			if (ShouldReturn)
 			{
-				return result.Response!;
+				return Response!;
 			}
 
-			lastResponse = result.Response;
+			lastResponse = Response;
 			retryCount++;
 
 			if (retryCount <= _options.RetryCount)
