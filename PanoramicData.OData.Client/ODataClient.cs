@@ -146,10 +146,16 @@ public partial class ODataClient : IDisposable
 			_logger.LogDebug("SendWithRetryAsync - Sending {Method} request to {Url} (attempt {Attempt})",
 				requestToSend.Method, requestToSend.RequestUri, retryCount + 1);
 
+			// Log full request details at Trace level
+			await LogRequestTraceAsync(requestToSend, cancellationToken).ConfigureAwait(false);
+
 			var response = await _httpClient.SendAsync(requestToSend, cancellationToken).ConfigureAwait(false);
 
 			_logger.LogDebug("SendWithRetryAsync - Received {StatusCode} from {Url}",
 				response.StatusCode, request.RequestUri);
+
+			// Log full response details at Trace level
+			await LogResponseTraceAsync(response, cancellationToken).ConfigureAwait(false);
 
 			if (response.IsSuccessStatusCode || (int)response.StatusCode < 500)
 			{
@@ -169,6 +175,67 @@ public partial class ODataClient : IDisposable
 		}
 
 		return (false, null);
+	}
+
+	private async Task LogRequestTraceAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	{
+		if (!_logger.IsEnabled(LogLevel.Trace))
+		{
+			return;
+		}
+
+		var sb = new StringBuilder();
+		sb.AppendLine("=== HTTP Request ===");
+		sb.AppendLine(CultureInfo.InvariantCulture, $"{request.Method} {request.RequestUri}");
+
+		sb.AppendLine("--- Request Headers ---");
+		foreach (var header in request.Headers)
+		{
+			sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {string.Join(", ", header.Value)}");
+		}
+
+		if (request.Content is not null)
+		{
+			foreach (var header in request.Content.Headers)
+			{
+				sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {string.Join(", ", header.Value)}");
+			}
+
+			sb.AppendLine("--- Request Body ---");
+			var body = await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+			sb.AppendLine(body);
+		}
+
+		_logger.LogTrace("{RequestDetails}", sb.ToString());
+	}
+
+	private async Task LogResponseTraceAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+	{
+		if (!_logger.IsEnabled(LogLevel.Trace))
+		{
+			return;
+		}
+
+		var sb = new StringBuilder();
+		sb.AppendLine("=== HTTP Response ===");
+		sb.AppendLine(CultureInfo.InvariantCulture, $"Status: {(int)response.StatusCode} {response.ReasonPhrase}");
+
+		sb.AppendLine("--- Response Headers ---");
+		foreach (var header in response.Headers)
+		{
+			sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {string.Join(", ", header.Value)}");
+		}
+
+		foreach (var header in response.Content.Headers)
+		{
+			sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {string.Join(", ", header.Value)}");
+		}
+
+		sb.AppendLine("--- Response Body ---");
+		var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+		sb.AppendLine(body);
+
+		_logger.LogTrace("{ResponseDetails}", sb.ToString());
 	}
 
 	private void LogRetryWarning(HttpRequestMessage request, HttpStatusCode statusCode, int retryCount) =>

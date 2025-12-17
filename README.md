@@ -245,7 +245,48 @@ var query = client.For<Product>("Products").Top(5);
 var response = await client.GetAsync(query);
 ```
 
-### Sample Log Output
+### Logging Levels
+
+| Level | Information Logged |
+|-------|-------------------|
+| `Trace` | **Full HTTP traffic**: request URL, method, all headers, request body, response status, response headers, response body |
+| `Debug` | Request URLs, methods, status codes, content lengths, parsed item counts |
+| `Warning` | Retry attempts for failed requests |
+| `Error` | Failed requests with response body |
+
+### Full HTTP Traffic Logging (Trace Level)
+
+To see complete request and response details including headers and body content, set the minimum log level to `Trace`:
+
+```csharp
+services.AddLogging(builder =>
+{
+    builder
+        .SetMinimumLevel(LogLevel.Trace)  // Enable full HTTP traffic logging
+        .AddSimpleConsole();
+});
+```
+
+Sample Trace output:
+```
+=== HTTP Request ===
+GET https://api.example.com/Products?$top=5
+--- Request Headers ---
+Authorization: Bearer eyJ...
+Accept: application/json
+--- Request Body ---
+(none for GET requests)
+
+=== HTTP Response ===
+Status: 200 OK
+--- Response Headers ---
+Content-Type: application/json; odata.metadata=minimal
+OData-Version: 4.0
+--- Response Body ---
+{"@odata.context":"...","value":[{"ID":1,"Name":"Widget",...}]}
+```
+
+### Sample Debug Log Output
 
 ```
 12:34:56.789 dbug: PanoramicData.OData.Client.ODataClient[0]
