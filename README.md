@@ -182,6 +182,43 @@ var query = client.For<Product>("Products")
     .Top(10);
 ```
 
+## Fluent Query Execution
+
+Execute queries directly from the query builder without needing to pass the query to a separate method:
+
+```csharp
+// Get all matching entities
+var products = await client.For<Product>("Products")
+    .Filter("Price gt 100")
+    .OrderBy("Name")
+    .GetAsync(cancellationToken);
+
+// Get all pages automatically
+var allProducts = await client.For<Product>("Products")
+    .Filter("Rating gt 3")
+    .GetAllAsync(cancellationToken);
+
+// Get first or default
+var cheapest = await client.For<Product>("Products")
+    .OrderBy("Price")
+    .GetFirstOrDefaultAsync(cancellationToken);
+
+// Get single entity (throws if not exactly one)
+var unique = await client.For<Product>("Products")
+    .Filter("Name eq 'SpecialWidget'")
+    .GetSingleAsync(cancellationToken);
+
+// Get single or default (returns null if none, throws if multiple)
+var maybeOne = await client.For<Product>("Products")
+    .Filter("ID eq 123")
+    .GetSingleOrDefaultAsync(cancellationToken);
+
+// Get count
+var count = await client.For<Product>("Products")
+    .Filter("Price gt 50")
+    .GetCountAsync(cancellationToken);
+```
+
 ## Raw OData Queries
 
 ```csharp

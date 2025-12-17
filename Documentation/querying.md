@@ -5,6 +5,7 @@ This document covers all query options supported by the PanoramicData.OData.Clie
 ## Table of Contents
 
 - [Basic Queries](#basic-queries)
+- [Fluent Query Execution](#fluent-query-execution)
 - [Filtering ($filter)](#filtering-filter)
 - [Selecting Fields ($select)](#selecting-fields-select)
 - [Expanding Related Entities ($expand)](#expanding-related-entities-expand)
@@ -41,6 +42,45 @@ foreach (var product in response.Value)
     Console.WriteLine($"{product.Id}: {product.Name}");
 }
 ```
+
+## Fluent Query Execution
+
+Execute queries directly from the query builder for streamlined code:
+
+```csharp
+// Get all matching entities
+var products = await client.For<Product>("Products")
+    .Filter("Price gt 100")
+    .OrderBy("Name")
+    .GetAsync(cancellationToken);
+
+// Get all pages automatically (follows @odata.nextLink)
+var allProducts = await client.For<Product>("Products")
+    .Filter("Rating gt 3")
+    .GetAllAsync(cancellationToken);
+
+// Get first or default (returns null if no match)
+var cheapest = await client.For<Product>("Products")
+    .OrderBy("Price")
+    .GetFirstOrDefaultAsync(cancellationToken);
+
+// Get single entity (throws if not exactly one)
+var unique = await client.For<Product>("Products")
+    .Filter("Name eq 'SpecialWidget'")
+    .GetSingleAsync(cancellationToken);
+
+// Get single or default (returns null if none, throws if multiple)
+var maybeOne = await client.For<Product>("Products")
+    .Filter("ID eq 123")
+    .GetSingleOrDefaultAsync(cancellationToken);
+
+// Get count only
+var count = await client.For<Product>("Products")
+    .Filter("Price gt 50")
+    .GetCountAsync(cancellationToken);
+```
+
+These methods are equivalent to creating a query and passing it to the corresponding `ODataClient` method, but provide a more fluent, chainable API.
 
 ## Filtering ($filter)
 
@@ -327,4 +367,3 @@ var query = client.For<Product>("Products")
 // Get raw JSON when you need full control
 var json = await client.GetRawAsync("Products?$filter=Price gt 100");
 // Returns JsonDocument for manual parsing
-```
