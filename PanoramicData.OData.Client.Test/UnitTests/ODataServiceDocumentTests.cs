@@ -1,5 +1,3 @@
-using AwesomeAssertions;
-
 namespace PanoramicData.OData.Client.Test.UnitTests;
 
 /// <summary>

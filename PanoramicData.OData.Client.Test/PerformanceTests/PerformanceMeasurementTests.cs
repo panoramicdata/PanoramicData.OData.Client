@@ -1,6 +1,3 @@
-using AwesomeAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
-using PanoramicData.OData.Client.Test.Models;
 using System.Diagnostics;
 
 namespace PanoramicData.OData.Client.Test.PerformanceTests;

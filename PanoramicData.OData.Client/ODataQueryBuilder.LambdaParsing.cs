@@ -1,5 +1,3 @@
-using System.Linq.Expressions;
-
 namespace PanoramicData.OData.Client;
 
 /// <summary>

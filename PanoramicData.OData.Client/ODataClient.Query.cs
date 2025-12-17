@@ -1,8 +1,3 @@
-using Microsoft.Extensions.Logging;
-using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
-
 namespace PanoramicData.OData.Client;
 
 /// <summary>
@@ -20,7 +15,7 @@ public partial class ODataClient
 	/// Creates a query builder for the specified entity set name.
 	/// </summary>
 	public ODataQueryBuilder<T> For<T>(string entitySetName) where T : class
-		=> new(entitySetName, _logger);
+		=> new(this, entitySetName, _logger);
 
 	/// <summary>
 	/// Executes a query and returns all matching entities, following pagination.

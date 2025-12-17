@@ -1,7 +1,6 @@
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
 using PanoramicData.OData.Client.Converters;
-using PanoramicData.OData.Client.Test.Models;
 using System.Globalization;
 using System.Text.Json;
 

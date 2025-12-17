@@ -1,6 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-
 namespace PanoramicData.OData.Client.Test.Fixtures;
 
 /// <summary>

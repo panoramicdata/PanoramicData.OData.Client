@@ -1,5 +1,3 @@
-using AwesomeAssertions;
-using System.Net;
 using System.Net.Http.Headers;
 
 namespace PanoramicData.OData.Client.Test.UnitTests;

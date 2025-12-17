@@ -1,5 +1,3 @@
-using System.Net.Http.Headers;
-
 namespace PanoramicData.OData.Client;
 
 /// <summary>

@@ -1,12 +1,5 @@
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using PanoramicData.OData.Client.Converters;
-using PanoramicData.OData.Client.Exceptions;
-using System.Globalization;
-using System.Net;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace PanoramicData.OData.Client;
 

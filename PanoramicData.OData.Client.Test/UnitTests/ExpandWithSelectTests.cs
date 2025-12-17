@@ -1,6 +1,3 @@
-using AwesomeAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
-
 namespace PanoramicData.OData.Client.Test.UnitTests;
 
 /// <summary>

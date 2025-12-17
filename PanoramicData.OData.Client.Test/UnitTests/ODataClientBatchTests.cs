@@ -1,11 +1,4 @@
-using AwesomeAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
-using Moq.Protected;
-using PanoramicData.OData.Client.Test.Models;
-using System.Net;
 using System.Net.Http.Headers;
-using System.Text;
 
 namespace PanoramicData.OData.Client.Test.UnitTests;
 

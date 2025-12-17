@@ -1,7 +1,5 @@
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
-using Microsoft.Extensions.Logging.Abstractions;
-using PanoramicData.OData.Client.Test.Models;
 using System.Diagnostics.CodeAnalysis;
 
 namespace PanoramicData.OData.Client.Test.Benchmarks;

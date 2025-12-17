@@ -1,7 +1,4 @@
 using System.Diagnostics;
-using Microsoft.Extensions.Logging.Abstractions;
-using PanoramicData.OData.Client;
-using PanoramicData.OData.Client.Test.Models;
 
 namespace PanoramicData.OData.Client.Test.Benchmarks;
 

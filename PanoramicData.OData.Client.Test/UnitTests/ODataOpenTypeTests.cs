@@ -1,5 +1,4 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-using AwesomeAssertions;
 using System.Text.Json;
 
 namespace PanoramicData.OData.Client.Test.UnitTests;

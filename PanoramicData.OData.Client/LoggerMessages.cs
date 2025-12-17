@@ -1,6 +1,3 @@
-using Microsoft.Extensions.Logging;
-using System.Net;
-
 namespace PanoramicData.OData.Client;
 
 /// <summary>

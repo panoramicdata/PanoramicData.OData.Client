@@ -1,11 +1,5 @@
-using System.Net;
 using System.Text.Json;
-using AwesomeAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
-using Moq.Protected;
 using PanoramicData.OData.Client.Exceptions;
-using PanoramicData.OData.Client.Test.Models;
 
 namespace PanoramicData.OData.Client.Test.UnitTests;
 

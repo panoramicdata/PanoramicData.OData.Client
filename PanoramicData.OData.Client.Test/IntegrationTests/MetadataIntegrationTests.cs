@@ -1,4 +1,3 @@
-using AwesomeAssertions;
 using PanoramicData.OData.Client.Test.Fixtures;
 
 namespace PanoramicData.OData.Client.Test.IntegrationTests;

@@ -1,4 +1,3 @@
-using AwesomeAssertions;
 using PanoramicData.OData.Client.Exceptions;
 
 namespace PanoramicData.OData.Client.Test.UnitTests;

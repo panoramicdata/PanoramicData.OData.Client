@@ -1,8 +1,3 @@
-using Microsoft.Extensions.Logging;
-using System.Globalization;
-using System.Text;
-using System.Text.Json;
-
 namespace PanoramicData.OData.Client;
 
 /// <summary>
@@ -352,57 +347,112 @@ public class FluentODataQueryBuilder
 		var sb = new StringBuilder();
 		sb.Append(_entitySet);
 
-		// Append key
-		if (_key is not null)
+		AppendKeySegment(sb);
+		AppendFunctionSegment(sb);
+		AppendQueryString(sb);
+
+		return sb.ToString();
+	}
+
+	private void AppendKeySegment(StringBuilder sb)
+	{
+		if (_key is null)
 		{
-			sb.Append('(');
-			sb.Append(FormatKey(_key));
-			sb.Append(')');
+			return;
 		}
 
-		// Append function
-		if (!string.IsNullOrEmpty(_function))
-		{
-			sb.Append('/');
-			sb.Append(_function);
-			sb.Append('(');
-			if (_functionParameters is not null)
-			{
-				sb.Append(FormatFunctionParameters(_functionParameters));
-			}
+		sb.Append('(');
+		sb.Append(FormatKey(_key));
+		sb.Append(')');
+	}
 
-			sb.Append(')');
+	private void AppendFunctionSegment(StringBuilder sb)
+	{
+		if (string.IsNullOrEmpty(_function))
+		{
+			return;
 		}
 
-		// Build query string
+		sb.Append('/');
+		sb.Append(_function);
+		sb.Append('(');
+		if (_functionParameters is not null)
+		{
+			sb.Append(FormatFunctionParameters(_functionParameters));
+		}
+
+		sb.Append(')');
+	}
+
+	private void AppendQueryString(StringBuilder sb)
+	{
+		var queryParams = BuildQueryParameters();
+
+		if (queryParams.Count > 0)
+		{
+			sb.Append('?');
+			sb.Append(string.Join("&", queryParams));
+		}
+	}
+
+	private List<string> BuildQueryParameters()
+	{
 		var queryParams = new List<string>();
 
+		AddFilterParameter(queryParams);
+		AddSearchParameter(queryParams);
+		AddSelectParameter(queryParams);
+		AddExpandParameter(queryParams);
+		AddOrderByParameter(queryParams);
+		AddPagingParameters(queryParams);
+		AddApplyParameter(queryParams);
+
+		return queryParams;
+	}
+
+	private void AddFilterParameter(List<string> queryParams)
+	{
 		if (_filterClauses.Count > 0)
 		{
 			var combinedFilter = string.Join(" and ", _filterClauses.Select(f => $"({f})"));
 			queryParams.Add($"$filter={Uri.EscapeDataString(combinedFilter)}");
 		}
+	}
 
+	private void AddSearchParameter(List<string> queryParams)
+	{
 		if (!string.IsNullOrWhiteSpace(_search))
 		{
 			queryParams.Add($"$search={Uri.EscapeDataString(_search)}");
 		}
+	}
 
+	private void AddSelectParameter(List<string> queryParams)
+	{
 		if (_selectFields.Count > 0)
 		{
 			queryParams.Add($"$select={string.Join(",", _selectFields)}");
 		}
+	}
 
+	private void AddExpandParameter(List<string> queryParams)
+	{
 		if (_expandFields.Count > 0)
 		{
 			queryParams.Add($"$expand={string.Join(",", _expandFields)}");
 		}
+	}
 
+	private void AddOrderByParameter(List<string> queryParams)
+	{
 		if (_orderByClauses.Count > 0)
 		{
 			queryParams.Add($"$orderby={string.Join(",", _orderByClauses)}");
 		}
+	}
 
+	private void AddPagingParameters(List<string> queryParams)
+	{
 		if (_skip.HasValue)
 		{
 			queryParams.Add($"$skip={_skip.Value}");
@@ -417,19 +467,14 @@ public class FluentODataQueryBuilder
 		{
 			queryParams.Add("$count=true");
 		}
+	}
 
+	private void AddApplyParameter(List<string> queryParams)
+	{
 		if (!string.IsNullOrWhiteSpace(_apply))
 		{
 			queryParams.Add($"$apply={Uri.EscapeDataString(_apply)}");
 		}
-
-		if (queryParams.Count > 0)
-		{
-			sb.Append('?');
-			sb.Append(string.Join("&", queryParams));
-		}
-
-		return sb.ToString();
 	}
 
 	private static string FormatKey(object key) => key switch

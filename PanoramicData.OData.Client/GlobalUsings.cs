@@ -1,0 +1,11 @@
+﻿global using Microsoft.Extensions.Logging;
+global using PanoramicData.OData.Client.Exceptions;
+global using System.Globalization;
+global using System.Linq.Expressions;
+global using System.Net;
+global using System.Net.Http.Headers;
+global using System.Net.Http.Json;
+global using System.Text;
+global using System.Text.Json;
+global using System.Text.Json.Serialization;
+global using System.Text.RegularExpressions;

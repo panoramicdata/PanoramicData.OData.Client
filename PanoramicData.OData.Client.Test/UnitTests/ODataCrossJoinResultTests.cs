@@ -1,4 +1,3 @@
-using AwesomeAssertions;
 using System.Text.Json;
 
 namespace PanoramicData.OData.Client.Test.UnitTests;

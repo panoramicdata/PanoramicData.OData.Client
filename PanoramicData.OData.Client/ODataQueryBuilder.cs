@@ -1,15 +1,14 @@
-using Microsoft.Extensions.Logging;
-using System.Linq.Expressions;
-using System.Text;
-
 namespace PanoramicData.OData.Client;
 
 /// <summary>
 /// Builds OData query URLs from LINQ-like expressions.
 /// </summary>
 /// <typeparam name="T">The entity type being queried.</typeparam>
-public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) where T : class
+public partial class ODataQueryBuilder<T> where T : class
 {
+	private readonly string _entitySet;
+	private readonly ILogger _logger;
+	private readonly ODataClient? _client;
 	private readonly List<string> _filterClauses = [];
 	private readonly List<string> _orderByClauses = [];
 	private readonly List<string> _selectFields = [];
@@ -25,6 +24,118 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 	private string? _apply;
 	private string? _search;
 	private string? _derivedType;
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="ODataQueryBuilder{T}"/> class.
+	/// </summary>
+	/// <param name="entitySet">The entity set name.</param>
+	/// <param name="logger">The logger instance.</param>
+	public ODataQueryBuilder(string entitySet, ILogger logger)
+	{
+		_entitySet = entitySet;
+		_logger = logger;
+		_client = null;
+	}
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="ODataQueryBuilder{T}"/> class with a client reference for fluent execution.
+	/// </summary>
+	/// <param name="client">The OData client instance.</param>
+	/// <param name="entitySet">The entity set name.</param>
+	/// <param name="logger">The logger instance.</param>
+	internal ODataQueryBuilder(ODataClient client, string entitySet, ILogger logger)
+	{
+		_client = client;
+		_entitySet = entitySet;
+		_logger = logger;
+	}
+
+	#region Fluent Execution Methods
+
+	/// <summary>
+	/// Executes the query and returns a single page of results.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>An ODataResponse containing the results.</returns>
+	/// <exception cref="InvalidOperationException">Thrown if this query builder was not created from an ODataClient.</exception>
+	public Task<ODataResponse<T>> GetAsync(CancellationToken cancellationToken = default)
+	{
+		EnsureClientAvailable();
+		return _client!.GetAsync(this, cancellationToken);
+	}
+
+	/// <summary>
+	/// Executes the query and returns all pages of results, following pagination.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>An ODataResponse containing all results.</returns>
+	/// <exception cref="InvalidOperationException">Thrown if this query builder was not created from an ODataClient.</exception>
+	public Task<ODataResponse<T>> GetAllAsync(CancellationToken cancellationToken = default)
+	{
+		EnsureClientAvailable();
+		return _client!.GetAllAsync(this, cancellationToken);
+	}
+
+	/// <summary>
+	/// Gets the first entity matching the query, or null if no match.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>The first matching entity, or null.</returns>
+	/// <exception cref="InvalidOperationException">Thrown if this query builder was not created from an ODataClient.</exception>
+	public Task<T?> GetFirstOrDefaultAsync(CancellationToken cancellationToken = default)
+	{
+		EnsureClientAvailable();
+		return _client!.GetFirstOrDefaultAsync(this, cancellationToken);
+	}
+
+	/// <summary>
+	/// Gets a single entity matching the query. Throws if zero or more than one match.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>The single matching entity.</returns>
+	/// <exception cref="InvalidOperationException">Thrown if this query builder was not created from an ODataClient, or if zero or more than one entity matches.</exception>
+	public Task<T> GetSingleAsync(CancellationToken cancellationToken = default)
+	{
+		EnsureClientAvailable();
+		return _client!.GetSingleAsync(this, cancellationToken);
+	}
+
+	/// <summary>
+	/// Gets a single entity matching the query, or null if no match. Throws if more than one match.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>The single matching entity, or null.</returns>
+	/// <exception cref="InvalidOperationException">Thrown if this query builder was not created from an ODataClient, or if more than one entity matches.</exception>
+	public Task<T?> GetSingleOrDefaultAsync(CancellationToken cancellationToken = default)
+	{
+		EnsureClientAvailable();
+		return _client!.GetSingleOrDefaultAsync(this, cancellationToken);
+	}
+
+	/// <summary>
+	/// Gets only the count of entities matching the query, without retrieving the entities.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>The count of matching entities.</returns>
+	/// <exception cref="InvalidOperationException">Thrown if this query builder was not created from an ODataClient.</exception>
+	public Task<long> GetCountAsync(CancellationToken cancellationToken = default)
+	{
+		EnsureClientAvailable();
+		return _client!.GetCountAsync(this, cancellationToken);
+	}
+
+	private void EnsureClientAvailable()
+	{
+		if (_client is null)
+		{
+			throw new InvalidOperationException(
+				"This query builder was not created from an ODataClient instance. " +
+				"Use client.For<T>() to create a query builder that supports direct execution, " +
+				"or pass this query to the client's GetAsync/GetAllAsync methods.");
+		}
+	}
+
+	#endregion
 
 	/// <summary>
 	/// Sets the key for a single entity query.
@@ -48,10 +159,9 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		var typeName = fullTypeName ?? typeof(TDerived).Name;
 
 		// Create a new query builder with the derived type
-		var derivedBuilder = new ODataQueryBuilder<TDerived>(entitySet, logger)
-		{
-			_derivedType = typeName
-		};
+		var derivedBuilder = _client is not null
+			? new ODataQueryBuilder<TDerived>(_client, _entitySet, _logger) { _derivedType = typeName }
+			: new ODataQueryBuilder<TDerived>(_entitySet, _logger) { _derivedType = typeName };
 
 		// Copy over existing query options
 		derivedBuilder._filterClauses.AddRange(_filterClauses);
@@ -468,10 +578,10 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 	/// </summary>
 	public string BuildUrl()
 	{
-		LoggerMessages.QueryBuilderBuildUrl(logger, typeof(T).Name, entitySet);
+		LoggerMessages.QueryBuilderBuildUrl(_logger, typeof(T).Name, _entitySet);
 
 		var sb = new StringBuilder();
-		sb.Append(entitySet);
+		sb.Append(_entitySet);
 
 		AppendDerivedTypeToUrl(sb);
 		AppendKeyToUrl(sb);
@@ -479,7 +589,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		AppendQueryString(sb);
 
 		var url = sb.ToString();
-		LoggerMessages.QueryBuilderFinalUrl(logger, typeof(T).Name, url);
+		LoggerMessages.QueryBuilderFinalUrl(_logger, typeof(T).Name, url);
 
 		return url;
 	}
@@ -493,7 +603,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 		sb.Append('/');
 		sb.Append(_derivedType);
-		LoggerMessages.QueryBuilderDerivedType(logger, _derivedType);
+		LoggerMessages.QueryBuilderDerivedType(_logger, _derivedType);
 	}
 
 	private void AppendKeyToUrl(StringBuilder sb)
@@ -506,7 +616,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		sb.Append('(');
 		sb.Append(FormatKey(_key));
 		sb.Append(')');
-		LoggerMessages.QueryBuilderKey(logger, _key);
+		LoggerMessages.QueryBuilderKey(_logger, _key);
 	}
 
 	private void AppendFunctionToUrl(StringBuilder sb)
@@ -518,7 +628,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 		sb.Append('/');
 		sb.Append(_function);
-		LoggerMessages.QueryBuilderFunction(logger, _function);
+		LoggerMessages.QueryBuilderFunction(_logger, _function);
 
 		sb.Append('(');
 		if (_functionParameters is not null)
@@ -567,7 +677,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 		var combinedFilter = string.Join(" and ", _filterClauses.Select(f => $"({f})"));
 		queryParams.Add($"$filter={Uri.EscapeDataString(combinedFilter)}");
-		LoggerMessages.QueryBuilderFilter(logger, combinedFilter);
+		LoggerMessages.QueryBuilderFilter(_logger, combinedFilter);
 	}
 
 	private void AppendSearchParameter(List<string> queryParams)
@@ -578,7 +688,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		}
 
 		queryParams.Add($"$search={Uri.EscapeDataString(_search)}");
-		LoggerMessages.QueryBuilderSearch(logger, _search);
+		LoggerMessages.QueryBuilderSearch(_logger, _search);
 	}
 
 	private void AppendSelectParameter(List<string> queryParams)
@@ -590,7 +700,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 		var selectClause = string.Join(",", _selectFields);
 		queryParams.Add($"$select={selectClause}");
-		LoggerMessages.QueryBuilderSelect(logger, selectClause);
+		LoggerMessages.QueryBuilderSelect(_logger, selectClause);
 	}
 
 	private void AppendExpandParameter(List<string> queryParams)
@@ -602,7 +712,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 		var expandClause = string.Join(",", _expandFields);
 		queryParams.Add($"$expand={expandClause}");
-		LoggerMessages.QueryBuilderExpand(logger, expandClause);
+		LoggerMessages.QueryBuilderExpand(_logger, expandClause);
 	}
 
 	private void AppendOrderByParameter(List<string> queryParams)
@@ -614,7 +724,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 		var orderByClause = string.Join(",", _orderByClauses);
 		queryParams.Add($"$orderby={orderByClause}");
-		LoggerMessages.QueryBuilderOrderBy(logger, orderByClause);
+		LoggerMessages.QueryBuilderOrderBy(_logger, orderByClause);
 	}
 
 	private void AppendSkipParameter(List<string> queryParams)
@@ -625,7 +735,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		}
 
 		queryParams.Add($"$skip={_skip.Value}");
-		LoggerMessages.QueryBuilderSkip(logger, _skip.Value);
+		LoggerMessages.QueryBuilderSkip(_logger, _skip.Value);
 	}
 
 	private void AppendTopParameter(List<string> queryParams)
@@ -636,7 +746,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		}
 
 		queryParams.Add($"$top={_top.Value}");
-		LoggerMessages.QueryBuilderTop(logger, _top.Value);
+		LoggerMessages.QueryBuilderTop(_logger, _top.Value);
 	}
 
 	private void AppendCountParameter(List<string> queryParams)
@@ -647,7 +757,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		}
 
 		queryParams.Add("$count=true");
-		LoggerMessages.QueryBuilderCount(logger);
+		LoggerMessages.QueryBuilderCount(_logger);
 	}
 
 	private void AppendApplyParameter(List<string> queryParams)
@@ -658,7 +768,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		}
 
 		queryParams.Add($"$apply={Uri.EscapeDataString(_apply)}");
-		LoggerMessages.QueryBuilderApply(logger, _apply);
+		LoggerMessages.QueryBuilderApply(_logger, _apply);
 	}
 
 	private void AppendComputeParameter(List<string> queryParams)
@@ -670,6 +780,6 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 		var computeClause = string.Join(",", _computeExpressions);
 		queryParams.Add($"$compute={Uri.EscapeDataString(computeClause)}");
-		LoggerMessages.QueryBuilderCompute(logger, computeClause);
+		LoggerMessages.QueryBuilderCompute(_logger, computeClause);
 	}
 }

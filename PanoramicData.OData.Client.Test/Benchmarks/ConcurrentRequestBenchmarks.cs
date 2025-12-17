@@ -1,11 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Net;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
-using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
-using Moq.Protected;
-using PanoramicData.OData.Client.Test.Models;
 
 namespace PanoramicData.OData.Client.Test.Benchmarks;
 

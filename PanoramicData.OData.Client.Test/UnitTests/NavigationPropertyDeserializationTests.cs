@@ -1,8 +1,3 @@
-using AwesomeAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
-using Moq.Protected;
-using System.Net;
 using System.Text.Json;
 
 namespace PanoramicData.OData.Client.Test.UnitTests;

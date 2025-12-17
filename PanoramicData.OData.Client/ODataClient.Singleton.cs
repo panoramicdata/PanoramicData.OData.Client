@@ -1,8 +1,3 @@
-using Microsoft.Extensions.Logging;
-using PanoramicData.OData.Client.Exceptions;
-using System.Net;
-using System.Net.Http.Json;
-
 namespace PanoramicData.OData.Client;
 
 /// <summary>

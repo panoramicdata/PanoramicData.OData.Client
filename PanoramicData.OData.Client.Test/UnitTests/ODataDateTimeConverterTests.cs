@@ -1,4 +1,3 @@
-using AwesomeAssertions;
 using PanoramicData.OData.Client.Converters;
 using System.Text.Json;
 

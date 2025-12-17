@@ -1,8 +1,4 @@
-using AwesomeAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using PanoramicData.OData.Client.Exceptions;
-using PanoramicData.OData.Client.Test.Models;
 
 namespace PanoramicData.OData.Client.Test.IntegrationTests;
 
