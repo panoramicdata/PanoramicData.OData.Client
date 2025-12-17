@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [vNext]
 
 ### Added
+- NestedExpandBuilder for configuring nested expand options (select, expand, filter, orderby, top, skip)
+- ExpandWithSelect method for expand with nested select syntax (fixes #4)
 - Fluent batch API with clean method chaining (`CreateBatch().Get<T>().Create().Delete().ExecuteAsync()`)
 - `Changeset(Action<ODataChangesetBuilder>)` pattern for atomic batch operations
 - Index-based result access on `ODataBatchResponse` (`response[0]`, `response.GetResult<T>(0)`)
@@ -19,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatic version replacement in `Publish.ps1`
 
 ### Changed
+- Split multi-type files into one type per file for better maintainability
 - `ODataBatchBuilder` methods now return builder for fluent chaining (breaking change from string operation IDs)
 - `ODataChangesetBuilder` methods now return builder for fluent chaining
 - `CreateChangeset()` replaced with `Changeset(Action<ODataChangesetBuilder>)` pattern
