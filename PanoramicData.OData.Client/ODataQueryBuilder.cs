@@ -146,11 +146,14 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 	/// <summary>
 	/// Adds expand fields from an expression.
+	/// Supports nested expands via expressions like p => new { p.Parent, p.Parent!.Children }
+	/// which produces $expand=Parent($expand=Children).
 	/// </summary>
 	public ODataQueryBuilder<T> Expand(Expression<Func<T, object?>> selector)
 	{
-		var memberNames = GetMemberNames(selector);
-		_expandFields.AddRange(memberNames);
+		var memberPaths = GetExpandMemberPaths(selector);
+		var nestedExpands = BuildNestedExpandFields(memberPaths);
+		_expandFields.AddRange(nestedExpands);
 		return this;
 	}
 
@@ -279,7 +282,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 	/// </summary>
 	public string BuildUrl()
 	{
-		logger.LogDebug("ODataQueryBuilder<{Type}>.BuildUrl() - EntitySet: '{EntitySet}'", typeof(T).Name, entitySet);
+		LoggerMessages.QueryBuilderBuildUrl(logger, typeof(T).Name, entitySet);
 
 		var sb = new StringBuilder();
 		sb.Append(entitySet);
@@ -290,7 +293,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		AppendQueryString(sb);
 
 		var url = sb.ToString();
-		logger.LogDebug("ODataQueryBuilder<{Type}>.BuildUrl() - Final URL: {Url}", typeof(T).Name, url);
+		LoggerMessages.QueryBuilderFinalUrl(logger, typeof(T).Name, url);
 
 		return url;
 	}
@@ -304,7 +307,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 		sb.Append('/');
 		sb.Append(_derivedType);
-		logger.LogDebug("ODataQueryBuilder - DerivedType: {DerivedType}", _derivedType);
+		LoggerMessages.QueryBuilderDerivedType(logger, _derivedType);
 	}
 
 	private void AppendKeyToUrl(StringBuilder sb)
@@ -317,7 +320,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		sb.Append('(');
 		sb.Append(FormatKey(_key));
 		sb.Append(')');
-		logger.LogDebug("ODataQueryBuilder - Key: {Key}", _key);
+		LoggerMessages.QueryBuilderKey(logger, _key);
 	}
 
 	private void AppendFunctionToUrl(StringBuilder sb)
@@ -329,7 +332,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 		sb.Append('/');
 		sb.Append(_function);
-		logger.LogDebug("ODataQueryBuilder - Function: {Function}", _function);
+		LoggerMessages.QueryBuilderFunction(logger, _function);
 
 		sb.Append('(');
 		if (_functionParameters is not null)
@@ -378,7 +381,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 		var combinedFilter = string.Join(" and ", _filterClauses.Select(f => $"({f})"));
 		queryParams.Add($"$filter={Uri.EscapeDataString(combinedFilter)}");
-		logger.LogDebug("ODataQueryBuilder - Filter: {Filter}", combinedFilter);
+		LoggerMessages.QueryBuilderFilter(logger, combinedFilter);
 	}
 
 	private void AppendSearchParameter(List<string> queryParams)
@@ -389,7 +392,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		}
 
 		queryParams.Add($"$search={Uri.EscapeDataString(_search)}");
-		logger.LogDebug("ODataQueryBuilder - Search: {Search}", _search);
+		LoggerMessages.QueryBuilderSearch(logger, _search);
 	}
 
 	private void AppendSelectParameter(List<string> queryParams)
@@ -401,7 +404,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 		var selectClause = string.Join(",", _selectFields);
 		queryParams.Add($"$select={selectClause}");
-		logger.LogDebug("ODataQueryBuilder - Select: {Select}", selectClause);
+		LoggerMessages.QueryBuilderSelect(logger, selectClause);
 	}
 
 	private void AppendExpandParameter(List<string> queryParams)
@@ -413,7 +416,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 		var expandClause = string.Join(",", _expandFields);
 		queryParams.Add($"$expand={expandClause}");
-		logger.LogDebug("ODataQueryBuilder - Expand: {Expand}", expandClause);
+		LoggerMessages.QueryBuilderExpand(logger, expandClause);
 	}
 
 	private void AppendOrderByParameter(List<string> queryParams)
@@ -425,7 +428,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 		var orderByClause = string.Join(",", _orderByClauses);
 		queryParams.Add($"$orderby={orderByClause}");
-		logger.LogDebug("ODataQueryBuilder - OrderBy: {OrderBy}", orderByClause);
+		LoggerMessages.QueryBuilderOrderBy(logger, orderByClause);
 	}
 
 	private void AppendSkipParameter(List<string> queryParams)
@@ -436,7 +439,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		}
 
 		queryParams.Add($"$skip={_skip.Value}");
-		logger.LogDebug("ODataQueryBuilder - Skip: {Skip}", _skip.Value);
+		LoggerMessages.QueryBuilderSkip(logger, _skip.Value);
 	}
 
 	private void AppendTopParameter(List<string> queryParams)
@@ -447,7 +450,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		}
 
 		queryParams.Add($"$top={_top.Value}");
-		logger.LogDebug("ODataQueryBuilder - Top: {Top}", _top.Value);
+		LoggerMessages.QueryBuilderTop(logger, _top.Value);
 	}
 
 	private void AppendCountParameter(List<string> queryParams)
@@ -458,7 +461,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		}
 
 		queryParams.Add("$count=true");
-		logger.LogDebug("ODataQueryBuilder - Count: true");
+		LoggerMessages.QueryBuilderCount(logger);
 	}
 
 	private void AppendApplyParameter(List<string> queryParams)
@@ -469,7 +472,7 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 		}
 
 		queryParams.Add($"$apply={Uri.EscapeDataString(_apply)}");
-		logger.LogDebug("ODataQueryBuilder - Apply: {Apply}", _apply);
+		LoggerMessages.QueryBuilderApply(logger, _apply);
 	}
 
 	private void AppendComputeParameter(List<string> queryParams)
@@ -481,6 +484,6 @@ public partial class ODataQueryBuilder<T>(string entitySet, ILogger logger) wher
 
 		var computeClause = string.Join(",", _computeExpressions);
 		queryParams.Add($"$compute={Uri.EscapeDataString(computeClause)}");
-		logger.LogDebug("ODataQueryBuilder - Compute: {Compute}", computeClause);
+		LoggerMessages.QueryBuilderCompute(logger, computeClause);
 	}
 }

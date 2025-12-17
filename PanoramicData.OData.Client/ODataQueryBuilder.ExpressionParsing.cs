@@ -471,4 +471,111 @@ public partial class ODataQueryBuilder<T> where T : class
 
 		throw new ArgumentException("Invalid selector expression");
 	}
+
+	/// <summary>
+	/// Gets full member paths from an expand expression.
+	/// For example, p => new { p.BestFriend, p.BestFriend!.Trips } returns ["BestFriend", "BestFriend/Trips"].
+	/// </summary>
+	private static List<string> GetExpandMemberPaths(Expression<Func<T, object?>> selector)
+	{
+		var results = new List<string>();
+
+		if (selector.Body is NewExpression newExpr)
+		{
+			foreach (var arg in newExpr.Arguments)
+			{
+				var memberPath = GetMemberPathFromExpression(arg);
+				if (!string.IsNullOrEmpty(memberPath) && !results.Contains(memberPath))
+				{
+					results.Add(memberPath);
+				}
+			}
+
+			return results;
+		}
+
+		if (selector.Body is MemberExpression member)
+		{
+			var memberPath = GetMemberPathFromExpression(member);
+			if (!string.IsNullOrEmpty(memberPath))
+			{
+				results.Add(memberPath);
+			}
+		}
+		else if (selector.Body is UnaryExpression unary && unary.Operand is MemberExpression unaryMember)
+		{
+			var memberPath = GetMemberPathFromExpression(unaryMember);
+			if (!string.IsNullOrEmpty(memberPath))
+			{
+				results.Add(memberPath);
+			}
+		}
+
+		return results;
+	}
+
+	/// <summary>
+	/// Builds nested expand syntax from a collection of member paths.
+	/// Converts paths like ["BestFriend", "BestFriend/Trips", "Friends"] 
+	/// into "BestFriend($expand=Trips),Friends".
+	/// </summary>
+	private static List<string> BuildNestedExpandFields(List<string> memberPaths)
+	{
+		// Build a tree of expand nodes
+		var rootNodes = new Dictionary<string, ExpandNode>();
+
+		foreach (var path in memberPaths)
+		{
+			var segments = path.Split('/');
+			AddPathToTree(rootNodes, segments, 0);
+		}
+
+		// Serialize the tree to OData expand syntax
+		var result = new List<string>();
+		foreach (var node in rootNodes.Values)
+		{
+			result.Add(node.ToODataSyntax());
+		}
+
+		return result;
+	}
+
+	private static void AddPathToTree(Dictionary<string, ExpandNode> nodes, string[] segments, int index)
+	{
+		if (index >= segments.Length)
+		{
+			return;
+		}
+
+		var segment = segments[index];
+
+		if (!nodes.TryGetValue(segment, out var node))
+		{
+			node = new ExpandNode(segment);
+			nodes[segment] = node;
+		}
+
+		// Continue with remaining segments as children
+		AddPathToTree(node.Children, segments, index + 1);
+	}
+
+	/// <summary>
+	/// Represents a node in the expand tree structure.
+	/// </summary>
+	private sealed class ExpandNode(string name)
+	{
+		public string Name { get; } = name;
+		public Dictionary<string, ExpandNode> Children { get; } = [];
+
+		public string ToODataSyntax()
+		{
+			if (Children.Count == 0)
+			{
+				return Name;
+			}
+
+			var childExpands = Children.Values.Select(c => c.ToODataSyntax());
+			return $"{Name}($expand={string.Join(",", childExpands)})";
+		}
+	}
 }
