@@ -326,7 +326,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// Cache for PropertyInfo arrays by type - anonymous types used in Function() calls.
 	/// Uses ConditionalWeakTable to allow garbage collection of types.
 	/// </summary>
-	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Type, PropertyInfo[]> PropertyCache = new();
+	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Type, PropertyInfo[]> PropertyCache = [];
 
 	private static string FormatFunctionParameters(object parameters)
 	{

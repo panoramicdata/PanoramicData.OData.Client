@@ -30,6 +30,9 @@ public class FluentODataQueryBuilder
 	private bool _count;
 	private object? _key;
 	private string? _search;
+	private string? _function;
+	private object? _functionParameters;
+	private string? _apply;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="FluentODataQueryBuilder"/> class.
@@ -191,6 +194,30 @@ public class FluentODataQueryBuilder
 		return this;
 	}
 
+	/// <summary>
+	/// Sets a function to call on the entity set.
+	/// </summary>
+	/// <param name="functionName">The function name.</param>
+	/// <param name="parameters">Optional function parameters.</param>
+	/// <returns>This builder for method chaining.</returns>
+	public FluentODataQueryBuilder Function(string functionName, object? parameters = null)
+	{
+		_function = functionName;
+		_functionParameters = parameters;
+		return this;
+	}
+
+	/// <summary>
+	/// Sets a raw $apply clause for aggregations.
+	/// </summary>
+	/// <param name="applyClause">The apply clause.</param>
+	/// <returns>This builder for method chaining.</returns>
+	public FluentODataQueryBuilder Apply(string applyClause)
+	{
+		_apply = applyClause;
+		return this;
+	}
+
 	#endregion
 
 	#region Execution Methods
@@ -333,6 +360,20 @@ public class FluentODataQueryBuilder
 			sb.Append(')');
 		}
 
+		// Append function
+		if (!string.IsNullOrEmpty(_function))
+		{
+			sb.Append('/');
+			sb.Append(_function);
+			sb.Append('(');
+			if (_functionParameters is not null)
+			{
+				sb.Append(FormatFunctionParameters(_functionParameters));
+			}
+
+			sb.Append(')');
+		}
+
 		// Build query string
 		var queryParams = new List<string>();
 
@@ -377,6 +418,11 @@ public class FluentODataQueryBuilder
 			queryParams.Add("$count=true");
 		}
 
+		if (!string.IsNullOrWhiteSpace(_apply))
+		{
+			queryParams.Add($"$apply={Uri.EscapeDataString(_apply)}");
+		}
+
 		if (queryParams.Count > 0)
 		{
 			sb.Append('?');
@@ -394,6 +440,30 @@ public class FluentODataQueryBuilder
 		string s => $"'{s.Replace("'", "''")}'",
 		_ => key.ToString() ?? throw new ArgumentException("Invalid key value")
 	};
+
+	private static string FormatFunctionParameters(object parameters)
+	{
+		var props = parameters.GetType().GetProperties();
+		var parts = new List<string>();
+
+		foreach (var prop in props)
+		{
+			var value = prop.GetValue(parameters);
+			var formattedValue = value switch
+			{
+				null => "null",
+				string s => $"'{s.Replace("'", "''")}'",
+				bool b => b.ToString().ToLowerInvariant(),
+				DateTime dt => dt.ToString("O", CultureInfo.InvariantCulture),
+				DateTimeOffset dto => dto.ToString("O", CultureInfo.InvariantCulture),
+				_ => Convert.ToString(value, CultureInfo.InvariantCulture) ?? "null"
+			};
+
+			parts.Add($"{prop.Name}={formattedValue}");
+		}
+
+		return string.Join(",", parts);
+	}
 
 	#endregion
 }

@@ -135,7 +135,7 @@ public partial class ODataClient
 
 	private ODataBatchResponse ParseBatchResponse(string content, string contentType, ODataBatchBuilder batch)
 	{
-		var boundaryMatch = Regex.Match(contentType, @"boundary=([^;\s]+)");
+		var boundaryMatch = BoundaryMatchRegex().Match(contentType);
 		if (!boundaryMatch.Success)
 		{
 			LoggerMessages.ParseBatchResponseNoBoundary(_logger, contentType);
@@ -182,7 +182,7 @@ public partial class ODataClient
 
 	private void ParseChangesetPart(string part, List<ODataBatchOperation> allOperations, ODataBatchResponse result, ref int operationIndex)
 	{
-		var changesetBoundaryMatch = Regex.Match(part, @"boundary=([^;\s]+)");
+		var changesetBoundaryMatch = BoundaryMatchRegex().Match(part);
 		if (!changesetBoundaryMatch.Success)
 		{
 			return;
@@ -213,7 +213,7 @@ public partial class ODataClient
 
 	private ODataBatchOperationResult? ParseOperationResponse(string part, List<ODataBatchOperation> operations, ref int operationIndex)
 	{
-		var statusMatch = Regex.Match(part, @"HTTP/\d\.\d\s+(\d{3})\s+(.*)");
+		var statusMatch = StatusMatchRegex().Match(part);
 		if (!statusMatch.Success)
 		{
 			return null;
@@ -234,7 +234,7 @@ public partial class ODataClient
 
 	private static string ExtractOperationId(string part, List<ODataBatchOperation> operations, int operationIndex)
 	{
-		var contentIdMatch = Regex.Match(part, @"Content-ID:\s*(\S+)", RegexOptions.IgnoreCase);
+		var contentIdMatch = ContentIdMatchRegex().Match(part);
 		if (contentIdMatch.Success)
 		{
 			return contentIdMatch.Groups[1].Value;
@@ -381,4 +381,40 @@ public partial class ODataClient
 			LoggerMessages.ParseJsonBatchResponseDeserializeFailed(_logger, ex, opResult.OperationId);
 		}
 	}
+
+	/// <summary>
+	/// Returns a regular expression that matches the value of the 'boundary' parameter in a string, such as a MIME content
+	/// type header.
+	/// </summary>
+	/// <remarks>The returned regular expression captures the boundary value in the first capturing group. This is
+	/// commonly used to extract multipart boundary values from content type headers in HTTP requests or
+	/// responses.</remarks>
+	/// <returns>A <see cref="Regex"/> instance configured to match the 'boundary' parameter and capture its value.</returns>
+	[GeneratedRegex(@"boundary=([^;\s]+)")]
+	private static partial Regex BoundaryMatchRegex();
+
+	/// <summary>
+	/// Gets a regular expression that matches HTTP status lines and captures the status code and reason phrase.
+	/// </summary>
+	/// <remarks>The returned regular expression expects the input to begin with "HTTP/", followed by a version
+	/// number, a three-digit status code, and a reason phrase separated by whitespace. This can be used to parse HTTP
+	/// response status lines such as "HTTP/1.1 404 Not Found".</remarks>
+	/// <returns>A <see cref="Regex"/> instance that matches HTTP status lines in the format "HTTP/x.x status-code
+	/// reason-phrase". The first capture group contains the three-digit status code, and the second contains the reason
+	/// phrase.
+	/// </returns>
+	[GeneratedRegex(@"HTTP/\d\.\d\s+(\d{3})\s+(.*)")]
+	private static partial Regex StatusMatchRegex();
+
+
+	/// <summary>
+	/// Creates a regular expression that matches the 'Content-ID' header and captures its value in a case-insensitive
+	/// manner.
+	/// </summary>
+	/// <remarks>The returned regular expression uses the pattern <c>Content-ID:\s*(\S+)</c> with case-insensitive
+	/// matching and is culture-invariant to 'en-GB'. The first capturing group contains the value of the 'Content-ID'
+	/// header, excluding leading whitespace.</remarks>
+	/// <returns>A <see cref="Regex"/> instance configured to match and capture the value of the 'Content-ID' header.</returns>
+	[GeneratedRegex(@"Content-ID:\s*(\S+)", RegexOptions.IgnoreCase, "en-GB")]
+	private static partial Regex ContentIdMatchRegex();
 }

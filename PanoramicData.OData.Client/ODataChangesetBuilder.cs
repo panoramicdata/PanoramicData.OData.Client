@@ -15,6 +15,7 @@ public class ODataChangesetBuilder
 	{
 		_changeset = changeset;
 		_jsonOptions = jsonOptions;
+		_ = _jsonOptions; // Reserved for future use
 	}
 
 	/// <summary>
@@ -23,8 +24,8 @@ public class ODataChangesetBuilder
 	/// <typeparam name="T">The entity type.</typeparam>
 	/// <param name="entitySet">The entity set name.</param>
 	/// <param name="entity">The entity to create.</param>
-	/// <returns>The operation ID for retrieving the result.</returns>
-	public string Create<T>(string entitySet, T entity) where T : class
+	/// <returns>This builder for method chaining.</returns>
+	public ODataChangesetBuilder Create<T>(string entitySet, T entity) where T : class
 	{
 		var operation = new ODataBatchOperation
 		{
@@ -34,7 +35,7 @@ public class ODataChangesetBuilder
 			ResultType = typeof(T)
 		};
 		_changeset.Operations.Add(operation);
-		return operation.Id;
+		return this;
 	}
 
 	/// <summary>
@@ -46,8 +47,8 @@ public class ODataChangesetBuilder
 	/// <param name="key">The entity key.</param>
 	/// <param name="patchValues">The values to update.</param>
 	/// <param name="etag">Optional ETag for concurrency control.</param>
-	/// <returns>The operation ID for retrieving the result.</returns>
-	public string Update<T, TKey>(string entitySet, TKey key, object patchValues, string? etag = null) where T : class
+	/// <returns>This builder for method chaining.</returns>
+	public ODataChangesetBuilder Update<T, TKey>(string entitySet, TKey key, object patchValues, string? etag = null) where T : class
 	{
 		var operation = new ODataBatchOperation
 		{
@@ -58,7 +59,7 @@ public class ODataChangesetBuilder
 			ETag = etag
 		};
 		_changeset.Operations.Add(operation);
-		return operation.Id;
+		return this;
 	}
 
 	/// <summary>
@@ -69,8 +70,8 @@ public class ODataChangesetBuilder
 	/// <param name="key">The entity key.</param>
 	/// <param name="patchValues">The values to update.</param>
 	/// <param name="etag">Optional ETag for concurrency control.</param>
-	/// <returns>The operation ID for retrieving the result.</returns>
-	public string Update<T>(string entitySet, object key, object patchValues, string? etag = null) where T : class
+	/// <returns>This builder for method chaining.</returns>
+	public ODataChangesetBuilder Update<T>(string entitySet, object key, object patchValues, string? etag = null) where T : class
 		=> Update<T, object>(entitySet, key, patchValues, etag);
 
 	/// <summary>
@@ -80,8 +81,8 @@ public class ODataChangesetBuilder
 	/// <param name="entitySet">The entity set name.</param>
 	/// <param name="key">The entity key.</param>
 	/// <param name="etag">Optional ETag for concurrency control.</param>
-	/// <returns>The operation ID for retrieving the result.</returns>
-	public string Delete<TKey>(string entitySet, TKey key, string? etag = null)
+	/// <returns>This builder for method chaining.</returns>
+	public ODataChangesetBuilder Delete<TKey>(string entitySet, TKey key, string? etag = null)
 	{
 		var operation = new ODataBatchOperation
 		{
@@ -90,7 +91,7 @@ public class ODataChangesetBuilder
 			ETag = etag
 		};
 		_changeset.Operations.Add(operation);
-		return operation.Id;
+		return this;
 	}
 
 	/// <summary>
@@ -99,8 +100,8 @@ public class ODataChangesetBuilder
 	/// <param name="entitySet">The entity set name.</param>
 	/// <param name="key">The entity key.</param>
 	/// <param name="etag">Optional ETag for concurrency control.</param>
-	/// <returns>The operation ID for retrieving the result.</returns>
-	public string Delete(string entitySet, object key, string? etag = null)
+	/// <returns>This builder for method chaining.</returns>
+	public ODataChangesetBuilder Delete(string entitySet, object key, string? etag = null)
 		=> Delete<object>(entitySet, key, etag);
 
 	private static string FormatKey<TKey>(TKey key) => key switch

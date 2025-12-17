@@ -6,9 +6,12 @@
     This script performs the following steps:
     1. Checks for uncommitted changes (git porcelain)
     2. Determines the Nerdbank GitVersioning version
-    3. Validates nuget-key.txt exists, has content, and is gitignored
-    4. Runs unit tests (unless -SkipTests is specified)
-    5. Publishes to NuGet.org
+    3. Updates CHANGELOG.md [vNext] placeholder with actual version
+    4. Commits changelog update (which increments git height)
+    5. Recalculates version after commit
+    6. Validates nuget-key.txt exists, has content, and is gitignored
+    7. Runs unit tests (unless -SkipTests is specified)
+    8. Publishes to NuGet.org
 
 .PARAMETER SkipTests
     Skip running unit tests before publishing.
@@ -42,6 +45,14 @@ function Write-Error-Exit {
     exit 1
 }
 
+function Get-NbgvVersion {
+    $nbgvOutput = nbgv get-version --format json 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error-Exit "Failed to get version from nbgv. Ensure Nerdbank.GitVersioning is installed.`n$nbgvOutput"
+    }
+    return $nbgvOutput | ConvertFrom-Json
+}
+
 # Get script directory (solution root)
 $solutionRoot = $PSScriptRoot
 Set-Location $solutionRoot
@@ -59,22 +70,94 @@ if ($gitStatus) {
 }
 Write-Success "Working directory is clean."
 
-# Step 2: Determine Nerdbank GitVersioning version
-Write-Step "Determining version from Nerdbank.GitVersioning..."
+# Step 2: Check if CHANGELOG.md has [vNext] placeholder
+Write-Step "Checking CHANGELOG.md for [vNext] placeholder..."
 
-$nbgvOutput = nbgv get-version --format json 2>&1
-if ($LASTEXITCODE -ne 0) {
-    Write-Error-Exit "Failed to get version from nbgv. Ensure Nerdbank.GitVersioning is installed.`n$nbgvOutput"
+$changelogPath = Join-Path $solutionRoot "CHANGELOG.md"
+if (-not (Test-Path $changelogPath)) {
+    Write-Error-Exit "CHANGELOG.md not found. Please create it with a [vNext] section."
 }
 
-$versionInfo = $nbgvOutput | ConvertFrom-Json
+$changelogContent = Get-Content $changelogPath -Raw
+if ($changelogContent -notmatch '\[vNext\]') {
+    Write-Host "   No [vNext] placeholder found - changelog already up to date." -ForegroundColor Yellow
+    $needsChangelogUpdate = $false
+} else {
+    $needsChangelogUpdate = $true
+    Write-Success "Found [vNext] placeholder to update."
+}
+
+# Step 3: Get current version and update changelog if needed
+if ($needsChangelogUpdate) {
+    Write-Step "Calculating version for changelog..."
+    
+    # Get current version info - this will be the version BEFORE the changelog commit
+    # After committing, git height increases by 1, so we need to calculate the post-commit version
+    $currentVersionInfo = Get-NbgvVersion
+    $currentHeight = [int]$currentVersionInfo.GitCommitHeight
+    $nextHeight = $currentHeight + 1
+    
+    # Calculate what the version will be after the changelog commit
+    # The version format from nbgv is typically: Major.Minor.Height-prerelease
+    $baseVersion = $currentVersionInfo.Version
+    $prereleaseSuffix = ""
+    if ($currentVersionInfo.NuGetPackageVersion -match '-(.+)$') {
+        $prereleaseSuffix = "-$($Matches[1])"
+        # Update the height in the prerelease suffix if it contains the height
+        $prereleaseSuffix = $prereleaseSuffix -replace "\.$currentHeight\.", ".$nextHeight."
+        $prereleaseSuffix = $prereleaseSuffix -replace "\.$currentHeight$", ".$nextHeight"
+    }
+    
+    # Reconstruct the version - for nbgv, the patch version often IS the height
+    $versionParts = $currentVersionInfo.SimpleVersion -split '\.'
+    if ($versionParts.Count -ge 3) {
+        $versionParts[2] = $nextHeight.ToString()
+    }
+    $predictedVersion = ($versionParts -join '.') + $prereleaseSuffix
+    
+    # For NuGet, use the predicted NuGet version format
+    $nugetVersion = $currentVersionInfo.NuGetPackageVersion -replace "\.$currentHeight", ".$nextHeight"
+    
+    Write-Host "   Current version: $($currentVersionInfo.NuGetPackageVersion)" -ForegroundColor Gray
+    Write-Host "   Predicted post-commit version: $nugetVersion" -ForegroundColor Gray
+    
+    # Update CHANGELOG.md
+    Write-Step "Updating CHANGELOG.md with version $nugetVersion..."
+    
+    $today = Get-Date -Format "yyyy-MM-dd"
+    $newChangelogContent = $changelogContent -replace '\[vNext\]', "[$nugetVersion] - $today"
+    
+    # Also add a new [vNext] section at the top for future changes
+    $newVNextSection = @"
+## [vNext]
+
+"@
+    $newChangelogContent = $newChangelogContent -replace '(## \[[\d\.]+-?\w*\] - \d{4}-\d{2}-\d{2})', "$newVNextSection`$1"
+    
+    Set-Content $changelogPath $newChangelogContent -Encoding UTF8
+    Write-Success "CHANGELOG.md updated with version $nugetVersion"
+    
+    # Commit the changelog update
+    Write-Step "Committing changelog update..."
+    git add $changelogPath
+    git commit -m "Release $nugetVersion - Update CHANGELOG.md"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error-Exit "Failed to commit changelog update."
+    }
+    Write-Success "Changelog committed."
+}
+
+# Step 4: Determine final version from Nerdbank GitVersioning
+Write-Step "Determining final version from Nerdbank.GitVersioning..."
+
+$versionInfo = Get-NbgvVersion
 $version = $versionInfo.NuGetPackageVersion
 if (-not $version) {
     Write-Error-Exit "Could not determine NuGet package version from nbgv output."
 }
 Write-Success "Version: $version"
 
-# Step 3: Validate nuget-key.txt
+# Step 5: Validate nuget-key.txt
 Write-Step "Validating nuget-key.txt..."
 
 $nugetKeyPath = Join-Path $solutionRoot "nuget-key.txt"
@@ -98,7 +181,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Success "nuget-key.txt is properly gitignored."
 
-# Step 4: Run unit tests (unless skipped)
+# Step 6: Run unit tests (unless skipped)
 if ($SkipTests) {
     Write-Step "Skipping unit tests (-SkipTests specified)."
 } else {
@@ -111,7 +194,7 @@ if ($SkipTests) {
     Write-Success "All tests passed."
 }
 
-# Step 5: Build and pack
+# Step 7: Build and pack
 Write-Step "Building and packing..."
 
 $projectPath = Join-Path $solutionRoot "PanoramicData.OData.Client\PanoramicData.OData.Client.csproj"
@@ -129,7 +212,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Success "Package created successfully."
 
-# Step 6: Publish to NuGet.org
+# Step 8: Publish to NuGet.org
 Write-Step "Publishing to NuGet.org..."
 
 $packagePath = Join-Path $outputPath "PanoramicData.OData.Client.$version.nupkg"
@@ -151,5 +234,8 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "`n========================================" -ForegroundColor Green
 Write-Host " Successfully published version $version" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
+
+Write-Host "`nDon't forget to push the changelog commit:" -ForegroundColor Yellow
+Write-Host "   git push origin main" -ForegroundColor Yellow
 
 exit 0

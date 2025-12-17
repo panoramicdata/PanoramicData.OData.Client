@@ -12,7 +12,7 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for OData batch request support.
 /// </summary>
-public class ODataClientBatchTests : IDisposable
+public class ODataClientBatchTests : TestBase, IDisposable
 {
 	private readonly Mock<HttpMessageHandler> _mockHandler;
 	private readonly HttpClient _httpClient;
@@ -66,94 +66,90 @@ public class ODataClientBatchTests : IDisposable
 	#region Batch Operation Builder Tests
 
 	/// <summary>
-	/// Tests that Get adds a GET operation.
+	/// Tests that Get adds a GET operation and returns builder for chaining.
 	/// </summary>
 	[Fact]
-	public void Batch_Get_ShouldAddGetOperation()
+	public void Batch_Get_ShouldReturnBuilderAndAddOperation()
 	{
 		// Arrange
 		var batch = _client.CreateBatch();
 
 		// Act
-		var opId = batch.Get<Product>(entitySet: "Products", key: 1);
+		var result = batch.Get<Product>(entitySet: "Products", key: 1);
 
 		// Assert
-		opId.Should().NotBeNullOrEmpty();
+		result.Should().BeSameAs(batch);
 		batch.Items.Should().ContainSingle();
 	}
 
 	/// <summary>
-	/// Tests that Create adds a POST operation.
+	/// Tests that Create adds a POST operation and returns builder for chaining.
 	/// </summary>
 	[Fact]
-	public void Batch_Create_ShouldAddCreateOperation()
+	public void Batch_Create_ShouldReturnBuilderAndAddOperation()
 	{
 		// Arrange
 		var batch = _client.CreateBatch();
 		var product = new Product { Name = "Test Product" };
 
 		// Act
-		var opId = batch.Create("Products", product);
+		var result = batch.Create("Products", product);
 
 		// Assert
-		opId.Should().NotBeNullOrEmpty();
+		result.Should().BeSameAs(batch);
 		batch.Items.Should().ContainSingle();
 	}
 
 	/// <summary>
-	/// Tests that Update adds a PATCH operation.
+	/// Tests that Update adds a PATCH operation and returns builder for chaining.
 	/// </summary>
 	[Fact]
-	public void Batch_Update_ShouldAddUpdateOperation()
+	public void Batch_Update_ShouldReturnBuilderAndAddOperation()
 	{
 		// Arrange
 		var batch = _client.CreateBatch();
 
 		// Act
-		var opId = batch.Update<Product>("Products", 1, new { Name = "Updated" });
+		var result = batch.Update<Product>("Products", 1, new { Name = "Updated" });
 
 		// Assert
-		opId.Should().NotBeNullOrEmpty();
+		result.Should().BeSameAs(batch);
 		batch.Items.Should().ContainSingle();
 	}
 
 	/// <summary>
-	/// Tests that Delete adds a DELETE operation.
+	/// Tests that Delete adds a DELETE operation and returns builder for chaining.
 	/// </summary>
 	[Fact]
-	public void Batch_Delete_ShouldAddDeleteOperation()
+	public void Batch_Delete_ShouldReturnBuilderAndAddOperation()
 	{
 		// Arrange
 		var batch = _client.CreateBatch();
 
 		// Act
-		var opId = batch.Delete("Products", 1);
+		var result = batch.Delete("Products", 1);
 
 		// Assert
-		opId.Should().NotBeNullOrEmpty();
+		result.Should().BeSameAs(batch);
 		batch.Items.Should().ContainSingle();
 	}
 
 	/// <summary>
-	/// Tests that multiple operations are added correctly.
+	/// Tests that multiple operations can be chained fluently.
 	/// </summary>
 	[Fact]
-	public void Batch_MultipleOperations_ShouldAddAllOperations()
+	public void Batch_FluentChaining_ShouldAddAllOperations()
 	{
-		// Arrange
-		var batch = _client.CreateBatch();
-
-		// Act
-		var getOpId = batch.Get<Product>("Products", 1);
-		var createOpId = batch.Create("Products", new Product { Name = "New" });
-		var updateOpId = batch.Update<Product>("Products", 2, new { Name = "Updated" });
-		var deleteOpId = batch.Delete("Products", 3);
+		// Arrange & Act
+		var batch = _client.CreateBatch()
+			.Get<Product>("Products", 1)
+			.Create("Products", new Product { Name = "New" })
+			.Update<Product>("Products", 2, new { Name = "Updated" })
+			.Delete("Products", 3);
 
 		// Assert
 		batch.Items.Should().HaveCount(4);
-		getOpId.Should().NotBe(createOpId);
-		createOpId.Should().NotBe(updateOpId);
-		updateOpId.Should().NotBe(deleteOpId);
+		batch.GetAllOperations().Should().HaveCount(4);
 	}
 
 	#endregion
@@ -161,77 +157,64 @@ public class ODataClientBatchTests : IDisposable
 	#region Changeset Tests
 
 	/// <summary>
-	/// Tests that CreateChangeset returns a changeset builder.
+	/// Tests that Changeset adds a changeset using the action pattern.
 	/// </summary>
 	[Fact]
-	public void Batch_CreateChangeset_ShouldReturnChangesetBuilder()
+	public void Batch_Changeset_ShouldAddChangesetWithOperations()
 	{
-		// Arrange
-		var batch = _client.CreateBatch();
-
-		// Act
-		var changeset = batch.CreateChangeset();
+		// Arrange & Act
+		var batch = _client.CreateBatch()
+			.Changeset(cs => cs
+				.Create("Products", new Product { Name = "Test" })
+				.Update<Product>("Products", 1, new { Name = "Updated" })
+				.Delete("Products", 2));
 
 		// Assert
-		changeset.Should().NotBeNull();
-		changeset.Should().BeOfType<ODataChangesetBuilder>();
-	}
-
-	/// <summary>
-	/// Tests that changeset Create adds operation to changeset.
-	/// </summary>
-	[Fact]
-	public void Changeset_Create_ShouldAddOperationToChangeset()
-	{
-		// Arrange
-		var batch = _client.CreateBatch();
-		var changeset = batch.CreateChangeset();
-
-		// Act
-		var opId = changeset.Create("Products", new Product { Name = "Test" });
-
-		// Assert
-		opId.Should().NotBeNullOrEmpty();
 		batch.Items.Should().ContainSingle(); // One changeset
+		batch.GetAllOperations().Should().HaveCount(3); // Three operations
 	}
 
 	/// <summary>
-	/// Tests that multiple operations in a changeset are grouped.
+	/// Tests that changeset operations return builder for chaining.
 	/// </summary>
 	[Fact]
-	public void Changeset_MultipleOperations_ShouldBeGrouped()
+	public void Changeset_Operations_ShouldReturnBuilderForChaining()
 	{
 		// Arrange
-		var batch = _client.CreateBatch();
-		var changeset = batch.CreateChangeset();
+		ODataChangesetBuilder? capturedCs = null;
 
 		// Act
-		changeset.Create("Products", new Product { Name = "Test" });
-		changeset.Update<Product>("Products", 1, new { Name = "Updated" });
-		changeset.Delete("Products", 2);
+		_client.CreateBatch()
+			.Changeset(cs =>
+			{
+				capturedCs = cs;
+				var result1 = cs.Create("Products", new Product { Name = "Test" });
+				var result2 = cs.Update<Product>("Products", 1, new { Name = "Updated" });
+				var result3 = cs.Delete("Products", 2);
+
+				// All should return same builder
+				result1.Should().BeSameAs(cs);
+				result2.Should().BeSameAs(cs);
+				result3.Should().BeSameAs(cs);
+			});
 
 		// Assert
-		batch.Items.Should().ContainSingle(); // One changeset containing all operations
-		batch.GetAllOperations().Should().HaveCount(3); // Three operations total
+		capturedCs.Should().NotBeNull();
 	}
 
 	/// <summary>
-	/// Tests that mixed operations and changesets maintain order.
+	/// Tests that mixed operations and changesets maintain order with fluent API.
 	/// </summary>
 	[Fact]
-	public void Batch_MixedOperationsAndChangesets_ShouldMaintainOrder()
+	public void Batch_FluentMixedOperationsAndChangesets_ShouldMaintainOrder()
 	{
-		// Arrange
-		var batch = _client.CreateBatch();
-
-		// Act - Add a GET, then a changeset, then another GET
-		batch.Get<Product>("Products", 1);
-
-		var changeset = batch.CreateChangeset();
-		changeset.Create("Products", new Product { Name = "Test" });
-		changeset.Update<Product>("Products", 2, new { Name = "Updated" });
-
-		batch.Get<Product>("Products", 3);
+		// Act - Fully fluent chain
+		var batch = _client.CreateBatch()
+			.Get<Product>("Products", 1)
+			.Changeset(cs => cs
+				.Create("Products", new Product { Name = "Test" })
+				.Update<Product>("Products", 2, new { Name = "Updated" }))
+			.Get<Product>("Products", 3);
 
 		// Assert
 		batch.Items.Should().HaveCount(3); // GET, Changeset, GET
@@ -269,12 +252,11 @@ public class ODataClientBatchTests : IDisposable
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(response);
 
-		var batch = _client.CreateBatch();
-		batch.Get<Product>("Products", 1);
-		batch.Get<Product>("Products", 2);
-
 		// Act
-		var result = await batch.ExecuteAsync(CancellationToken.None);
+		var result = await _client.CreateBatch()
+			.Get<Product>("Products", 1)
+			.Get<Product>("Products", 2)
+			.ExecuteAsync(CancellationToken);
 
 		// Assert
 		result.Should().NotBeNull();
@@ -283,10 +265,10 @@ public class ODataClientBatchTests : IDisposable
 	}
 
 	/// <summary>
-	/// Tests that ExecuteAsync parses multiple results.
+	/// Tests that ExecuteAsync parses multiple results accessible by index.
 	/// </summary>
 	[Fact]
-	public async Task Batch_ExecuteAsync_ShouldParseMultipleResults()
+	public async Task Batch_ExecuteAsync_ShouldParseResultsAccessibleByIndex()
 	{
 		// Arrange
 		var responseContent = BuildMultipartResponse([
@@ -309,18 +291,21 @@ public class ODataClientBatchTests : IDisposable
 				ItExpr.IsAny<CancellationToken>())
 			.ReturnsAsync(response);
 
-		var batch = _client.CreateBatch();
-		batch.Get<Product>("Products", 1);
-		batch.Create("Products", new Product { Name = "New Product" });
-		batch.Update<Product>("Products", 2, new { Name = "Updated" });
-		batch.Delete("Products", 3);
-
 		// Act
-		var result = await batch.ExecuteAsync(CancellationToken.None);
+		var result = await _client.CreateBatch()
+			.Get<Product>("Products", 1)
+			.Create("Products", new Product { Name = "New Product" })
+			.Update<Product>("Products", 2, new { Name = "Updated" })
+			.Delete("Products", 3)
+			.ExecuteAsync(CancellationToken);
 
 		// Assert
 		result.Results.Should().HaveCount(4);
 		result.AllSucceeded.Should().BeTrue();
+		result[0].StatusCode.Should().Be(200);
+		result[1].StatusCode.Should().Be(201);
+		result[2].StatusCode.Should().Be(204);
+		result[3].StatusCode.Should().Be(204);
 	}
 
 	/// <summary>
@@ -348,15 +333,15 @@ public class ODataClientBatchTests : IDisposable
 				ItExpr.IsAny<CancellationToken>())
 			.ReturnsAsync(response);
 
-		var batch = _client.CreateBatch();
-		batch.Get<Product>("Products", 1);
-		batch.Get<Product>("Products", 999);
-
 		// Act
-		var result = await batch.ExecuteAsync(CancellationToken.None);
+		var result = await _client.CreateBatch()
+			.Get<Product>("Products", 1)
+			.Get<Product>("Products", 999)
+			.ExecuteAsync(CancellationToken);
 
 		// Assert
 		result.AllSucceeded.Should().BeFalse();
+		result.HasErrors.Should().BeTrue();
 		result.FailedResults.Should().ContainSingle();
 		result.FailedResults.First().StatusCode.Should().Be(404);
 	}
@@ -372,11 +357,11 @@ public class ODataClientBatchTests : IDisposable
 	public void Batch_UpdateWithETag_ShouldIncludeETagInOperation()
 	{
 		// Arrange
-		var batch = _client.CreateBatch();
 		const string etag = "\"abc123\"";
 
 		// Act
-		batch.Update<Product>("Products", 1, new { Name = "Updated" }, etag);
+		var batch = _client.CreateBatch()
+			.Update<Product>("Products", 1, new { Name = "Updated" }, etag);
 
 		// Assert
 		var operation = batch.GetAllOperations().First();
@@ -390,11 +375,11 @@ public class ODataClientBatchTests : IDisposable
 	public void Batch_DeleteWithETag_ShouldIncludeETagInOperation()
 	{
 		// Arrange
-		var batch = _client.CreateBatch();
 		const string etag = "\"xyz789\"";
 
 		// Act
-		batch.Delete("Products", 1, etag);
+		var batch = _client.CreateBatch()
+			.Delete("Products", 1, etag);
 
 		// Assert
 		var operation = batch.GetAllOperations().First();
@@ -447,6 +432,26 @@ public class ODataClientBatchTests : IDisposable
 	}
 
 	/// <summary>
+	/// Tests HasErrors when some operations fail.
+	/// </summary>
+	[Fact]
+	public void ODataBatchResponse_HasErrors_WithFailure_ShouldReturnTrue()
+	{
+		// Arrange
+		var response = new ODataBatchResponse
+		{
+			Results =
+			[
+				new ODataBatchOperationResult { StatusCode = 200 },
+				new ODataBatchOperationResult { StatusCode = 404 }
+			]
+		};
+
+		// Assert
+		response.HasErrors.Should().BeTrue();
+	}
+
+	/// <summary>
 	/// Tests FailedResults returns only failures.
 	/// </summary>
 	[Fact]
@@ -470,6 +475,94 @@ public class ODataClientBatchTests : IDisposable
 		failed.Should().HaveCount(2);
 		failed.Should().Contain(r => r.OperationId == "2");
 		failed.Should().Contain(r => r.OperationId == "3");
+	}
+
+	/// <summary>
+	/// Tests GetResult by index.
+	/// </summary>
+	[Fact]
+	public void ODataBatchResponse_Indexer_ShouldReturnCorrectResult()
+	{
+		// Arrange
+		var response = new ODataBatchResponse
+		{
+			Results =
+			[
+				new ODataBatchOperationResult { OperationId = "op1", StatusCode = 200 },
+				new ODataBatchOperationResult { OperationId = "op2", StatusCode = 201 }
+			]
+		};
+
+		// Act & Assert
+		response[0].OperationId.Should().Be("op1");
+		response[1].OperationId.Should().Be("op2");
+	}
+
+	/// <summary>
+	/// Tests typed GetResult by index.
+	/// </summary>
+	[Fact]
+	public void ODataBatchResponse_GetResultByIndex_ShouldReturnTypedResult()
+	{
+		// Arrange
+		var product = new Product { Id = 1, Name = "Test" };
+		var response = new ODataBatchResponse
+		{
+			Results =
+			[
+				new ODataBatchOperationResult { StatusCode = 200, Result = product }
+			]
+		};
+
+		// Act
+		var result = response.GetResult<Product>(0);
+
+		// Assert
+		result.Should().BeSameAs(product);
+	}
+
+	/// <summary>
+	/// Tests TryGetResult by index.
+	/// </summary>
+	[Fact]
+	public void ODataBatchResponse_TryGetResult_ShouldReturnTrueWhenFound()
+	{
+		// Arrange
+		var product = new Product { Id = 1, Name = "Test" };
+		var response = new ODataBatchResponse
+		{
+			Results =
+			[
+				new ODataBatchOperationResult { StatusCode = 200, Result = product }
+			]
+		};
+
+		// Act
+		var success = response.TryGetResult<Product>(0, out var result);
+
+		// Assert
+		success.Should().BeTrue();
+		result.Should().BeSameAs(product);
+	}
+
+	/// <summary>
+	/// Tests TryGetResult returns false for out of range index.
+	/// </summary>
+	[Fact]
+	public void ODataBatchResponse_TryGetResult_OutOfRange_ShouldReturnFalse()
+	{
+		// Arrange
+		var response = new ODataBatchResponse
+		{
+			Results = [new ODataBatchOperationResult { StatusCode = 200 }]
+		};
+
+		// Act
+		var success = response.TryGetResult<Product>(5, out var result);
+
+		// Assert
+		success.Should().BeFalse();
+		result.Should().BeNull();
 	}
 
 	/// <summary>
@@ -557,12 +650,11 @@ public class ODataClientBatchTests : IDisposable
 				ItExpr.IsAny<CancellationToken>())
 			.ReturnsAsync(response);
 
-		var batch = _client.CreateBatch();
-		batch.Get<Product>("Products", 1);
-		batch.Create("Products", new Product { Name = "New Product" });
-
 		// Act
-		var result = await batch.ExecuteAsync(CancellationToken.None);
+		var result = await _client.CreateBatch()
+			.Get<Product>("Products", 1)
+			.Create("Products", new Product { Name = "New Product" })
+			.ExecuteAsync(CancellationToken);
 
 		// Assert
 		result.Results.Should().HaveCount(2);
