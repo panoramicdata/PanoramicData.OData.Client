@@ -423,8 +423,10 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 
 		var response = new HttpResponseMessage(HttpStatusCode.OK)
 		{
-			Content = new StringContent(content, System.Text.Encoding.UTF8, $"multipart/mixed; boundary={batchBoundary}")
+			Content = new StringContent(content, System.Text.Encoding.UTF8, "multipart/mixed")
 		};
+		response.Content.Headers.ContentType!.Parameters.Add(
+			new System.Net.Http.Headers.NameValueHeaderValue("boundary", batchBoundary));
 
 		return response;
 	}

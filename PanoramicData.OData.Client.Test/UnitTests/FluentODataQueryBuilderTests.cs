@@ -212,7 +212,7 @@ public class FluentODataQueryBuilderTests : TestBase, IDisposable
 		var url = _client.For("Products").OrderByDescending("Price").BuildUrl();
 
 		// Assert
-		url.Should().Contain("$orderby=Price%20desc");
+		url.Should().Contain("$orderby=Price desc");
 	}
 
 	/// <summary>

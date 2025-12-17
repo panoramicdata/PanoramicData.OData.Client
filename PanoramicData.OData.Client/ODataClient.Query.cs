@@ -402,9 +402,11 @@ public partial class ODataClient
 			return name[..^1] + "ies";
 		}
 
-		if (name.EndsWith('s'))
+		// Words ending in s, x, z, ch, sh get 'es'
+		if (name.EndsWith('s') || name.EndsWith('x') || name.EndsWith('z') ||
+			name.EndsWith("ch", StringComparison.Ordinal) || name.EndsWith("sh", StringComparison.Ordinal))
 		{
-			return name;
+			return name + "es";
 		}
 
 		return name + "s";

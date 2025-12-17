@@ -368,10 +368,14 @@ public class ODataClientAsyncTests : TestBase, IDisposable
 			--batch_response--
 			""";
 
-		return new HttpResponseMessage(HttpStatusCode.OK)
+		var response = new HttpResponseMessage(HttpStatusCode.OK)
 		{
-			Content = new StringContent(content, System.Text.Encoding.UTF8, $"multipart/mixed; boundary={batchBoundary}")
+			Content = new StringContent(content, System.Text.Encoding.UTF8, "multipart/mixed")
 		};
+		response.Content.Headers.ContentType!.Parameters.Add(
+			new System.Net.Http.Headers.NameValueHeaderValue("boundary", batchBoundary));
+
+		return response;
 	}
 
 	#endregion

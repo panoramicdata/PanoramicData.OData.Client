@@ -70,14 +70,14 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	/// Tests that For&lt;T&gt;() handles entity names already ending in 's'.
 	/// </summary>
 	[Fact]
-	public void For_EntityNameEndingInS_DoesNotDoublePluralize()
+	public void For_EntityNameEndingInS_Uses_Es()
 	{
 		// Act
 		var query = _client.For<Address>();
 
 		// Assert
 		var url = query.BuildUrl();
-		url.Should().Be("Addresss"); // Simple pluralization adds 's'
+		url.Should().Be("Addresses");
 	}
 
 	/// <summary>
