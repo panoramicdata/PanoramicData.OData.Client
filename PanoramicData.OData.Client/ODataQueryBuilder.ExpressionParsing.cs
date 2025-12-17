@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -9,6 +10,21 @@ namespace PanoramicData.OData.Client;
 /// </summary>
 public partial class ODataQueryBuilder<T> where T : class
 {
+	/// <summary>
+	/// Frozen dictionary for O(1) operator lookups - initialized once, thread-safe.
+	/// </summary>
+	private static readonly FrozenDictionary<ExpressionType, string> OperatorMap = new Dictionary<ExpressionType, string>
+	{
+		[ExpressionType.Equal] = "eq",
+		[ExpressionType.NotEqual] = "ne",
+		[ExpressionType.GreaterThan] = "gt",
+		[ExpressionType.GreaterThanOrEqual] = "ge",
+		[ExpressionType.LessThan] = "lt",
+		[ExpressionType.LessThanOrEqual] = "le",
+		[ExpressionType.AndAlso] = "and",
+		[ExpressionType.OrElse] = "or"
+	}.ToFrozenDictionary();
+
 	private static string ExpressionToODataFilter(Expression expression) =>
 		ExpressionToODataFilter(expression, parentOperator: null);
 
@@ -45,12 +61,66 @@ public partial class ODataQueryBuilder<T> where T : class
 		return current is ConstantExpression;
 	}
 
+	/// <summary>
+	/// Evaluates an expression to get its value.
+	/// Uses reflection for simple member access chains to avoid Expression.Compile() overhead.
+	/// </summary>
 	private static object? EvaluateExpression(Expression expression)
 	{
+		// Try fast path: use reflection for simple member access chains
+		if (TryEvaluateWithReflection(expression, out var result))
+		{
+			return result;
+		}
+
+		// Fallback: compile the expression (expensive but handles complex cases)
 		var objectMember = Expression.Convert(expression, typeof(object));
 		var getterLambda = Expression.Lambda<Func<object>>(objectMember);
 		var getter = getterLambda.Compile();
 		return getter();
+	}
+
+	/// <summary>
+	/// Attempts to evaluate a member expression using reflection instead of compilation.
+	/// This is faster for simple member access chains like: closure.field or closure.field.property
+	/// </summary>
+	private static bool TryEvaluateWithReflection(Expression expression, out object? result)
+	{
+		result = null;
+
+		// Build the member access chain
+		var memberChain = new Stack<MemberInfo>();
+		var current = expression;
+
+		while (current is MemberExpression memberExpr)
+		{
+			memberChain.Push(memberExpr.Member);
+			current = memberExpr.Expression;
+		}
+
+		// We need a constant at the root (the closure object)
+		if (current is not ConstantExpression constant)
+		{
+			return false;
+		}
+
+		// Walk the chain and get values using reflection
+		object? value = constant.Value;
+
+		while (memberChain.Count > 0 && value is not null)
+		{
+			var member = memberChain.Pop();
+
+			value = member switch
+			{
+				FieldInfo field => field.GetValue(value),
+				PropertyInfo prop => prop.GetValue(value),
+				_ => null
+			};
+		}
+
+		result = value;
+		return true;
 	}
 
 	private static string ParseBinaryExpression(BinaryExpression binary, ExpressionType? parentOperator)
@@ -59,18 +129,10 @@ public partial class ODataQueryBuilder<T> where T : class
 		var left = ExpressionToODataFilter(binary.Left, binary.NodeType);
 		var right = ExpressionToODataFilter(binary.Right, binary.NodeType);
 
-		var op = binary.NodeType switch
+		if (!OperatorMap.TryGetValue(binary.NodeType, out var op))
 		{
-			ExpressionType.Equal => "eq",
-			ExpressionType.NotEqual => "ne",
-			ExpressionType.GreaterThan => "gt",
-			ExpressionType.GreaterThanOrEqual => "ge",
-			ExpressionType.LessThan => "lt",
-			ExpressionType.LessThanOrEqual => "le",
-			ExpressionType.AndAlso => "and",
-			ExpressionType.OrElse => "or",
-			_ => throw new NotSupportedException($"Binary operator {binary.NodeType} is not supported")
-		};
+			throw new NotSupportedException($"Binary operator {binary.NodeType} is not supported");
+		}
 
 		var result = $"{left} {op} {right}";
 
@@ -198,27 +260,41 @@ public partial class ODataQueryBuilder<T> where T : class
 
 	private static string GetMemberPath(MemberExpression member)
 	{
-		var path = new List<string>();
+		// Use a stack to avoid List.Insert(0) which is O(n)
+		var pathStack = new Stack<string>();
 		Expression? current = member;
 
 		while (current is MemberExpression memberExpr)
 		{
-			path.Insert(0, memberExpr.Member.Name);
+			pathStack.Push(memberExpr.Member.Name);
 			current = memberExpr.Expression;
 		}
 
-		return string.Join("/", path);
+		// For small paths (common case), avoid string.Join allocation
+		return pathStack.Count switch
+		{
+			0 => string.Empty,
+			1 => pathStack.Pop(),
+			_ => string.Join("/", pathStack)
+		};
 	}
 
 	private static object? GetValue(Expression expression) => expression switch
 	{
 		ConstantExpression constant => constant.Value,
 		MemberExpression member => GetMemberValue(member),
-		_ => Expression.Lambda(expression).Compile().DynamicInvoke()
+		_ => EvaluateExpression(expression) // Use optimized evaluation
 	};
 
 	private static object? GetMemberValue(MemberExpression member)
 	{
+		// Use the same optimized reflection-based evaluation
+		if (TryEvaluateWithReflection(member, out var result))
+		{
+			return result;
+		}
+
+		// Fallback to compilation for complex cases
 		var objectMember = Expression.Convert(member, typeof(object));
 		var getterLambda = Expression.Lambda<Func<object>>(objectMember);
 		var getter = getterLambda.Compile();
@@ -246,15 +322,26 @@ public partial class ODataQueryBuilder<T> where T : class
 		_ => key.ToString() ?? throw new ArgumentException("Invalid key value")
 	};
 
+	/// <summary>
+	/// Cache for PropertyInfo arrays by type - anonymous types used in Function() calls.
+	/// Uses ConditionalWeakTable to allow garbage collection of types.
+	/// </summary>
+	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Type, PropertyInfo[]> PropertyCache = new();
+
 	private static string FormatFunctionParameters(object parameters)
 	{
-		var props = parameters.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+		var type = parameters.GetType();
+
+		// Get or create cached PropertyInfo array
+		var props = PropertyCache.GetValue(type, t =>
+			t.GetProperties(BindingFlags.Public | BindingFlags.Instance));
+
 		var paramStrings = props
-			.Where(p => p.GetValue(parameters) is not null)
+			.Select(p => (Name: p.Name, Value: p.GetValue(parameters)))
+			.Where(p => p.Value is not null)
 			.Select(p =>
 			{
-				var value = p.GetValue(parameters);
-				var formattedValue = FormatFunctionParameterValue(value);
+				var formattedValue = FormatFunctionParameterValue(p.Value);
 				return $"{char.ToLowerInvariant(p.Name[0])}{p.Name[1..]}={formattedValue}";
 			});
 
