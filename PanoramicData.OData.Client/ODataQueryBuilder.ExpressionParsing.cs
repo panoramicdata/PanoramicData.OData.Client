@@ -476,59 +476,180 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// </summary>
 	private static List<string> GetExpandMemberPaths(Expression<Func<T, object?>> selector)
 	{
-		var results = new List<string>();
+		var pathInfos = GetExpandMemberPathsWithInfo(selector);
+		return pathInfos.Select(p => p.Path).ToList();
+	}
+
+	/// <summary>
+	/// Gets full member paths from an expand expression along with property type information.
+	/// For example, p => new { p.BestFriend, p.BestFriend!.Trips } returns paths with navigation/scalar info.
+	/// </summary>
+	private static List<ExpandPathInfo> GetExpandMemberPathsWithInfo(Expression<Func<T, object?>> selector)
+	{
+		var results = new List<ExpandPathInfo>();
 
 		if (selector.Body is NewExpression newExpr)
 		{
 			foreach (var arg in newExpr.Arguments)
 			{
-				var memberPath = GetMemberPathFromExpression(arg);
-				if (!string.IsNullOrEmpty(memberPath) && !results.Contains(memberPath))
+				var pathInfo = GetExpandPathInfoFromExpression(arg);
+				if (pathInfo is not null && !results.Any(r => r.Path == pathInfo.Path))
 				{
-					results.Add(memberPath);
+					results.Add(pathInfo);
 				}
 			}
 
 			return results;
 		}
 
-		if (selector.Body is MemberExpression member)
+		var singlePathInfo = GetExpandPathInfoFromExpression(selector.Body);
+		if (singlePathInfo is not null)
 		{
-			var memberPath = GetMemberPathFromExpression(member);
-			if (!string.IsNullOrEmpty(memberPath))
-			{
-				results.Add(memberPath);
-			}
-		}
-		else if (selector.Body is UnaryExpression unary && unary.Operand is MemberExpression unaryMember)
-		{
-			var memberPath = GetMemberPathFromExpression(unaryMember);
-			if (!string.IsNullOrEmpty(memberPath))
-			{
-				results.Add(memberPath);
-			}
+			results.Add(singlePathInfo);
 		}
 
 		return results;
 	}
 
 	/// <summary>
+	/// Extracts expand path information from an expression, including property type info.
+	/// </summary>
+	private static ExpandPathInfo? GetExpandPathInfoFromExpression(Expression expression)
+	{
+		if (expression is UnaryExpression unary && unary.NodeType == ExpressionType.Convert)
+		{
+			expression = unary.Operand;
+		}
+
+		if (expression is not MemberExpression member)
+		{
+			return null;
+		}
+
+		var segments = new List<ExpandSegment>();
+		Expression? current = member;
+
+		while (current is MemberExpression memberExpr)
+		{
+			if (memberExpr.Member is PropertyInfo propInfo)
+			{
+				segments.Insert(0, new ExpandSegment(propInfo.Name, IsNavigationProperty(propInfo)));
+			}
+			else
+			{
+				segments.Insert(0, new ExpandSegment(memberExpr.Member.Name, false));
+			}
+
+			current = memberExpr.Expression;
+		}
+
+		if (segments.Count == 0)
+		{
+			return null;
+		}
+
+		return new ExpandPathInfo(segments);
+	}
+
+	/// <summary>
+	/// Determines if a property is a navigation property (vs a scalar property).
+	/// Navigation properties are entity references or collections of entities.
+	/// Scalar properties are primitives, strings, dates, guids, etc.
+	/// </summary>
+	private static bool IsNavigationProperty(PropertyInfo property)
+	{
+		var propertyType = property.PropertyType;
+
+		// Check for nullable types - get underlying type
+		var underlyingType = Nullable.GetUnderlyingType(propertyType);
+		if (underlyingType is not null)
+		{
+			propertyType = underlyingType;
+		}
+
+		// Primitives are scalar
+		if (propertyType.IsPrimitive)
+		{
+			return false;
+		}
+
+		// Common scalar types
+		if (propertyType == typeof(string) ||
+			propertyType == typeof(DateTime) ||
+			propertyType == typeof(DateTimeOffset) ||
+			propertyType == typeof(DateOnly) ||
+			propertyType == typeof(TimeOnly) ||
+			propertyType == typeof(TimeSpan) ||
+			propertyType == typeof(Guid) ||
+			propertyType == typeof(decimal))
+		{
+			return false;
+		}
+
+		// Enums are scalar
+		if (propertyType.IsEnum)
+		{
+			return false;
+		}
+
+		// byte[] is scalar (used for binary data)
+		if (propertyType == typeof(byte[]))
+		{
+			return false;
+		}
+
+		// Collections of entities are navigation properties (but not string which is IEnumerable<char>)
+		if (typeof(System.Collections.IEnumerable).IsAssignableFrom(propertyType) &&
+			propertyType != typeof(string))
+		{
+			return true;
+		}
+
+		// Reference types that are classes are typically navigation properties
+		// (entity references like Tenant, Role, etc.)
+		return propertyType.IsClass;
+	}
+
+	/// <summary>
 	/// Builds nested expand syntax from a collection of member paths.
 	/// Converts paths like ["BestFriend", "BestFriend/Trips", "Friends"] 
 	/// into "BestFriend($expand=Trips),Friends".
+	/// Handles scalar properties with $select instead of $expand.
 	/// </summary>
 	private static List<string> BuildNestedExpandFields(List<string> memberPaths)
 	{
-		// Build a tree of expand nodes
+		// This overload is kept for backward compatibility but uses the new implementation
+		// by treating all segments as navigation properties
 		var rootNodes = new Dictionary<string, ExpandNode>();
 
 		foreach (var path in memberPaths)
 		{
 			var segments = path.Split('/');
-			AddPathToTree(rootNodes, segments, 0);
+			var expandSegments = segments.Select(s => new ExpandSegment(s, true)).ToList();
+			AddPathToTreeWithInfo(rootNodes, expandSegments, 0);
 		}
 
-		// Serialize the tree to OData expand syntax
+		var result = new List<string>();
+		foreach (var node in rootNodes.Values)
+		{
+			result.Add(node.ToODataSyntax());
+		}
+
+		return result;
+	}
+
+	/// <summary>
+	/// Builds nested expand syntax from expand path information that includes property type info.
+	/// </summary>
+	private static List<string> BuildNestedExpandFieldsWithInfo(List<ExpandPathInfo> pathInfos)
+	{
+		var rootNodes = new Dictionary<string, ExpandNode>();
+
+		foreach (var pathInfo in pathInfos)
+		{
+			AddPathToTreeWithInfo(rootNodes, pathInfo.Segments, 0);
+		}
+
 		var result = new List<string>();
 		foreach (var node in rootNodes.Values)
 		{
@@ -549,7 +670,7 @@ public partial class ODataQueryBuilder<T> where T : class
 
 		if (!nodes.TryGetValue(segment, out var node))
 		{
-			node = new ExpandNode(segment);
+			node = new ExpandNode(segment, isNavigation: true);
 			nodes[segment] = node;
 		}
 
@@ -557,13 +678,58 @@ public partial class ODataQueryBuilder<T> where T : class
 		AddPathToTree(node.Children, segments, index + 1);
 	}
 
+	private static void AddPathToTreeWithInfo(Dictionary<string, ExpandNode> nodes, List<ExpandSegment> segments, int index)
+	{
+		if (index >= segments.Count)
+		{
+			return;
+		}
+
+		var segment = segments[index];
+
+		if (!nodes.TryGetValue(segment.Name, out var node))
+		{
+			node = new ExpandNode(segment.Name, segment.IsNavigation);
+			nodes[segment.Name] = node;
+		}
+
+		// Continue with remaining segments as children
+		AddPathToTreeWithInfo(node.Children, segments, index + 1);
+	}
+
+	/// <summary>
+	/// Represents a segment in an expand path with property type information.
+	/// </summary>
+	private sealed record ExpandSegment(string Name, bool IsNavigation);
+
+	/// <summary>
+	/// Represents an expand path with its segments and property type information.
+	/// </summary>
+	private sealed class ExpandPathInfo
+	{
+		public List<ExpandSegment> Segments { get; }
+		public string Path => string.Join("/", Segments.Select(s => s.Name));
+
+		public ExpandPathInfo(List<ExpandSegment> segments)
+		{
+			Segments = segments;
+		}
+	}
+
 	/// <summary>
 	/// Represents a node in the expand tree structure.
 	/// </summary>
-	private sealed class ExpandNode(string name)
+	private sealed class ExpandNode
 	{
-		public string Name { get; } = name;
+		public string Name { get; }
+		public bool IsNavigation { get; }
 		public Dictionary<string, ExpandNode> Children { get; } = [];
+
+		public ExpandNode(string name, bool isNavigation = true)
+		{
+			Name = name;
+			IsNavigation = isNavigation;
+		}
 
 		public string ToODataSyntax()
 		{
@@ -572,8 +738,32 @@ public partial class ODataQueryBuilder<T> where T : class
 				return Name;
 			}
 
-			var childExpands = Children.Values.Select(c => c.ToODataSyntax());
-			return $"{Name}($expand={string.Join(",", childExpands)})";
+			// Separate children into navigation properties (use $expand) and scalar properties (use $select)
+			var navigationChildren = Children.Values.Where(c => c.IsNavigation).ToList();
+			var scalarChildren = Children.Values.Where(c => !c.IsNavigation).ToList();
+
+			var options = new List<string>();
+
+			// Add $select for scalar children
+			if (scalarChildren.Count > 0)
+			{
+				var selectFields = string.Join(",", scalarChildren.Select(c => c.Name));
+				options.Add($"$select={selectFields}");
+			}
+
+			// Add $expand for navigation children
+			if (navigationChildren.Count > 0)
+			{
+				var expandFields = string.Join(",", navigationChildren.Select(c => c.ToODataSyntax()));
+				options.Add($"$expand={expandFields}");
+			}
+
+			if (options.Count == 0)
+			{
+				return Name;
+			}
+
+			return $"{Name}({string.Join(";", options)})";
 		}
 	}
 }

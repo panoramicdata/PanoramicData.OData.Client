@@ -3,6 +3,7 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for ExpandWithSelect and nested expand functionality.
 /// Tests for GitHub Issue #4: Expand with nested $select instead of $expand.
+/// Tests for GitHub Issue #5: Expand expression with nested scalar property incorrectly generates expand instead of select.
 /// </summary>
 public class ExpandWithSelectTests : IDisposable
 {
@@ -281,6 +282,250 @@ public class ExpandWithSelectTests : IDisposable
 
 		// Assert
 		url.Should().Contain("$expand=ReportSchedule,Results");
+	}
+
+	#endregion
+
+	#region GitHub Issue #5 - Expand with Nested Scalar Property Tests
+
+	/// <summary>
+	/// Tests that accessing a scalar property through navigation produces $expand=Nav($select=Scalar).
+	/// Example: e => e.Tenant.Name should produce $expand=Tenant($select=Name)
+	/// This is the exact scenario from GitHub Issue #5.
+	/// </summary>
+	[Fact]
+	public void Expand_NavigationWithScalarProperty_ProducesExpandWithSelect()
+	{
+		// Arrange & Act
+		var url = _client.For<Connection>()
+			.Expand(c => c.Tenant!.Name)
+			.BuildUrl();
+
+		// Assert - Should use $select for scalar property, NOT $expand
+		url.Should().Contain("$expand=Tenant($select=Name)");
+		url.Should().NotContain("$expand=Tenant($expand=Name)");
+	}
+
+	/// <summary>
+	/// Tests that accessing a scalar property through navigation in anonymous object produces correct output.
+	/// Example: e => new { e.Tenant.Name } should produce $expand=Tenant($select=Name)
+	/// </summary>
+	[Fact]
+	public void Expand_AnonymousObjectWithScalarProperty_ProducesExpandWithSelect()
+	{
+		// Arrange & Act
+		var url = _client.For<Connection>()
+			.Expand(c => new { c.Tenant!.Name })
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("$expand=Tenant($select=Name)");
+		url.Should().NotContain("$expand=Tenant($expand=Name)");
+	}
+
+	/// <summary>
+	/// Tests that accessing multiple scalar properties from same navigation produces combined $select.
+	/// Example: e => new { e.Tenant.Name, e.Tenant.Description } should produce $expand=Tenant($select=Name,Description)
+	/// </summary>
+	[Fact]
+	public void Expand_MultipleScalarPropertiesFromSameNavigation_ProducesCombinedSelect()
+	{
+		// Arrange & Act
+		var url = _client.For<Connection>()
+			.Expand(c => new { c.Tenant!.Name, c.Tenant!.Description })
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("$expand=Tenant($select=Name,Description)");
+	}
+
+	/// <summary>
+	/// Tests that scalar properties from different navigation properties are handled correctly.
+	/// Example: e => new { e.Tenant.Name, e.Role.Name } should produce $expand=Tenant($select=Name),Role($select=Name)
+	/// </summary>
+	[Fact]
+	public void Expand_ScalarPropertiesFromDifferentNavigations_ProducesMultipleExpandWithSelect()
+	{
+		// Arrange & Act
+		var url = _client.For<Connection>()
+			.Expand(c => new { TenantName = c.Tenant!.Name, RoleName = c.Role!.Name })
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("Tenant($select=Name)");
+		url.Should().Contain("Role($select=Name)");
+	}
+
+	/// <summary>
+	/// Tests mixing full navigation expand with scalar property access.
+	/// Example: e => new { e.Tenant, e.Role.Name } should produce $expand=Tenant,Role($select=Name)
+	/// </summary>
+	[Fact]
+	public void Expand_MixedNavigationAndScalar_ProducesCorrectOutput()
+	{
+		// Arrange & Act
+		var url = _client.For<Connection>()
+			.Expand(c => new { c.Tenant, c.Role!.Name })
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("Tenant");
+		url.Should().Contain("Role($select=Name)");
+	}
+
+	/// <summary>
+	/// Tests that nested navigation properties still work correctly.
+	/// Example: e => new { e.Role, e.Role.RolePermissions } should produce $expand=Role($expand=RolePermissions)
+	/// </summary>
+	[Fact]
+	public void Expand_NestedNavigationProperties_ProducesNestedExpand()
+	{
+		// Arrange & Act
+		var url = _client.For<Connection>()
+			.Expand(c => new { c.Role, c.Role!.RoleRights })
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("$expand=Role($expand=RoleRights)");
+	}
+
+	/// <summary>
+	/// Tests combining nested navigation with scalar property access.
+	/// Example: e => new { e.Role.RolePermissions, e.Tenant.Name } should produce $expand=Role($expand=RolePermissions),Tenant($select=Name)
+	/// </summary>
+	[Fact]
+	public void Expand_NestedNavigationAndScalarProperty_ProducesCorrectOutput()
+	{
+		// Arrange & Act
+		var url = _client.For<Connection>()
+			.Expand(c => new { c.Role!.RoleRights, c.Tenant!.Name })
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("Role($expand=RoleRights)");
+		url.Should().Contain("Tenant($select=Name)");
+	}
+
+	/// <summary>
+	/// Tests that string properties are correctly identified as scalar.
+	/// </summary>
+	[Fact]
+	public void Expand_StringProperty_IsIdentifiedAsScalar()
+	{
+		// Arrange & Act
+		var url = _client.For<Connection>()
+			.Expand(c => c.Tenant!.Name)
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("$expand=Tenant($select=Name)");
+	}
+
+	/// <summary>
+	/// Tests that int properties are correctly identified as scalar.
+	/// </summary>
+	[Fact]
+	public void Expand_IntProperty_IsIdentifiedAsScalar()
+	{
+		// Arrange & Act
+		var url = _client.For<Connection>()
+			.Expand(c => c.Tenant!.Id)
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("$expand=Tenant($select=Id)");
+	}
+
+	/// <summary>
+	/// Tests that bool properties are correctly identified as scalar.
+	/// </summary>
+	[Fact]
+	public void Expand_BoolProperty_IsIdentifiedAsScalar()
+	{
+		// Arrange & Act
+		var url = _client.For<Connection>()
+			.Expand(c => c.Tenant!.IsActive)
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("$expand=Tenant($select=IsActive)");
+	}
+
+	/// <summary>
+	/// Tests that DateTimeOffset properties are correctly identified as scalar.
+	/// </summary>
+	[Fact]
+	public void Expand_DateTimeOffsetProperty_IsIdentifiedAsScalar()
+	{
+		// Arrange & Act
+		var url = _client.For<Connection>()
+			.Expand(c => c.Tenant!.CreatedAt)
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("$expand=Tenant($select=CreatedAt)");
+	}
+
+	/// <summary>
+	/// Tests that nullable string properties are correctly identified as scalar.
+	/// </summary>
+	[Fact]
+	public void Expand_NullableStringProperty_IsIdentifiedAsScalar()
+	{
+		// Arrange & Act
+		var url = _client.For<Connection>()
+			.Expand(c => c.Tenant!.Description)
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("$expand=Tenant($select=Description)");
+	}
+
+	/// <summary>
+	/// Tests that collection properties are correctly identified as navigation.
+	/// </summary>
+	[Fact]
+	public void Expand_CollectionProperty_IsIdentifiedAsNavigation()
+	{
+		// Arrange & Act
+		var url = _client.For<Connection>()
+			.Expand(c => c.Role!.RoleRights)
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("$expand=Role($expand=RoleRights)");
+		url.Should().NotContain("$select=RoleRights");
+	}
+
+	/// <summary>
+	/// Tests that expanding a navigation property only produces $expand=NavProperty.
+	/// </summary>
+	[Fact]
+	public void Expand_NavigationPropertyOnly_ProducesExpand()
+	{
+		// Arrange & Act
+		var url = _client.For<Connection>()
+			.Expand(c => c.Tenant!)
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("$expand=Tenant");
+		url.Should().NotContain("$select");
+	}
+
+	/// <summary>
+	/// Tests that expanding multiple navigation properties produces correct $expand.
+	/// </summary>
+	[Fact]
+	public void Expand_MultipleNavigationProperties_ProducesExpand()
+	{
+		// Arrange & Act
+		var url = _client.For<Connection>()
+			.Expand(c => new { c.Tenant, c.Role })
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("$expand=Tenant,Role");
 	}
 
 	#endregion

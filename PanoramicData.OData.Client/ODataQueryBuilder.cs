@@ -258,11 +258,12 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// Adds expand fields from an expression.
 	/// Supports nested expands via expressions like p => new { p.Parent, p.Parent!.Children }
 	/// which produces $expand=Parent($expand=Children).
+	/// Also supports scalar property access like p => p.Parent.Name which produces $expand=Parent($select=Name).
 	/// </summary>
 	public ODataQueryBuilder<T> Expand(Expression<Func<T, object?>> selector)
 	{
-		var memberPaths = GetExpandMemberPaths(selector);
-		var nestedExpands = BuildNestedExpandFields(memberPaths);
+		var pathInfos = GetExpandMemberPathsWithInfo(selector);
+		var nestedExpands = BuildNestedExpandFieldsWithInfo(pathInfos);
 		_expandFields.AddRange(nestedExpands);
 		return this;
 	}
