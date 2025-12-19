@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [vNext]
 
+## [10.0.46] - 2025-12-19
+
 ## [10.0.43] - 2025-12-17
 
 ### Added
@@ -56,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ETag-based optimistic concurrency
 - Comprehensive logging via `ILogger`
 - Fluent and typed query APIs
+
 
 
 
