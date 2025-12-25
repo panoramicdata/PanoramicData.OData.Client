@@ -109,8 +109,6 @@ public partial class ODataClient
 		}
 
 		var content = new HttpMessageContent(innerRequest);
-		content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/http");
-		content.Headers.TryAddWithoutValidation("Content-Transfer-Encoding", "binary");
 
 		return content;
 	}
