@@ -110,6 +110,9 @@ public class ODataDateTimeConverterTests
 		result.Year.Should().Be(2024);
 		result.Month.Should().Be(1);
 		result.Day.Should().Be(15);
+		result.Hour.Should().Be(0);
+		result.Minute.Should().Be(0);
+		result.Second.Should().Be(0);
 	}
 
 	/// <summary>
