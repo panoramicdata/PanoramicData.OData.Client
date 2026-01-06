@@ -304,12 +304,26 @@ public partial class ODataQueryBuilder<T> where T : class
 		null => "null",
 		string s => $"'{s.Replace("'", "''")}'",
 		bool b => b.ToString().ToLowerInvariant(),
-		DateTime dt => $"{dt:yyyy-MM-ddTHH:mm:ssZ}",
+		DateTime dt => FormatDateTime(dt),
+		//DateTime dt => $"{dt:yyyy-MM-ddTHH:mm:ssZ}",
 		DateTimeOffset dto => $"{dto.UtcDateTime:yyyy-MM-ddTHH:mm:ssZ}",
 		Guid g => g.ToString(),
 		Enum e => $"'{e}'",
 		_ => value.ToString() ?? "null"
 	};
+
+	private static string FormatDateTime(DateTime dt)
+	{
+		// Convert to UTC before formatting with Z suffix
+		var utc = dt.Kind switch
+		{
+			DateTimeKind.Utc => dt,
+			DateTimeKind.Local => dt.ToUniversalTime(),
+			DateTimeKind.Unspecified => DateTime.SpecifyKind(dt, DateTimeKind.Utc), // Assume UTC for unspecified
+			_ => dt.ToUniversalTime()
+		};
+		return $"{utc:yyyy-MM-ddTHH:mm:ssZ}";
+	}
 
 	private static string FormatKey(object key) => key switch
 	{
