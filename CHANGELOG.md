@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [vNext]
 
 ### Fixed
+- Fix DateTime formatting consistency - FormatFunctionParameterValue and FormatArrayElementValue now respect DateTimeKind
+- Fix DateTime filter formatting for Unspecified kind - now formats without Z suffix to match OData Edm.DateTime type, preventing timezone conversion errors
 - Fix date-only string parsing to treat as UTC instead of local time, preventing timezone conversion errors
 
 ## [10.0.46] - 2025-12-19

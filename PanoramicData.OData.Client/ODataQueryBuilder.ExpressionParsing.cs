@@ -313,14 +313,19 @@ public partial class ODataQueryBuilder<T> where T : class
 
 	private static string FormatDateTime(DateTime dt)
 	{
-		// OData requires timezone info. Always format as UTC with Z suffix.
-		var utc = dt.Kind switch
+		// OData has two datetime types:
+		// - Edm.DateTimeOffset: requires timezone (Z suffix or offset)
+		// - Edm.DateTime: NO timezone (no Z suffix)
+		
+		// For Unspecified Kind: format WITHOUT Z suffix (Edm.DateTime)
+		// This prevents timezone conversion issues on the server
+		if (dt.Kind == DateTimeKind.Unspecified)
 		{
-			DateTimeKind.Utc => dt,
-			DateTimeKind.Local => dt.ToUniversalTime(),
-			DateTimeKind.Unspecified => dt, // Assume already UTC for unspecified
-			_ => dt
-		};
+			return $"{dt:yyyy-MM-ddTHH:mm:ss.fff}";
+		}
+
+		// For UTC and Local: convert to UTC and format with Z (Edm.DateTimeOffset)
+		var utc = dt.Kind == DateTimeKind.Local ? dt.ToUniversalTime() : dt;
 		return $"{utc:yyyy-MM-ddTHH:mm:ss.fffZ}";
 	}
 
@@ -368,7 +373,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		long l => l.ToString(CultureInfo.InvariantCulture),
 		double d => d.ToString(CultureInfo.InvariantCulture),
 		decimal dec => dec.ToString(CultureInfo.InvariantCulture),
-		DateTime dt => $"{dt:yyyy-MM-ddTHH:mm:ssZ}",
+		DateTime dt => FormatDateTime(dt),
 		DateTimeOffset dto => $"{dto.UtcDateTime:yyyy-MM-ddTHH:mm:ssZ}",
 		Guid g => g.ToString(),
 		Enum e => $"'{e}'",
@@ -386,7 +391,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		long l => l.ToString(CultureInfo.InvariantCulture),
 		double d => d.ToString(CultureInfo.InvariantCulture),
 		decimal dec => dec.ToString(CultureInfo.InvariantCulture),
-		DateTime dt => $"{dt:yyyy-MM-ddTHH:mm:ssZ}",
+		DateTime dt => FormatDateTime(dt),
 		DateTimeOffset dto => $"{dto.UtcDateTime:yyyy-MM-ddTHH:mm:ssZ}",
 		Guid g => g.ToString(),
 		Enum e => e.ToString(),
