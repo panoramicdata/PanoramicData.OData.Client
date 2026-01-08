@@ -313,20 +313,15 @@ public partial class ODataQueryBuilder<T> where T : class
 
 	private static string FormatDateTime(DateTime dt)
 	{
-		// OData has two datetime types:
-		// - Edm.DateTimeOffset: requires timezone (Z suffix or offset)
-		// - Edm.DateTime: NO timezone (no Z suffix)
-		
-		// For Unspecified Kind: format WITHOUT Z suffix (Edm.DateTime)
-		// This prevents timezone conversion issues on the server
-		if (dt.Kind == DateTimeKind.Unspecified)
+		// Convert to UTC before formatting with Z suffix
+		var utc = dt.Kind switch
 		{
-			return $"{dt:yyyy-MM-ddTHH:mm:ss.fff}";
-		}
-
-		// For UTC and Local: convert to UTC and format with Z (Edm.DateTimeOffset)
-		var utc = dt.Kind == DateTimeKind.Local ? dt.ToUniversalTime() : dt;
-		return $"{utc:yyyy-MM-ddTHH:mm:ss.fffZ}";
+			DateTimeKind.Utc => dt,
+			DateTimeKind.Local => dt.ToUniversalTime(),
+			DateTimeKind.Unspecified => DateTime.SpecifyKind(dt, DateTimeKind.Utc), // Assume UTC for unspecified
+			_ => dt.ToUniversalTime()
+		};
+		return $"{utc:yyyy-MM-ddTHH:mm:ssZ}";
 	}
 
 	private static string FormatKey(object key) => key switch
