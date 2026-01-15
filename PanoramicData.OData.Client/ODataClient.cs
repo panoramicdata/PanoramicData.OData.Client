@@ -21,7 +21,6 @@ public partial class ODataClient : IDisposable
 		DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
 		Converters =
 		{
-			new ODataTypeAnnotationConverter(), // Must be first to handle @odata.type annotation
 			new JsonStringEnumConverter(),
 			new ODataDateTimeConverter(),
 			new ODataNullableDateTimeConverter()
@@ -36,7 +35,6 @@ public partial class ODataClient : IDisposable
 		DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
 		Converters =
 		{
-			new ODataTypeAnnotationConverter(), // Must be first to handle @odata.type annotation
 			new JsonStringEnumConverter(),
 			new ODataDateTimeConverter(),
 			new ODataNullableDateTimeConverter()
