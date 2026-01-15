@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [vNext]
 
+### Added
+- Add ODataTypeAnnotationConverter to support @odata.type annotation for Table-Per-Hierarchy (TPH) inheritance scenarios
+
 ### Fixed
 - Fix DateTime formatting consistency - FormatFunctionParameterValue and FormatArrayElementValue now respect DateTimeKind
 - Fix DateTime filter formatting for Unspecified kind - now formats without Z suffix to match OData Edm.DateTime type, preventing timezone conversion errors
