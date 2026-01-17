@@ -113,7 +113,7 @@ public class ODataCrossJoinTests
 	}
 
 	[Fact]
-	public async Task CrossJoin_LessThanTwoEntitySets_ShouldThrow()
+	public Task CrossJoin_LessThanTwoEntitySets_ShouldThrow()
 	{
 		// Arrange
 		var logger = NullLogger.Instance;
@@ -121,6 +121,7 @@ public class ODataCrossJoinTests
 		// Act & Assert
 		var act = () => new ODataCrossJoinBuilder(["Products"], logger);
 		act.Should().ThrowExactly<ArgumentException>();
+		return Task.CompletedTask;
 	}
 
 	[Fact]

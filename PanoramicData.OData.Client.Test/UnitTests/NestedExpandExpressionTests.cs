@@ -50,7 +50,7 @@ public class NestedExpandExpressionTests
 	/// Tests that multiple independent expands still work correctly.
 	/// </summary>
 	[Fact]
-	public void Expand_WithMultipleIndependentProperties_ProducesCommaSepa­ratedExpands()
+	public void Expand_WithMultipleIndependentProperties_ProducesCommaSeparatedExpands()
 	{
 		// Arrange
 		var builder = new ODataQueryBuilder<Person>("People", NullLogger.Instance);
