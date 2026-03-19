@@ -18,15 +18,16 @@ public class ODataDateTimeConverter : JsonConverter<DateTime>
 		}
 
 		// Try parsing as DateTimeOffset first (handles 'Z' suffix and timezone offsets)
-		if (DateTimeOffset.TryParse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dto))
+		// For date-only strings without timezone info, AssumeUniversal treats them as UTC
+		if (DateTimeOffset.TryParse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dto))
 		{
 			return dto.UtcDateTime;
 		}
 
-		// Fall back to DateTime parsing
-		if (DateTime.TryParse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+		// Fall back to DateTime parsing with AssumeUniversal for date-only strings
+		if (DateTime.TryParse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dt))
 		{
-			return dt;
+			return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
 		}
 
 		return default;
@@ -68,15 +69,16 @@ public class ODataNullableDateTimeConverter : JsonConverter<DateTime?>
 		}
 
 		// Try parsing as DateTimeOffset first (handles 'Z' suffix and timezone offsets)
-		if (DateTimeOffset.TryParse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dto))
+		// For date-only strings without timezone info, AssumeUniversal treats them as UTC
+		if (DateTimeOffset.TryParse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dto))
 		{
 			return dto.UtcDateTime;
 		}
 
-		// Fall back to DateTime parsing
-		if (DateTime.TryParse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+		// Fall back to DateTime parsing with AssumeUniversal for date-only strings
+		if (DateTime.TryParse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dt))
 		{
-			return dt;
+			return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
 		}
 
 		return null;

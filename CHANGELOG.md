@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [vNext]
+
+### Added
+- Add ODataTypeAnnotationConverter to support @odata.type annotation for Table-Per-Hierarchy (TPH) inheritance scenarios
+
+### Fixed
+- Fix DateTime formatting consistency - FormatFunctionParameterValue and FormatArrayElementValue now respect DateTimeKind
+- Fix DateTime filter formatting for Unspecified kind - now formats without Z suffix to match OData Edm.DateTime type, preventing timezone conversion errors
+- Fix date-only string parsing to treat as UTC instead of local time, preventing timezone conversion errors
 
 ## [10.0.46] - 2025-12-19
 
