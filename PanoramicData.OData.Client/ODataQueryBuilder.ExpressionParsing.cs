@@ -1,3 +1,4 @@
+using PanoramicData.OData.Client.Visitors;
 using System.Collections.Frozen;
 using System.Reflection;
 
@@ -26,37 +27,42 @@ public partial class ODataQueryBuilder<T> where T : class
 	private static string ExpressionToODataFilter(Expression expression) =>
 		ExpressionToODataFilter(expression, parentOperator: null);
 
-	private static string ExpressionToODataFilter(Expression expression, ExpressionType? parentOperator) => expression switch
-	{
-		BinaryExpression binary => ParseBinaryExpression(binary, parentOperator),
-		MethodCallExpression methodCall => ParseMethodCallExpression(methodCall),
-		UnaryExpression unary when unary.NodeType == ExpressionType.Not => $"not ({ExpressionToODataFilter(unary.Operand, parentOperator)})",
-		UnaryExpression unary when unary.NodeType == ExpressionType.Convert => ExpressionToODataFilter(unary.Operand, parentOperator),
-		MemberExpression member when member.Type == typeof(bool) && !ShouldEvaluate(member) => GetMemberPath(member),
-		MemberExpression member when ShouldEvaluate(member) => FormatValue(EvaluateExpression(member)),
-		MemberExpression member => GetMemberPath(member),
-		ConstantExpression constant => FormatValue(constant.Value),
-		_ => throw new NotSupportedException($"Expression type {expression.NodeType} is not supported")
-	};
+	private static string ExpressionToODataFilter(Expression expression, ExpressionType? parentOperator) =>
+		expression switch
+		{
+			BinaryExpression binary => ParseBinaryExpression(binary, parentOperator),
+
+			// If a call is fully constant (no lambda parameter inside), evaluate it for ANY return type.
+			MethodCallExpression methodCall when ShouldEvaluate(methodCall) => FormatValue(
+				EvaluateExpression(methodCall)),
+			MethodCallExpression methodCall => ParseMethodCallExpression(methodCall),
+
+			UnaryExpression { NodeType: ExpressionType.Not } unary =>
+				$"not ({ExpressionToODataFilter(unary.Operand, parentOperator)})",
+			UnaryExpression { NodeType: ExpressionType.Convert } unary => ExpressionToODataFilter(
+				unary.Operand, parentOperator),
+
+			MemberExpression member when member.Type == typeof(bool) && !ShouldEvaluate(member) =>
+				GetMemberPath(member),
+			MemberExpression member when ShouldEvaluate(member) => FormatValue(EvaluateExpression(member)),
+			MemberExpression member => GetMemberPath(member),
+
+			ConstantExpression constant => FormatValue(constant.Value),
+			_ => throw new NotSupportedException($"Expression type {expression.NodeType} is not supported")
+		};
 
 	/// <summary>
 	/// Determines if an expression should be evaluated (compiled and executed)
 	/// rather than converted to an OData property path.
 	/// </summary>
-	private static bool ShouldEvaluate(MemberExpression member)
+	private static bool ShouldEvaluate(Expression expression)
 	{
-		Expression? current = member;
-		while (current is MemberExpression memberExpr)
-		{
-			current = memberExpr.Expression;
-		}
+		expression = StripConvert(expression) ?? expression;
 
-		if (current is null)
-		{
-			return true;
-		}
+		var visitor = new ParameterReferenceVisitor();
+		visitor.Visit(expression);
 
-		return current is ConstantExpression;
+		return !visitor.FoundParameter;
 	}
 
 	/// <summary>
@@ -234,10 +240,20 @@ public partial class ODataQueryBuilder<T> where T : class
 
 	private static string GetStringExpressionPath(Expression expression) => expression switch
 	{
+		MemberExpression member when ShouldEvaluate(member) => FormatValue(EvaluateExpression(member)),
 		MemberExpression member => GetMemberPath(member),
+
+		// Same fix for string-path building: if a nested call is constant, evaluate it.
+		MethodCallExpression nestedMethodCall when ShouldEvaluate(nestedMethodCall) => FormatValue(
+			EvaluateExpression(nestedMethodCall)),
 		MethodCallExpression nestedMethodCall => ParseMethodCallExpression(nestedMethodCall),
-		UnaryExpression unary when unary.Operand is MemberExpression unaryMember => GetMemberPath(unaryMember),
-		_ => throw new NotSupportedException($"Expression type {expression.GetType().Name} is not supported for string operations")
+
+		UnaryExpression { Operand: MemberExpression unaryMember } when ShouldEvaluate(unaryMember)
+			=> FormatValue(EvaluateExpression(unaryMember)),
+		UnaryExpression { Operand: MemberExpression unaryMember } => GetMemberPath(unaryMember),
+
+		_ => throw new NotSupportedException(
+			$"Expression type {expression.GetType().Name} is not supported for string operations")
 	};
 
 	private static string FormatInClause(string propertyPath, System.Collections.IEnumerable values)
@@ -258,23 +274,27 @@ public partial class ODataQueryBuilder<T> where T : class
 
 	private static string GetMemberPath(MemberExpression member)
 	{
-		// Use a stack to avoid List.Insert(0) which is O(n)
-		var pathStack = new Stack<string>();
-		Expression? current = member;
-
-		while (current is MemberExpression memberExpr)
+		// If we're looking at a DateTime/DateTimeOffset component access (e.g. x.CreatedAt.Year),
+		// translate it to year(createdAt) / month(...) / etc.
+		var subject = StripConvert(member.Expression!);
+		if (subject is null)
 		{
-			pathStack.Push(memberExpr.Member.Name);
-			current = memberExpr.Expression;
+			return string.Empty;
 		}
 
-		// For small paths (common case), avoid string.Join allocation
-		return pathStack.Count switch
+		if (!TryGetDateComponentFunction(member, out var dateFunc) || !IsDateLike(subject.Type))
 		{
-			0 => string.Empty,
-			1 => pathStack.Pop(),
-			_ => string.Join("/", pathStack)
-		};
+			return BuildPlainPath(member);
+		}
+
+		// Allow x.CreatedAt.Value.Year (nullable hop)
+		if (subject is MemberExpression subjMember && IsNullableValueAccess(subjMember))
+		{
+			subject = StripConvert(subjMember.Expression!);
+		}
+
+		var innerPath = BuildPlainPath(subject);
+		return $"{dateFunc}({innerPath})";
 	}
 
 	private static object? GetValue(Expression expression) => expression switch
@@ -778,5 +798,81 @@ public partial class ODataQueryBuilder<T> where T : class
 
 			return $"{Name}({string.Join(";", options)})";
 		}
+	}
+	
+	private static bool IsNullableValueAccess(MemberExpression m) => 
+		m.Member.Name == "Value" && Nullable.GetUnderlyingType(m.Expression?.Type ?? m.Type) is not null;
+
+	private static bool IsDateLike(Type t)
+	{
+		t = Nullable.GetUnderlyingType(t) ?? t;
+		return t == typeof(DateTime) || t == typeof(DateTimeOffset);
+	}
+
+	private static bool TryGetDateComponentFunction(MemberExpression memberExpression, out string functionName)
+	{
+		functionName = string.Empty;
+		if (memberExpression.Expression is null)
+		{
+			return false;
+		}
+
+		var isDateLike = IsDateLike(memberExpression.Expression!.Type);
+		if (!isDateLike)
+		{
+			return false;
+		}
+
+		var memberName = memberExpression.Member.Name;
+		functionName = memberName switch
+		{
+			nameof(DateTime.Year) => "year",
+			nameof(DateTime.Month) => "month",
+			nameof(DateTime.Day) => "day",
+			nameof(DateTime.Hour) => "hour",
+			nameof(DateTime.Minute) => "minute",
+			nameof(DateTime.Second) => "second",
+			_ => string.Empty
+		};
+		return functionName.Length != 0;
+	}
+
+	// Builds a plain OData property path like "A/B/C", skipping Nullable<T>.Value hops.
+	private static string BuildPlainPath(Expression? expression)
+	{
+		if (expression is null)
+		{
+			return string.Empty;
+		}
+
+		var pathStack = new Stack<string>();
+		var current = StripConvert(expression);
+
+		while (current is MemberExpression memberExpr)
+		{
+			if (IsNullableValueAccess(memberExpr))
+			{
+				current = StripConvert(memberExpr.Expression);
+				continue;
+			}
+
+			pathStack.Push(memberExpr.Member.Name);
+			current = StripConvert(memberExpr.Expression);
+		}
+
+		return pathStack.Count switch
+		{
+			0 => string.Empty,
+			1 => pathStack.Pop(),
+			_ => string.Join("/", pathStack)
+		};
+	}
+	
+	private static Expression? StripConvert(Expression? e)
+	{
+		if (e is null) return null;
+		while (e is UnaryExpression { NodeType: ExpressionType.Convert } u)
+			e = u.Operand;
+		return e;
 	}
 }

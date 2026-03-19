@@ -1,3 +1,5 @@
+using System.Net.Http.Headers;
+
 namespace PanoramicData.OData.Client.Test.UnitTests;
 
 /// <summary>
@@ -34,6 +36,30 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 		_client.Dispose();
 		_httpClient.Dispose();
 		GC.SuppressFinalize(this);
+	}
+
+	/// <summary>
+	/// Verifies that the HTTP content written to the stream includes the required headers
+	/// </summary>
+	[Fact]
+	public async Task WriteToStreamAsync_ShouldIncludeRequiredHeaders()
+	{
+		using var request = new HttpRequestMessage(HttpMethod.Post, "http://test.org/Customers");
+		request.Content = new StringContent("{\"Name\":\"Test\"}");
+		request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+		using var content = new HttpMessageContent(request);
+
+		// Act
+		var resultString = await content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+		// Assert: Check the HttpContent headers specifically
+		content.Headers.TryGetValues("Content-Transfer-Encoding", out var values);
+		values.Should().Contain("binary");
+
+		// Assert: Check the serialized string content
+		resultString.Should().Contain("POST /Customers HTTP/1.1");
+		resultString.Should().Contain("Content-Type: application/json");
 	}
 
 	#region Get Operation Tests

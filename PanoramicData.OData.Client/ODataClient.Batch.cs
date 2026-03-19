@@ -25,6 +25,8 @@ public partial class ODataClient
 		ODataBatchBuilder batch,
 		CancellationToken cancellationToken = default)
 	{
+		if (batch.Items.Count == 0) return new ODataBatchResponse();
+	
 		var batchBoundary = $"batch_{Guid.NewGuid():N}";
 
 		LoggerMessages.ExecuteBatchAsync(_logger, batch.Items.Count, batchBoundary);
@@ -109,8 +111,6 @@ public partial class ODataClient
 		}
 
 		var content = new HttpMessageContent(innerRequest);
-		content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/http");
-		content.Headers.TryAddWithoutValidation("Content-Transfer-Encoding", "binary");
 
 		return content;
 	}
@@ -240,18 +240,13 @@ public partial class ODataClient
 
 	private void ExtractResponseBody(string part, ODataBatchOperationResult result, List<ODataBatchOperation> operations, int operationIndex)
 	{
-		var bodyStart = part.IndexOf("\r\n\r\n", StringComparison.Ordinal);
-		if (bodyStart == -1)
-		{
-			bodyStart = part.IndexOf("\n\n", StringComparison.Ordinal);
-		}
-
+		var bodyStart = part.IndexOf('{', StringComparison.Ordinal);
 		if (bodyStart < 0)
 		{
 			return;
 		}
 
-		result.ResponseBody = part[(bodyStart + 4)..].Trim();
+		result.ResponseBody = part[bodyStart..].Trim();
 		TryDeserializeResult(result, operations, operationIndex);
 	}
 

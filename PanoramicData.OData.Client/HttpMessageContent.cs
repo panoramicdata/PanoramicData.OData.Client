@@ -41,14 +41,14 @@ internal sealed class HttpMessageContent : HttpContent
 		var sb = new StringBuilder();
 
 		// Request line: METHOD path HTTP/1.1
-		var requestUri = _request.RequestUri?.PathAndQuery ?? "/";
 		sb.Append(_request.Method.ToString());
 		sb.Append(' ');
+		var requestUri = (_request.RequestUri?.IsAbsoluteUri == true ? _request.RequestUri.PathAndQuery : _request.RequestUri?.ToString()) ?? "/";
 		sb.Append(requestUri);
 		sb.AppendLine(" HTTP/1.1");
 
 		// Host header
-		if (_request.RequestUri?.Host is not null)
+		if (_request.RequestUri is { IsAbsoluteUri: true })
 		{
 			sb.Append("Host: ");
 			sb.AppendLine(_request.RequestUri.Host);

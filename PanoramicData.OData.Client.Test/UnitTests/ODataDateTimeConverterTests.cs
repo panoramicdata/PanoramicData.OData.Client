@@ -101,7 +101,7 @@ public class ODataDateTimeConverterTests
 	public void Read_SimpleDateFormat_ParsesCorrectly()
 	{
 		// Arrange
-		var json = "\"2024-01-15\"";
+		var json = "\"2024-01-15Z\"";
 
 		// Act
 		var result = JsonSerializer.Deserialize<DateTime>(json, _options);
