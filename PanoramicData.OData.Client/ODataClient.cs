@@ -197,10 +197,12 @@ public partial class ODataClient : IDisposable
 			sb.AppendLine(body);
 		}
 
-		LoggerMessages.LogRequestTrace(_logger, sb.ToString());
-	}
+		#pragma warning disable CA1873 // Method is already guarded by IsEnabled check at method entry
+			LoggerMessages.LogRequestTrace(_logger, sb.ToString());
+		#pragma warning restore CA1873
+		}
 
-	private async Task LogResponseTraceAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+		private async Task LogResponseTraceAsync(HttpResponseMessage response, CancellationToken cancellationToken)
 	{
 		if (!_logger.IsEnabled(LogLevel.Trace))
 		{
@@ -226,10 +228,12 @@ public partial class ODataClient : IDisposable
 		var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 		sb.AppendLine(body);
 
-		LoggerMessages.LogResponseTrace(_logger, sb.ToString());
-	}
+		#pragma warning disable CA1873 // Method is already guarded by IsEnabled check at method entry
+			LoggerMessages.LogResponseTrace(_logger, sb.ToString());
+		#pragma warning restore CA1873
+		}
 
-	private static async Task<HttpRequestMessage> CloneRequestAsync(HttpRequestMessage request)
+		private static async Task<HttpRequestMessage> CloneRequestAsync(HttpRequestMessage request)
 	{
 		var clone = new HttpRequestMessage(request.Method, request.RequestUri);
 

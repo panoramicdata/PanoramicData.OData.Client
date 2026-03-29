@@ -127,7 +127,12 @@ public class ODataAsyncOperation<T>
 	{
 		var startTime = DateTime.UtcNow;
 
-		LoggerMessages.AsyncOperationWaiting(_logger, timeout?.ToString() ?? "indefinite");
+		if (_logger.IsEnabled(LogLevel.Debug))
+		{
+#pragma warning disable CA1873 // Guarded by IsEnabled check above
+			LoggerMessages.AsyncOperationWaiting(_logger, timeout?.ToString() ?? "indefinite");
+#pragma warning restore CA1873
+		}
 
 		while (!IsCompleted)
 		{

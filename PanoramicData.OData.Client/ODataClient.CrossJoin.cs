@@ -13,7 +13,13 @@ public partial class ODataClient
 	/// <returns>A cross-join query builder.</returns>
 	public ODataCrossJoinBuilder CrossJoin(params string[] entitySets)
 	{
-		LoggerMessages.CrossJoinCreating(_logger, string.Join(", ", entitySets));
+		if (_logger.IsEnabled(LogLevel.Debug))
+		{
+#pragma warning disable CA1873 // Guarded by IsEnabled check above
+			LoggerMessages.CrossJoinCreating(_logger, string.Join(", ", entitySets));
+#pragma warning restore CA1873
+		}
+
 		return new ODataCrossJoinBuilder(entitySets, _logger);
 	}
 

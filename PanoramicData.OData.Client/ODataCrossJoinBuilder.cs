@@ -160,7 +160,12 @@ public class ODataCrossJoinBuilder
 		sb.Append(string.Join(",", _entitySets));
 		sb.Append(')');
 
-		LoggerMessages.CrossJoinBuilderBuildUrl(_logger, string.Join(",", _entitySets));
+		if (_logger.IsEnabled(LogLevel.Debug))
+		{
+#pragma warning disable CA1873 // Guarded by IsEnabled check above
+			LoggerMessages.CrossJoinBuilderBuildUrl(_logger, string.Join(",", _entitySets));
+#pragma warning restore CA1873
+		}
 
 		var queryParams = BuildQueryParameters();
 
