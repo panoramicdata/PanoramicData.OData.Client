@@ -1,3 +1,4 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project>
     <PropertyGroup>
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
@@ -5,28 +6,28 @@
 
     <!-- Shared -->
     <ItemGroup>
-        <PackageVersion Include="Nerdbank.GitVersioning" Version="3.7.115" />
+        <PackageVersion Include="Nerdbank.GitVersioning" Version="3.9.50" />
     </ItemGroup>
 
     <!-- Main library -->
     <ItemGroup>
         <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
-        <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+        <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.201" />
     </ItemGroup>
 
     <!-- Test -->
     <ItemGroup>
-        <PackageVersion Include="AwesomeAssertions" Version="9.3.0" />
+        <PackageVersion Include="AwesomeAssertions" Version="9.4.0" />
         <PackageVersion Include="AwesomeAssertions.Analyzers" Version="9.0.8" />
-        <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
-        <PackageVersion Include="coverlet.collector" Version="6.0.4" />
-        <PackageVersion Include="coverlet.msbuild" Version="6.0.4" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0-preview.4.25258.110" />
-        <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.0-preview.4.25258.110" />
-        <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.0-preview.4.25258.110" />
-        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+        <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+        <PackageVersion Include="coverlet.collector" Version="8.0.1" />
+        <PackageVersion Include="coverlet.msbuild" Version="8.0.1" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
+        <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.5" />
+        <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.5" />
+        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
         <PackageVersion Include="Moq" Version="4.20.72" />
-        <PackageVersion Include="xunit.v3" Version="3.2.1" />
+        <PackageVersion Include="xunit.v3" Version="3.2.2" />
         <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     </ItemGroup>
 </Project>

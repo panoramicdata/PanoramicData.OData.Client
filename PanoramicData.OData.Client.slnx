@@ -1,32 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Solution>
-	<Folder Name="/Documentation/">
-		<File Path="Documentation/async-operations.md" />
-		<File Path="Documentation/batch.md" />
-		<File Path="Documentation/cross-join.md" />
-		<File Path="Documentation/crud.md" />
-		<File Path="Documentation/delta.md" />
-		<File Path="Documentation/etag-concurrency.md" />
-		<File Path="Documentation/functions-actions.md" />
-		<File Path="Documentation/metadata.md" />
-		<File Path="Documentation/open-types.md" />
-		<File Path="Documentation/querying.md" />
-		<File Path="Documentation/references.md" />
-		<File Path="Documentation/singletons.md" />
-		<File Path="Documentation/streams.md" />
-		<File Path="README.md" />
-	</Folder>
-	<Folder Name="/Solution Items/">
-		<File Path=".editorconfig" />
-		<File Path=".gitignore" />
-		<File Path="Directory.Build.props" />
-		<File Path="LICENSE" />
-		<File Path="nuget-key.txt" />
-		<File Path="PanoramicData.OData.Client.dic" />
-		<File Path="Publish.ps1" />
-		<File Path="Run-Benchmarks.ps1" />
-		<File Path="Run-Coverage.ps1" />
-		<File Path="version.json" />
-	</Folder>
-	<Project Path="PanoramicData.OData.Client.Test/PanoramicData.OData.Client.Test.csproj" Id="56794b6c-9510-4f89-ab13-f5f8bb907845" />
-	<Project Path="PanoramicData.OData.Client/PanoramicData.OData.Client.csproj" />
+  <Folder Name="/Documentation/">
+    <File Path="Documentation/async-operations.md" />
+    <File Path="Documentation/batch.md" />
+    <File Path="Documentation/cross-join.md" />
+    <File Path="Documentation/crud.md" />
+    <File Path="Documentation/delta.md" />
+    <File Path="Documentation/etag-concurrency.md" />
+    <File Path="Documentation/functions-actions.md" />
+    <File Path="Documentation/metadata.md" />
+    <File Path="Documentation/open-types.md" />
+    <File Path="Documentation/querying.md" />
+    <File Path="Documentation/references.md" />
+    <File Path="Documentation/singletons.md" />
+    <File Path="Documentation/streams.md" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
+    <File Path="LICENSE" />
+    <File Path="nuget-key.txt" />
+    <File Path="PanoramicData.OData.Client.dic" />
+    <File Path="Publish.ps1" />
+    <File Path="Run-Benchmarks.ps1" />
+    <File Path="Run-Coverage.ps1" />
+    <File Path="version.json" />
+    <File Path="CONTRIBUTING.md" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+    <File Path="SECURITY.md" />
+  </Folder>
+  <Project Path="PanoramicData.OData.Client.Test/PanoramicData.OData.Client.Test.csproj" Id="56794b6c-9510-4f89-ab13-f5f8bb907845" />
+  <Project Path="PanoramicData.OData.Client/PanoramicData.OData.Client.csproj" />
 </Solution>
