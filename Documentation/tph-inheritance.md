@@ -55,12 +55,21 @@ var created = await client.CreateAsync<Person>("People", newEmployee);
 }
 ```
 
+> **Note:** The namespace in `@odata.type` is derived from the .NET type's full name (e.g. `#MyApp.Models.Employee`). Use `[ODataTypeAnnotation(TypeName = "...")]` on the class to override this with the exact name your server expects.
+
 ### Custom Type Names
 
-You can customize the OData type name using the `ODataTypeAnnotationAttribute`:
+You can customize the OData type name using the `ODataTypeAnnotationAttribute`. The `#` prefix is optional - it will be added automatically if omitted:
 
 ```csharp
 [ODataTypeAnnotation(TypeName = "#CustomNamespace.ContractorType")]
+public class Contractor : Person
+{
+    public string Company { get; set; }
+}
+
+// Equivalent - # prefix is added automatically
+[ODataTypeAnnotation(TypeName = "CustomNamespace.ContractorType")]
 public class Contractor : Person
 {
     public string Company { get; set; }
@@ -107,6 +116,12 @@ modelBuilder.Entity<Person>()
 - The converter handles top-level objects only
 - Nested polymorphic objects within properties are not currently supported
 - Type names follow .NET's full type name convention (namespace + class name)
+
+## Behaviour Notes
+
+- **Anonymous patch objects** - when using `UpdateAsync` with an anonymous object (e.g. `new { Price = 99 }`), no `@odata.type` annotation is added, as intended
+- **Types with `[JsonConverter]`** - if a class already has a `[JsonConverter]` attribute applied, the OData client respects it and does not inject `@odata.type`; this takes precedence over the TPH converter
+- **Deep inheritance** - three or more levels of inheritance are supported; `@odata.type` always reflects the concrete runtime type
 
 ## Related
 

@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [vNext]
 
+### Added
+- Add `ODataTypeAnnotationConverter` - automatically injects `@odata.type` into POST/PATCH bodies when serializing a derived type, enabling polymorphic `CreateAsync` calls against OData servers using Table-Per-Hierarchy (TPH) inheritance
+- Add `ODataTypeAnnotationAttribute` - optional attribute to override the auto-derived type name (e.g. `TypeName = "#MyNamespace.Employee"`) or force annotation inclusion on non-polymorphic types (`AlwaysInclude = true`)
+
 ## [10.0.60] - 2026-03-29
 
 ### Added
-- Add ODataTypeAnnotationConverter to support @odata.type annotation for Table-Per-Hierarchy (TPH) inheritance scenarios
 
 ### Fixed
 - Fix DateTime formatting consistency - FormatFunctionParameterValue and FormatArrayElementValue now respect DateTimeKind
