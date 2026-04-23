@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `ODataTypeAnnotationConverter` - automatically injects `@odata.type` into POST/PATCH bodies when serializing a derived type, enabling polymorphic `CreateAsync` calls against OData servers using Table-Per-Hierarchy (TPH) inheritance
 - Add `ODataTypeAnnotationAttribute` - optional attribute to override the auto-derived type name (e.g. `TypeName = "#MyNamespace.Employee"`) or force annotation inclusion on non-polymorphic types (`AlwaysInclude = true`)
 
+### Fixed
+- Fix `ODataTypeAnnotationConverter` type detection to exclude OData framework types (including `Delta<T>`), preventing ASP.NET Core OData PATCH `Delta<T>` model binding from being intercepted
+
 ## [10.0.60] - 2026-03-29
 
 ### Added

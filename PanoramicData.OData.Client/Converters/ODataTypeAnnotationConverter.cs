@@ -35,21 +35,22 @@ public class ODataTypeAnnotationConverter : JsonConverterFactory
     /// </summary>
     private static bool IsODataFrameworkType(Type type)
     {
-        // Check if it's a Delta<T> type from Microsoft.AspNetCore.OData
-        if (type.IsGenericType && type.GetGenericTypeDefinition().Name == "Delta`1")
+        // Exclude Delta<T> and all OData framework generic Delta variants.
+        if (type.IsGenericType)
         {
-            return true;
+            var genericName = type.GetGenericTypeDefinition().Name;
+            if (genericName.StartsWith("Delta`", StringComparison.Ordinal))
+            {
+                return true;
+            }
         }
 
-        // Check namespace to avoid other OData framework types
+        // Exclude by namespace to avoid intercepting OData framework types.
         var namespaceName = type.Namespace;
-        if (namespaceName != null)
-        {
-            return namespaceName.StartsWith("Microsoft.AspNetCore.OData.", StringComparison.Ordinal) ||
-                   namespaceName.StartsWith("Microsoft.OData.", StringComparison.Ordinal);
-        }
-
-        return false;
+        return namespaceName != null && (
+            namespaceName.StartsWith("Microsoft.AspNetCore.OData", StringComparison.Ordinal) ||
+            namespaceName.StartsWith("Microsoft.OData", StringComparison.Ordinal) ||
+            namespaceName.StartsWith("System.Web.OData", StringComparison.Ordinal));
     }
 
     private sealed class ODataTypeAnnotationConverterInner<T> : JsonConverter<T> where T : class

@@ -1,5 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using PanoramicData.OData.Client.Converters;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Text.Json;
 
 namespace PanoramicData.OData.Client.Test.UnitTests;
@@ -245,6 +247,55 @@ public class ODataTypeAnnotationConverterTests
     [ODataTypeAnnotation(TypeName = "#Fleet.HeavyTruck")]
     public class HeavyTruck : Truck { public int Axles { get; set; } }
 
+    [Fact]
+    public void CanConvert_DeltaGenericType_ReturnsFalse()
+    {
+        var converter = new ODataTypeAnnotationConverter();
+        var deltaType = CreateRuntimeGenericType("PanoramicData.Testing.Delta`1", typeof(Vehicle));
+
+        converter.CanConvert(deltaType).Should().BeFalse(
+            because: "Delta<T> must be excluded to avoid breaking OData PATCH model binding");
+    }
+
+    [Fact]
+    public void CanConvert_MicrosoftAspNetCoreODataNamespace_ReturnsFalse()
+    {
+        var converter = new ODataTypeAnnotationConverter();
+        var type = CreateRuntimeType("Microsoft.AspNetCore.OData.Sample.FrameworkType");
+
+        converter.CanConvert(type).Should().BeFalse(
+            because: "OData framework namespaces must be excluded from conversion");
+    }
+
+    [Fact]
+    public void CanConvert_MicrosoftODataNamespace_ReturnsFalse()
+    {
+        var converter = new ODataTypeAnnotationConverter();
+        var type = CreateRuntimeType("Microsoft.OData.Sample.FrameworkType");
+
+        converter.CanConvert(type).Should().BeFalse(
+            because: "OData framework namespaces must be excluded from conversion");
+    }
+
+    [Fact]
+    public void CanConvert_SystemWebODataNamespace_ReturnsFalse()
+    {
+        var converter = new ODataTypeAnnotationConverter();
+        var type = CreateRuntimeType("System.Web.OData.Sample.FrameworkType");
+
+        converter.CanConvert(type).Should().BeFalse(
+            because: "legacy OData framework namespaces must be excluded from conversion");
+    }
+
+    [Fact]
+    public void CanConvert_NormalPocoClass_ReturnsTrue()
+    {
+        var converter = new ODataTypeAnnotationConverter();
+
+        converter.CanConvert(typeof(Vehicle)).Should().BeTrue(
+            because: "regular model classes should still be converted for @odata.type support");
+    }
+
     /// <summary>
     /// Derived type serialized as base should include @odata.type at the start of the object.
     /// </summary>
@@ -464,7 +515,28 @@ public class ODataTypeAnnotationConverterTests
         json.Should().Contain("\"topSpeedKph\"");
     }
 
-    // Additional domain model for new tests
+    private static Type CreateRuntimeType(string fullTypeName)
+    {
+        var assemblyName = new AssemblyName($"DynamicTypes_{Guid.NewGuid():N}");
+        var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
+        var moduleBuilder = assemblyBuilder.DefineDynamicModule("Main");
+        var typeBuilder = moduleBuilder.DefineType(fullTypeName, TypeAttributes.Public | TypeAttributes.Class);
+
+        return typeBuilder.CreateType()!;
+    }
+
+    private static Type CreateRuntimeGenericType(string fullTypeName, Type genericArgument)
+    {
+        var assemblyName = new AssemblyName($"DynamicGenericTypes_{Guid.NewGuid():N}");
+        var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
+        var moduleBuilder = assemblyBuilder.DefineDynamicModule("Main");
+        var typeBuilder = moduleBuilder.DefineType(fullTypeName, TypeAttributes.Public | TypeAttributes.Class);
+        typeBuilder.DefineGenericParameters("T");
+
+        var genericDefinition = typeBuilder.CreateType()!;
+        return genericDefinition.MakeGenericType(genericArgument);
+    }
+
     [ODataTypeAnnotation(TypeName = "Fleet.PublicBus")] // no leading #
     public class Bus : Vehicle { public int Capacity { get; set; } }
 
