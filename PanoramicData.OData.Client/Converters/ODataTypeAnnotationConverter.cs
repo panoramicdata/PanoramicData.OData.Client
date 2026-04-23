@@ -16,15 +16,40 @@ public class ODataTypeAnnotationConverter : JsonConverterFactory
         // handle serialization - our factory lives in the Converters collection which
         // has higher STJ precedence than a type-level attribute, so without this guard
         // we would silently override the user's converter.
+        // Exclude OData framework types like Delta<T> to avoid interfering with server-side deserialization.
         typeToConvert.IsClass
         && typeToConvert != typeof(string)
-        && !typeToConvert.IsDefined(typeof(JsonConverterAttribute), inherit: false);
+        && !typeToConvert.IsDefined(typeof(JsonConverterAttribute), inherit: false)
+        && !IsODataFrameworkType(typeToConvert);
 
     /// <inheritdoc />
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
         var converterType = typeof(ODataTypeAnnotationConverterInner<>).MakeGenericType(typeToConvert);
         return (JsonConverter?)Activator.CreateInstance(converterType);
+    }
+
+    /// <summary>
+    /// Determines if the given type is an OData framework type that should not be processed
+    /// by this converter to avoid interference with server-side OData deserialization.
+    /// </summary>
+    private static bool IsODataFrameworkType(Type type)
+    {
+        // Check if it's a Delta<T> type from Microsoft.AspNetCore.OData
+        if (type.IsGenericType && type.GetGenericTypeDefinition().Name == "Delta`1")
+        {
+            return true;
+        }
+
+        // Check namespace to avoid other OData framework types
+        var namespaceName = type.Namespace;
+        if (namespaceName != null)
+        {
+            return namespaceName.StartsWith("Microsoft.AspNetCore.OData.", StringComparison.Ordinal) ||
+                   namespaceName.StartsWith("Microsoft.OData.", StringComparison.Ordinal);
+        }
+
+        return false;
     }
 
     private sealed class ODataTypeAnnotationConverterInner<T> : JsonConverter<T> where T : class
