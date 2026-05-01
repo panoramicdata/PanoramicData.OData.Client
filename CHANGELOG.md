@@ -8,15 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [vNext]
 
 ### Added
-- Add `ODataTypeAnnotationConverter` - automatically injects `@odata.type` into POST/PATCH bodies when serializing a derived type, enabling polymorphic `CreateAsync` calls against OData servers using Table-Per-Hierarchy (TPH) inheritance
-- Add `ODataTypeAnnotationAttribute` - optional attribute to override the auto-derived type name (e.g. `TypeName = "#MyNamespace.Employee"`) or force annotation inclusion on non-polymorphic types (`AlwaysInclude = true`)
+- Add `GetByKeyOrDefaultAsync` method - always returns null on 404 without requiring `IgnoreResourceNotFoundException` option
+- Add `IgnoreResourceNotFoundException` option to `ODataClientOptions` - returns null instead of throwing `ODataNotFoundException` on 404 responses
+
+## [10.0.67] - 2026-04-23
 
 ### Fixed
 - Fix `ODataTypeAnnotationConverter` type detection to exclude OData framework types (including `Delta<T>`), preventing ASP.NET Core OData PATCH `Delta<T>` model binding from being intercepted
 
-## [10.0.60] - 2026-03-29
+## [10.0.66] - 2026-04-23
+
+### Fixed
+- Fix `ODataTypeAnnotationConverter` to identify and exclude `Delta<T>` and other OData framework types, preventing `ArgumentNullException` when a `Delta` parameter is null in PATCH operations
+
+## [10.0.65] - 2026-04-22
 
 ### Added
+- Add `ODataTypeAnnotationConverter` - automatically injects `@odata.type` into POST/PATCH bodies when serializing a derived type, enabling polymorphic `CreateAsync` calls against OData servers using Table-Per-Hierarchy (TPH) inheritance
+- Add `ODataTypeAnnotationAttribute` - optional attribute to override the auto-derived type name (e.g. `TypeName = "#MyNamespace.Employee"`) or force annotation inclusion on non-polymorphic types (`AlwaysInclude = true`)
+
+## [10.0.60] - 2026-03-29
 
 ### Fixed
 - Fix DateTime formatting consistency - FormatFunctionParameterValue and FormatArrayElementValue now respect DateTimeKind

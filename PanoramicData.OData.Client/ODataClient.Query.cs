@@ -88,6 +88,46 @@ public partial class ODataClient
 		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
 
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+
+		if (_options.IgnoreResourceNotFoundException && response.StatusCode == HttpStatusCode.NotFound)
+		{
+			return null;
+		}
+
+		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+
+		return await response.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false);
+	}
+
+	/// <summary>
+	/// Gets a single entity by key, returning <c>null</c> if the resource is not found (HTTP 404).
+	/// </summary>
+	/// <typeparam name="T">The entity type.</typeparam>
+	/// <typeparam name="TKey">The key type.</typeparam>
+	/// <param name="key">The entity key.</param>
+	/// <param name="query">Optional query builder for additional options like $select, $expand.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>The entity, or <c>null</c> if not found.</returns>
+	public async Task<T?> GetByKeyOrDefaultAsync<T, TKey>(
+		TKey key,
+		ODataQueryBuilder<T>? query = null,
+		CancellationToken cancellationToken = default) where T : class
+	{
+		query ??= For<T>();
+		query.Key(key);
+
+		var url = query.BuildUrl();
+		LoggerMessages.GetByKeyAsync(_logger, typeof(T).Name, key!, url);
+
+		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
+
+		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+
+		if (response.StatusCode == HttpStatusCode.NotFound)
+		{
+			return null;
+		}
+
 		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
 
 		return await response.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false);
@@ -117,6 +157,12 @@ public partial class ODataClient
 		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
 
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+
+		if (_options.IgnoreResourceNotFoundException && response.StatusCode == HttpStatusCode.NotFound)
+		{
+			return new ODataSingleResponse<T> { Value = null };
+		}
+
 		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
 
 		var result = new ODataSingleResponse<T>

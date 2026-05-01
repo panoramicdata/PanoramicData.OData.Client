@@ -60,4 +60,17 @@ public class ODataClientOptions
 	/// A common value is <c>TimeSpan.FromHours(1)</c> since OData metadata rarely changes.
 	/// </remarks>
 	public TimeSpan? MetadataCacheDuration { get; set; }
+
+	/// <summary>
+	/// Gets or sets a value indicating whether a 404 Not Found response should return <c>null</c>
+	/// instead of throwing an <see cref="ODataNotFoundException"/>.
+	/// </summary>
+	/// <remarks>
+	/// When <c>true</c>, methods such as <see cref="ODataClient.GetByKeyAsync{T, TKey}(TKey, ODataQueryBuilder{T}?, CancellationToken)"/>
+	/// and <see cref="ODataClient.GetByKeyOrDefaultAsync{T, TKey}(TKey, ODataQueryBuilder{T}?, CancellationToken)"/>
+	/// will return <c>null</c> instead of throwing when the resource is not found.
+	/// This mirrors the behaviour of <c>IgnoreResourceNotFoundException</c> in Simple.OData.Client.
+	/// Defaults to <c>false</c>.
+	/// </remarks>
+	public bool IgnoreResourceNotFoundException { get; set; }
 }
