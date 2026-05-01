@@ -28,6 +28,7 @@ public class FluentODataQueryBuilder
 	private string? _function;
 	private object? _functionParameters;
 	private string? _apply;
+	private readonly List<string> _rawQueryOptions = [];
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="FluentODataQueryBuilder"/> class.
@@ -210,6 +211,30 @@ public class FluentODataQueryBuilder
 	public FluentODataQueryBuilder Apply(string applyClause)
 	{
 		_apply = applyClause;
+		return this;
+	}
+
+	/// <summary>
+	/// Appends a raw, vendor-specific query option to the request URL.
+	/// </summary>
+	/// <param name="queryOptions">
+	/// A raw query string segment to append, e.g. <c>"PropertySet=Minimum,AddressList"</c>.
+	/// The value is appended verbatim - no quoting or URL encoding is applied.
+	/// Multiple calls are combined with <c>&amp;</c>.
+	/// </param>
+	/// <remarks>
+	/// Use this for non-standard query parameters that are not part of the OData specification,
+	/// such as Exchange Online's <c>PropertySet</c> parameter.
+	/// Unlike Simple.OData.Client's <c>QueryOptions(IDictionary)</c> overload,
+	/// this method does not wrap values in single quotes.
+	/// </remarks>
+	public FluentODataQueryBuilder QueryOptions(string queryOptions)
+	{
+		if (!string.IsNullOrWhiteSpace(queryOptions))
+		{
+			_rawQueryOptions.Add(queryOptions);
+		}
+
 		return this;
 	}
 
@@ -406,6 +431,7 @@ public class FluentODataQueryBuilder
 		AddOrderByParameter(queryParams);
 		AddPagingParameters(queryParams);
 		AddApplyParameter(queryParams);
+		AddRawQueryOptions(queryParams);
 
 		return queryParams;
 	}
@@ -474,6 +500,17 @@ public class FluentODataQueryBuilder
 		if (!string.IsNullOrWhiteSpace(_apply))
 		{
 			queryParams.Add($"$apply={Uri.EscapeDataString(_apply)}");
+		}
+	}
+
+	private void AddRawQueryOptions(List<string> queryParams)
+	{
+		if (_rawQueryOptions.Count > 0)
+		{
+			foreach (var option in _rawQueryOptions)
+			{
+				queryParams.Add(option);
+			}
 		}
 	}
 

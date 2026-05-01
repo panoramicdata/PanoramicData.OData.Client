@@ -560,4 +560,85 @@ public class QueryBuilderQueryOptionsTests
 	}
 
 	#endregion
+
+	#region QueryOptions
+
+	/// <summary>
+	/// Tests QueryOptions appends a raw vendor-specific parameter verbatim.
+	/// </summary>
+	[Fact]
+	public void QueryOptions_AppendsRawParameterVerbatim()
+	{
+		var url = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
+			.QueryOptions("PropertySet=Minimum,AddressList")
+			.BuildUrl();
+
+		url.Should().Contain("PropertySet=Minimum,AddressList");
+	}
+
+	/// <summary>
+	/// Tests QueryOptions does not quote or URL-encode comma-separated values.
+	/// </summary>
+	[Fact]
+	public void QueryOptions_DoesNotQuoteOrEncodeValues()
+	{
+		var propertySets = string.Join(",", "Minimum", "AddressList");
+		var url = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
+			.QueryOptions($"PropertySet={propertySets}")
+			.BuildUrl();
+
+		// Must NOT contain single quotes around the value
+		url.Should().Contain("PropertySet=Minimum,AddressList");
+		url.Should().NotContain("PropertySet='Minimum,AddressList'");
+	}
+
+	/// <summary>
+	/// Tests multiple QueryOptions calls are combined with &amp;.
+	/// </summary>
+	[Fact]
+	public void QueryOptions_MultipleCalls_CombinedWithAmpersand()
+	{
+		var url = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
+			.QueryOptions("PropertySet=Minimum")
+			.QueryOptions("CustomParam=Value")
+			.BuildUrl();
+
+		url.Should().Contain("PropertySet=Minimum");
+		url.Should().Contain("CustomParam=Value");
+		url.Should().Contain("PropertySet=Minimum&CustomParam=Value");
+	}
+
+	/// <summary>
+	/// Tests QueryOptions combined with standard OData query options.
+	/// </summary>
+	[Fact]
+	public void QueryOptions_CombinedWithStandardOptions_AppendsAfterStandardParams()
+	{
+		var url = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
+			.Select("ID,Name")
+			.Filter("Price gt 10")
+			.QueryOptions("PropertySet=Minimum,AddressList")
+			.BuildUrl();
+
+		url.Should().Contain("$select=ID,Name");
+		url.Should().Contain("$filter=");
+		url.Should().Contain("PropertySet=Minimum,AddressList");
+	}
+
+	/// <summary>
+	/// Tests QueryOptions with key segment appends correctly.
+	/// </summary>
+	[Fact]
+	public void QueryOptions_WithKey_AppendsToQueryString()
+	{
+		var url = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
+			.Key("shared@example.com")
+			.QueryOptions("PropertySet=Delivery")
+			.BuildUrl();
+
+		url.Should().Contain("Products('shared@example.com')");
+		url.Should().Contain("PropertySet=Delivery");
+	}
+
+	#endregion
 }

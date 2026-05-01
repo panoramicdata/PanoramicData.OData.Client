@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [vNext]
 
 ### Added
+- Add `QueryOptions(string)` method to `ODataQueryBuilder<T>` and `FluentODataQueryBuilder` for verbatim vendor-specific query parameters (e.g. `PropertySet=Minimum,AddressList`) without quoting
+
+## [10.0.68] - 2026-05-01
+
+### Added
 - Add `GetByKeyOrDefaultAsync` method - always returns null on 404 without requiring `IgnoreResourceNotFoundException` option
 - Add `IgnoreResourceNotFoundException` option to `ODataClientOptions` - returns null instead of throwing `ODataNotFoundException` on 404 responses
 
