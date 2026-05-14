@@ -24,6 +24,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	private string? _apply;
 	private string? _search;
 	private string? _derivedType;
+	private readonly List<string> _rawQueryOptions = [];
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="ODataQueryBuilder{T}"/> class.
@@ -561,6 +562,30 @@ public partial class ODataQueryBuilder<T> where T : class
 	}
 
 	/// <summary>
+	/// Appends a raw, vendor-specific query option to the request URL.
+	/// </summary>
+	/// <param name="queryOptions">
+	/// A raw query string segment to append, e.g. <c>"PropertySet=Minimum,AddressList"</c>.
+	/// The value is appended verbatim - no quoting or URL encoding is applied.
+	/// Multiple calls are combined with <c>&amp;</c>.
+	/// </param>
+	/// <remarks>
+	/// Use this for non-standard query parameters that are not part of the OData specification,
+	/// such as Exchange Online's <c>PropertySet</c> parameter.
+	/// Unlike Simple.OData.Client's <c>QueryOptions(IDictionary)</c> overload,
+	/// this method does not wrap values in single quotes.
+	/// </remarks>
+	public ODataQueryBuilder<T> QueryOptions(string queryOptions)
+	{
+		if (!string.IsNullOrWhiteSpace(queryOptions))
+		{
+			_rawQueryOptions.Add(queryOptions);
+		}
+
+		return this;
+	}
+
+	/// <summary>
 	/// Adds a custom header to be sent with the request.
 	/// </summary>
 	public ODataQueryBuilder<T> WithHeader(string name, string value)
@@ -665,6 +690,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		AppendCountParameter(queryParams);
 		AppendApplyParameter(queryParams);
 		AppendComputeParameter(queryParams);
+		AppendRawQueryOptions(queryParams);
 
 		return queryParams;
 	}
@@ -782,5 +808,13 @@ public partial class ODataQueryBuilder<T> where T : class
 		var computeClause = string.Join(",", _computeExpressions);
 		queryParams.Add($"$compute={Uri.EscapeDataString(computeClause)}");
 		LoggerMessages.QueryBuilderCompute(_logger, computeClause);
+	}
+
+	private void AppendRawQueryOptions(List<string> queryParams)
+	{
+		foreach (var option in _rawQueryOptions)
+		{
+			queryParams.Add(option);
+		}
 	}
 }

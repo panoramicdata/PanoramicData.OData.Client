@@ -21,6 +21,7 @@ public partial class ODataClient : IDisposable
 		DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
 		Converters =
 		{
+			new ODataTypeAnnotationConverter(), // Must be first to handle @odata.type annotation for TPH inheritance
 			new JsonStringEnumConverter(),
 			new ODataDateTimeConverter(),
 			new ODataNullableDateTimeConverter()
