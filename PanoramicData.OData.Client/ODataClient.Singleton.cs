@@ -99,7 +99,7 @@ public partial class ODataClient
 		LoggerMessages.UpdateSingletonAsync(_logger, typeName, singletonName, etag ?? "(none)");
 
 		var request = CreateRequest(new HttpMethod("PATCH"), singletonName, headers);
-		request.Content = JsonContent.Create(patchValues, options: _jsonOptions);
+		request.Content = JsonContent.Create(patchValues, patchValues.GetType(), options: _jsonOptions);
 
 		if (!string.IsNullOrEmpty(etag))
 		{

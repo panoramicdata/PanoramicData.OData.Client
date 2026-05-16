@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Reflection;
 
 namespace PanoramicData.OData.Client.Converters;
@@ -17,10 +18,15 @@ public class ODataTypeAnnotationConverter : JsonConverterFactory
         // has higher STJ precedence than a type-level attribute, so without this guard
         // we would silently override the user's converter.
         // Exclude OData framework types like Delta<T> to avoid interfering with server-side deserialization.
+        // Exclude dictionary types - they are used as PATCH bodies and must not receive @odata.type annotations.
+        // Exclude typeof(object) itself - dictionary values boxed as object must serialize as their runtime type
+        // without being wrapped in an @odata.type object envelope.
         typeToConvert.IsClass
         && typeToConvert != typeof(string)
+        && typeToConvert != typeof(object)
         && !typeToConvert.IsDefined(typeof(JsonConverterAttribute), inherit: false)
-        && !IsODataFrameworkType(typeToConvert);
+        && !IsODataFrameworkType(typeToConvert)
+        && !IsDictionaryType(typeToConvert);
 
     /// <inheritdoc />
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
@@ -52,6 +58,16 @@ public class ODataTypeAnnotationConverter : JsonConverterFactory
             namespaceName.StartsWith("Microsoft.OData", StringComparison.Ordinal) ||
             namespaceName.StartsWith("System.Web.OData", StringComparison.Ordinal));
     }
+
+    /// <summary>
+    /// Determines if the given type is a dictionary type that should not receive
+    /// @odata.type annotations (e.g. patch body dictionaries).
+    /// </summary>
+    private static bool IsDictionaryType(Type type) =>
+        type == typeof(Dictionary<string, object?>) ||
+        type == typeof(Dictionary<string, object>) ||
+        typeof(IDictionary).IsAssignableFrom(type) ||
+        (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>));
 
     private sealed class ODataTypeAnnotationConverterInner<T> : JsonConverter<T> where T : class
     {

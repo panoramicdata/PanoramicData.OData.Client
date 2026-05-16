@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [vNext]
 
+## [10.0.71] - 2026-05-16
+
+### Fixed
+- Fix PATCH body serialization: `UpdateAsync` now passes the runtime type to `JsonContent.Create`, preventing `Dictionary<string, object?>` patch bodies from being serialized as empty `{}` objects
+- Fix `ODataTypeAnnotationConverter` to exclude dictionary types (`Dictionary<,>`, `IDictionary` implementors) and `typeof(object)` from `@odata.type` annotation injection, preventing corrupt PATCH bodies that caused ASP.NET OData `Delta<T>` model binding to return null and produce 400 "A PATCH request body is required" responses
+
 ### Added
 - Add `QueryOptions(string)` method to `ODataQueryBuilder<T>` and `FluentODataQueryBuilder` for verbatim vendor-specific query parameters (e.g. `PropertySet=Minimum,AddressList`) without quoting
 

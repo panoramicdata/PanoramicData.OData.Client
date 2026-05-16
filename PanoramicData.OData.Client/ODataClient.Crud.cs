@@ -103,7 +103,7 @@ public partial class ODataClient
 		LoggerMessages.UpdateAsync(_logger, typeName, url, etag ?? "(none)");
 
 		var request = CreateRequest(new HttpMethod("PATCH"), url, headers);
-		request.Content = JsonContent.Create(patchValues, options: _jsonOptions);
+		request.Content = JsonContent.Create(patchValues, patchValues.GetType(), options: _jsonOptions);
 
 		// Add If-Match header for concurrency control
 		if (!string.IsNullOrEmpty(etag))
