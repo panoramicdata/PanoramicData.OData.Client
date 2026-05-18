@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [vNext]
 
+### Fixed
+- Fix IgnoreResourceNotFoundException being ignored in fluent .For(...).Key(...).GetEntryAsync() - now returns null on 404 as expected
+
 ## [10.0.71] - 2026-05-16
 
 ### Fixed

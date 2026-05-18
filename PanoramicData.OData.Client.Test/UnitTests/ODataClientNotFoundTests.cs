@@ -197,4 +197,48 @@ public sealed class ODataClientNotFoundTests : TestBase, IDisposable
     }
 
     #endregion
+
+    #region Fluent GetEntryAsync with IgnoreResourceNotFoundException
+
+    /// <summary>
+    /// Fluent GetEntryAsync throws ODataNotFoundException by default when resource is not found.
+    /// </summary>
+    [Fact]
+    public async Task FluentGetEntryAsync_WhenNotFound_AndOptionIsFalse_ThrowsODataNotFoundException()
+    {
+        // Arrange
+        SetupMockResponse(HttpStatusCode.NotFound, "{}");
+        using var client = CreateClient(ignoreResourceNotFoundException: false);
+
+        // Act
+        var act = async () => await client
+            .For("Products")
+            .Key(Guid.NewGuid())
+            .GetEntryAsync(CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<ODataNotFoundException>();
+    }
+
+    /// <summary>
+    /// Fluent GetEntryAsync returns null when IgnoreResourceNotFoundException is true and resource is not found.
+    /// </summary>
+    [Fact]
+    public async Task FluentGetEntryAsync_WhenNotFound_AndOptionIsTrue_ReturnsNull()
+    {
+        // Arrange
+        SetupMockResponse(HttpStatusCode.NotFound, "{}");
+        using var client = CreateClient(ignoreResourceNotFoundException: true);
+
+        // Act
+        var result = await client
+            .For("Products")
+            .Key(Guid.NewGuid())
+            .GetEntryAsync(CancellationToken);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    #endregion
 }

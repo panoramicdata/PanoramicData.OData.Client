@@ -219,6 +219,12 @@ public partial class ODataClient
 	{
 		var request = CreateRequest(HttpMethod.Get, url, headers);
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+
+		if (_options.IgnoreResourceNotFoundException && response.StatusCode == HttpStatusCode.NotFound)
+		{
+			return null;
+		}
+
 		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
 
 		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
