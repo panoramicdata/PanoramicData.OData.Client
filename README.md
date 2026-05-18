@@ -9,7 +9,7 @@ A lightweight, modern OData V4 client library for .NET 10.
 
 ## What's New
 
-See the [CHANGELOG](CHANGELOG.md) for a complete list of changes in each version.
+See the [CHANGELOG](https://github.com/panoramicdata/PanoramicData.OData.Client/blob/main/CHANGELOG.md) for a complete list of changes in each version.
 
 ## OData V4 Feature Support
 
