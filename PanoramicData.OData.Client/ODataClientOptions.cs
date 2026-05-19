@@ -62,6 +62,20 @@ public class ODataClientOptions
 	public TimeSpan? MetadataCacheDuration { get; set; }
 
 	/// <summary>
+	/// Gets or sets a value indicating whether entity set names should be automatically pluralized
+	/// when using <c>For&lt;T&gt;()</c> without an explicit entity set name.
+	/// </summary>
+	/// <remarks>
+	/// When <c>true</c> (the default), the entity set name is derived from the type name using standard
+	/// pluralization rules (e.g., <c>Person</c> → <c>People</c>, <c>Mailbox</c> → <c>Mailboxes</c>).
+	/// Set to <c>false</c> to use the type name as-is, which is useful for APIs such as Exchange Online
+	/// that use singular endpoint names (e.g., <c>Mailbox</c>, not <c>Mailboxes</c>).
+	/// You can still override the name per-call using <c>For&lt;T&gt;("EntitySetName")</c>.
+	/// Defaults to <c>true</c>.
+	/// </remarks>
+	public bool AutoPluralization { get; set; } = true;
+
+	/// <summary>
 	/// Gets or sets a value indicating whether a 404 Not Found response should return <c>null</c>
 	/// instead of throwing an <see cref="ODataNotFoundException"/>.
 	/// </summary>

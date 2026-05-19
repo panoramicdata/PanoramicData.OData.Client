@@ -94,6 +94,54 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		url.Should().Be("CustomProducts");
 	}
 
+	/// <summary>
+	/// Tests that AutoPluralization = false uses the type name as-is.
+	/// </summary>
+	[Fact]
+	public void For_AutoPluralizationDisabled_UsesTypeNameAsIs()
+	{
+		// Arrange
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			AutoPluralization = false
+		});
+
+		// Act - type name is "Product"; with AutoPluralization=false it should stay "Product"
+		var url = client.For<Product>().BuildUrl();
+
+		// Assert
+		url.Should().Be("Product");
+	}
+
+	/// <summary>
+	/// Tests that AutoPluralization = false also works for types that would otherwise get 'es' appended.
+	/// </summary>
+	[Fact]
+	public void For_AutoPluralizationDisabled_AddressStaysSingular()
+	{
+		// Arrange - simulates APIs where endpoint is /Address not /Addresses
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			AutoPluralization = false
+		});
+
+		// Act
+		var url = client.For<Address>().BuildUrl();
+
+		// Assert - "Address" should NOT become "Addresses"
+		url.Should().Be("Address");
+	}
+
 	#endregion
 
 	#region NavigateTo Tests

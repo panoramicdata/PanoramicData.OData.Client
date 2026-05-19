@@ -438,9 +438,14 @@ public partial class ODataClient
 		};
 	}
 
-	private static string GetEntitySetName<T>()
+	private string GetEntitySetName<T>()
 	{
 		var name = typeof(T).Name;
+
+		if (!_options.AutoPluralization)
+		{
+			return name;
+		}
 
 		// Simple pluralization
 		if (name.EndsWith('y'))
