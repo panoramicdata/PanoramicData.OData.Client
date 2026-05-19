@@ -213,6 +213,40 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	}
 
 	/// <summary>
+	/// Tests the exact issue-thread pattern: NavigateTo(expr).As&lt;T&gt;().FindEntriesAsync() returns typed results.
+	/// </summary>
+	[Fact]
+	public async Task NavigateTo_NonGenericExpr_As_FindEntriesAsync_ReturnsTypedResults()
+	{
+		// Arrange
+		string? capturedUrl = null;
+		_mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUrl = req.RequestUri?.PathAndQuery)
+			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new StringContent(
+					"""{"value":[{"UserName":"scottketchum"},{"UserName":"russellwhyte"}]}""",
+					System.Text.Encoding.UTF8, "application/json")
+			});
+
+		// Act
+		var results = (await _client.For<Person>("People")
+			.Key("russellwhyte")
+			.NavigateTo(x => x.Friends)
+			.As<Person>()
+			.FindEntriesAsync(CancellationToken))
+			.ToList();
+
+		// Assert
+		capturedUrl.Should().Be("/People('russellwhyte')/Friends");
+		results.Should().HaveCount(2);
+	}
+
+	/// <summary>
 	/// Tests that FindEntriesAsync on FluentODataQueryBuilder returns results.
 	/// </summary>
 	[Fact]

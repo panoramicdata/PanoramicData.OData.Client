@@ -8,10 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [vNext]
 
 ### Added
-- Add non-generic NavigateTo(expr) overload to ODataQueryBuilder<T> returning FluentODataQueryBuilder, As<TResult>() on FluentODataQueryBuilder for re-typing, and FindEntriesAsync() alias - enabling Simple.OData.Client-compatible NavigateTo/As/FindEntriesAsync chain
-- Add NavigateTo<TNav>() method to ODataQueryBuilder<T> and NavigateTo() to FluentODataQueryBuilder, enabling navigation to dependent collections via EntitySet(key)/NavigationProperty URL paths
+- Add `FindEntriesAsync()` to `ODataQueryBuilder<T>` as a Simple.OData.Client-compatible alias for `GetAllAsync()`, returning `IEnumerable<T>` directly - enabling the `.NavigateTo(expr).As<T>().FindEntriesAsync()` chain without needing `.Value`
 
-## [10.0.72] - 2026-05-19
+## [10.0.74] - 2026-05-19
+
+### Added
+- Add non-generic `NavigateTo(expr)` overload to `ODataQueryBuilder<T>` returning `FluentODataQueryBuilder`, `As<TResult>()` on `FluentODataQueryBuilder` for re-typing, and `FindEntriesAsync()` alias - enabling Simple.OData.Client-compatible NavigateTo/As/FindEntriesAsync chain
+- Add `NavigateTo<TNav>()` method to `ODataQueryBuilder<T>` and `NavigateTo()` to `FluentODataQueryBuilder`, enabling navigation to dependent collections via EntitySet(key)/NavigationProperty URL paths
+
+## [10.0.72] - 2026-05-18
 
 ### Fixed
 - Fix IgnoreResourceNotFoundException being ignored in fluent .For(...).Key(...).GetEntryAsync() - now returns null on 404 as expected

@@ -78,6 +78,20 @@ public partial class ODataQueryBuilder<T> where T : class
 	}
 
 	/// <summary>
+	/// Executes the query and returns all matching entities, following pagination.
+	/// This is a Simple.OData.Client-compatible alias for <see cref="GetAllAsync"/> that returns the
+	/// entities directly without wrapping them in an <see cref="ODataResponse{T}"/>.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>All matching entities.</returns>
+	/// <exception cref="InvalidOperationException">Thrown if this query builder was not created from an ODataClient.</exception>
+	public async Task<IEnumerable<T>> FindEntriesAsync(CancellationToken cancellationToken = default)
+	{
+		var response = await GetAllAsync(cancellationToken).ConfigureAwait(false);
+		return response.Value;
+	}
+
+	/// <summary>
 	/// Gets the first entity matching the query, or null if no match.
 	/// </summary>
 	/// <param name="cancellationToken">Cancellation token.</param>
