@@ -481,6 +481,9 @@ internal static partial class LoggerMessages
 	[LoggerMessage(EventId = 215, Level = LogLevel.Debug, Message = "ODataQueryBuilder - Compute: {Compute}")]
 	public static partial void QueryBuilderCompute(ILogger logger, string compute);
 
+	[LoggerMessage(EventId = 216, Level = LogLevel.Debug, Message = "ODataQueryBuilder<{EntityType}>.NavigateTo() - Path: '{Path}'")]
+	public static partial void QueryBuilderNavigateTo(ILogger logger, string entityType, string path);
+
 	#endregion
 
 	#region ODataCrossJoinBuilder (Event IDs 221-230)

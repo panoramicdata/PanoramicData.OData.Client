@@ -119,6 +119,85 @@ public class FluentODataQueryBuilderTests : TestBase, IDisposable
 		url.Should().Be("Products(9876543210)");
 	}
 
+	#endregion
+
+	#region NavigateTo Tests
+
+	/// <summary>
+	/// Tests NavigateTo with an integer key produces the correct path.
+	/// </summary>
+	[Fact]
+	public void NavigateTo_WithIntKey_ProducesCorrectPath()
+	{
+		// Act
+		var url = _client.For("Mailboxes").Key(42).NavigateTo("MailboxPermissions").BuildUrl();
+
+		// Assert
+		url.Should().Be("Mailboxes(42)/MailboxPermissions");
+	}
+
+	/// <summary>
+	/// Tests NavigateTo with a string key produces the correct path.
+	/// </summary>
+	[Fact]
+	public void NavigateTo_WithStringKey_ProducesCorrectPath()
+	{
+		// Act
+		var url = _client.For("Mailboxes").Key("user@example.com").NavigateTo("MailboxPermissions").BuildUrl();
+
+		// Assert
+		url.Should().Be("Mailboxes('user@example.com')/MailboxPermissions");
+	}
+
+	/// <summary>
+	/// Tests NavigateTo with a guid key produces the correct path.
+	/// </summary>
+	[Fact]
+	public void NavigateTo_WithGuidKey_ProducesCorrectPath()
+	{
+		// Arrange
+		var guid = Guid.Parse("12345678-1234-1234-1234-123456789012");
+
+		// Act
+		var url = _client.For("Mailboxes").Key(guid).NavigateTo("MailboxPermissions").BuildUrl();
+
+		// Assert
+		url.Should().Be("Mailboxes(12345678-1234-1234-1234-123456789012)/MailboxPermissions");
+	}
+
+	/// <summary>
+	/// Tests NavigateTo with additional filter produces the correct URL.
+	/// </summary>
+	[Fact]
+	public void NavigateTo_WithFilter_ProducesCorrectUrl()
+	{
+		// Act
+		var url = _client.For("Mailboxes").Key(1).NavigateTo("MailboxPermissions").Filter("IsOwner eq true").BuildUrl();
+
+		// Assert
+		url.Should().StartWith("Mailboxes(1)/MailboxPermissions");
+		url.Should().Contain("$filter=");
+		url.Should().Contain("IsOwner%20eq%20true");
+	}
+
+	/// <summary>
+	/// Tests NavigateTo without a key throws InvalidOperationException.
+	/// </summary>
+	[Fact]
+	public void NavigateTo_WithoutKey_ThrowsInvalidOperationException()
+	{
+		// Act
+		var act = () => _client.For("Mailboxes").NavigateTo("MailboxPermissions");
+
+		// Assert
+		act.Should().Throw<InvalidOperationException>()
+			.WithMessage("*Key()*");
+	}
+
+	#endregion
+
+	#region BuildUrl Tests (Additional)
+
 	/// <summary>
 	/// Tests Filter.
 	/// </summary>

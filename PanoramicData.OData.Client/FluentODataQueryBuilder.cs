@@ -15,6 +15,7 @@ public class FluentODataQueryBuilder
 {
 	private readonly ODataClient _client;
 	private readonly string _entitySet;
+	private readonly ILogger _logger;
 	private readonly List<string> _filterClauses = [];
 	private readonly List<string> _orderByClauses = [];
 	private readonly List<string> _selectFields = [];
@@ -37,7 +38,7 @@ public class FluentODataQueryBuilder
 	{
 		_client = client;
 		_entitySet = entitySet;
-		_ = logger; // Reserved for future use
+		_logger = logger;
 	}
 
 	/// <summary>
@@ -58,6 +59,45 @@ public class FluentODataQueryBuilder
 		_key = key;
 		return this;
 	}
+
+	/// <summary>
+	/// Navigates to a related collection or singleton via a navigation property name.
+	/// Produces a URL segment of the form <c>EntitySet(key)/NavigationProperty</c>.
+	/// </summary>
+	/// <param name="navigationProperty">The name of the navigation property.</param>
+	/// <returns>A new <see cref="FluentODataQueryBuilder"/> rooted at the navigation path.</returns>
+	/// <exception cref="InvalidOperationException">Thrown if no key has been set on this builder.</exception>
+	public FluentODataQueryBuilder NavigateTo(string navigationProperty)
+	{
+		if (_key is null)
+		{
+			throw new InvalidOperationException(
+				"NavigateTo requires a key to be set. Call Key() before NavigateTo().");
+		}
+
+		var path = $"{_entitySet}({FormatKey(_key)})/{navigationProperty}";
+		return new FluentODataQueryBuilder(_client, path, _logger);
+	}
+
+
+	/// <summary>
+	/// Re-types this builder to deserialize results as <typeparamref name="TResult"/>.
+	/// Use after <c>NavigateTo(x =&gt; x.NavProp)</c> when the navigation property type differs
+	/// from the desired result type (e.g., a collection property typed as <c>List&lt;T&gt;</c>).
+	/// </summary>
+	/// <typeparam name="TResult">The type to deserialize results as.</typeparam>
+	/// <returns>A typed <see cref="ODataQueryBuilder{TResult}"/> with the same path.</returns>
+	/// <example>
+	/// <code>
+	/// var permissions = await client.For&lt;Mailbox&gt;()
+	///     .Key(identity)
+	///     .NavigateTo(x =&gt; x.MailboxPermissions)
+	///     .As&lt;MailboxPermission&gt;()
+	///     .GetAsync(ct);
+	/// </code>
+	/// </example>
+	public ODataQueryBuilder<TResult> As<TResult>() where TResult : class
+		=> new(_client, _entitySet, _logger);
 
 	/// <summary>
 	/// Adds a raw filter string.
@@ -292,6 +332,18 @@ public class FluentODataQueryBuilder
 	/// </remarks>
 	public Task<ODataResponse<Dictionary<string, object?>>> GetAllAsync(CancellationToken cancellationToken = default)
 		=> _client.GetAllFluentAsync(this, cancellationToken);
+
+	/// <summary>
+	/// Executes the query and returns all matching entries as dictionaries.
+	/// This is a legacy compatibility alias for <see cref="GetAllAsync"/>.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>A collection of dictionaries representing the matching entities.</returns>
+	public async Task<IEnumerable<IDictionary<string, object?>>> FindEntriesAsync(CancellationToken cancellationToken = default)
+	{
+		var response = await GetAllAsync(cancellationToken).ConfigureAwait(false);
+		return response.Value.Cast<IDictionary<string, object?>>();
+	}
 
 	/// <summary>
 	/// Executes the query and returns a single entry as a dictionary.

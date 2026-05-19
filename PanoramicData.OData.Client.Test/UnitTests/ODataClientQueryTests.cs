@@ -96,6 +96,157 @@ public class ODataClientQueryTests : TestBase, IDisposable
 
 	#endregion
 
+	#region NavigateTo Tests
+
+	/// <summary>
+	/// Tests NavigateTo with string property name produces the correct path.
+	/// </summary>
+	[Fact]
+	public void NavigateTo_WithStringPropertyName_ProducesCorrectPath()
+	{
+		// Act
+		var url = _client.For<Product>("Products").Key(1).NavigateTo<Product>("RelatedProducts").BuildUrl();
+
+		// Assert
+		url.Should().Be("Products(1)/RelatedProducts");
+	}
+
+	/// <summary>
+	/// Tests NavigateTo using a string name for a collection navigation property.
+	/// </summary>
+	[Fact]
+	public void NavigateTo_WithCollectionExpression_ProducesCorrectPath()
+	{
+		// Act
+		var url = _client.For<Person>("People").Key("russellwhyte").NavigateTo<Person>("Friends").BuildUrl();
+
+		// Assert
+		url.Should().Be("People('russellwhyte')/Friends");
+	}
+
+	/// <summary>
+	/// Tests NavigateTo with additional query options produces the correct URL.
+	/// </summary>
+	[Fact]
+	public void NavigateTo_WithSelect_ProducesCorrectUrl()
+	{
+		// Act
+		var url = _client.For<Person>("People").Key("russellwhyte").NavigateTo<Person>("Friends").Select(f => new { f.UserName, f.FirstName }).BuildUrl();
+
+		// Assert
+		url.Should().StartWith("People('russellwhyte')/Friends");
+		url.Should().Contain("$select=");
+		url.Should().Contain("UserName");
+		url.Should().Contain("FirstName");
+	}
+
+	/// <summary>
+	/// Tests NavigateTo without a key throws InvalidOperationException.
+	/// </summary>
+	[Fact]
+	public void NavigateTo_WithoutKey_ThrowsInvalidOperationException()
+	{
+		// Act
+		var act = () => _client.For<Person>("People").NavigateTo<Person>("Friends");
+
+		// Assert
+		act.Should().Throw<InvalidOperationException>()
+			.WithMessage("*Key()*");
+	}
+
+	/// <summary>
+	/// Tests that non-generic NavigateTo(expr) extracts the property name and returns a FluentODataQueryBuilder.
+	/// This mirrors the Simple.OData.Client NavigateTo(x => x.NavProp) pattern.
+	/// </summary>
+	[Fact]
+	public void NavigateTo_NonGenericExpr_ProducesCorrectPath()
+	{
+		// Act
+		var url = _client.For<Person>("People").Key("russellwhyte").NavigateTo(x => x.Friends).BuildUrl();
+
+		// Assert
+		url.Should().Be("People('russellwhyte')/Friends");
+	}
+
+	/// <summary>
+	/// Tests that As&lt;T&gt;() after non-generic NavigateTo preserves the navigation path.
+	/// </summary>
+	[Fact]
+	public void NavigateTo_NonGenericExpr_As_PreservesPath()
+	{
+		// Act
+		var url = _client.For<Person>("People").Key("russellwhyte").NavigateTo(x => x.Friends).As<Person>().BuildUrl();
+
+		// Assert
+		url.Should().Be("People('russellwhyte')/Friends");
+	}
+
+	/// <summary>
+	/// Tests the full Simple.OData.Client-compatible chain:
+	/// NavigateTo(expr).As&lt;T&gt;().GetAsync() sends a request to the correct URL.
+	/// </summary>
+	[Fact]
+	public async Task NavigateTo_NonGenericExpr_As_GetAsync_SendsCorrectRequest()
+	{
+		// Arrange
+		string? capturedUrl = null;
+		_mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUrl = req.RequestUri?.PathAndQuery)
+			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new StringContent("""{"value":[]}""", System.Text.Encoding.UTF8, "application/json")
+			});
+
+		// Act
+		await _client.For<Person>("People")
+			.Key("russellwhyte")
+			.NavigateTo(x => x.Friends)
+			.As<Person>()
+			.GetAsync(CancellationToken);
+
+		// Assert
+		capturedUrl.Should().Be("/People('russellwhyte')/Friends");
+	}
+
+	/// <summary>
+	/// Tests that FindEntriesAsync on FluentODataQueryBuilder returns results.
+	/// </summary>
+	[Fact]
+	public async Task NavigateTo_NonGenericExpr_FindEntriesAsync_ReturnsResults()
+	{
+		// Arrange
+		string? capturedUrl = null;
+		_mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUrl = req.RequestUri?.PathAndQuery)
+			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new StringContent(
+					"""{"value":[{"UserName":"scottketchum"}]}""",
+					System.Text.Encoding.UTF8, "application/json")
+			});
+
+		// Act
+		var results = (await _client.For<Person>("People")
+			.Key("russellwhyte")
+			.NavigateTo(x => x.Friends)
+			.FindEntriesAsync(CancellationToken)).ToList();
+
+		// Assert
+		capturedUrl.Should().Be("/People('russellwhyte')/Friends");
+		results.Should().HaveCount(1);
+		results[0].Should().ContainKey("UserName");
+	}
+
+	#endregion
+
 	#region GetAsync Tests
 
 	/// <summary>

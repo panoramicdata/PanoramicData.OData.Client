@@ -148,6 +148,66 @@ public partial class ODataQueryBuilder<T> where T : class
 	}
 
 	/// <summary>
+	/// Navigates to a related collection or singleton via a key and a navigation property name.
+	/// Produces a URL segment of the form <c>EntitySet(key)/NavigationProperty</c>.
+	/// </summary>
+	/// <typeparam name="TNav">The type of the navigation target entity.</typeparam>
+	/// <param name="navigationProperty">The name of the navigation property.</param>
+	/// <returns>A new <see cref="ODataQueryBuilder{TNav}"/> rooted at the navigation path.</returns>
+	/// <exception cref="InvalidOperationException">Thrown if no key has been set on this builder.</exception>
+	public ODataQueryBuilder<TNav> NavigateTo<TNav>(string navigationProperty) where TNav : class
+	{
+		if (_key is null)
+		{
+			throw new InvalidOperationException(
+				"NavigateTo requires a key to be set. Call Key() before NavigateTo().");
+		}
+
+		var path = $"{_entitySet}({FormatKey(_key)})/{navigationProperty}";
+		LoggerMessages.QueryBuilderNavigateTo(_logger, typeof(T).Name, path);
+
+		return _client is null
+			? new ODataQueryBuilder<TNav>(path, _logger)
+			: new ODataQueryBuilder<TNav>(_client, path, _logger);
+	}
+
+	/// <summary>
+	/// Navigates to a related entity using an expression that selects any navigation property,
+	/// returning an untyped builder. Use <see cref="FluentODataQueryBuilder.As{TResult}"/> to re-type
+	/// the result for deserialization.
+	/// Produces a URL segment of the form <c>EntitySet(key)/NavigationProperty</c>.
+	/// </summary>
+	/// <param name="navigationProperty">Expression selecting the navigation property (typed or collection).</param>
+	/// <returns>A <see cref="FluentODataQueryBuilder"/> rooted at the navigation path.</returns>
+	/// <exception cref="InvalidOperationException">Thrown if no key has been set on this builder.</exception>
+	/// <example>
+	/// <code>
+	/// var permissions = await client.For&lt;Mailbox&gt;()
+	///     .Key(identity)
+	///     .NavigateTo(x =&gt; x.MailboxPermissions)
+	///     .As&lt;MailboxPermission&gt;()
+	///     .GetAsync(ct);
+	/// </code>
+	/// </example>
+	public FluentODataQueryBuilder NavigateTo(Expression<Func<T, object?>> navigationProperty)
+	{
+		if (_key is null)
+		{
+			throw new InvalidOperationException(
+				"NavigateTo requires a key to be set. Call Key() before NavigateTo().");
+		}
+
+		var propName = GetMemberName(navigationProperty);
+		var path = $"{_entitySet}({FormatKey(_key)})/{propName}";
+		LoggerMessages.QueryBuilderNavigateTo(_logger, typeof(T).Name, path);
+
+		return _client is null
+			? throw new InvalidOperationException(
+				"NavigateTo() without a type parameter requires a client. Use client.For<T>() to create a query builder.")
+			: new FluentODataQueryBuilder(_client, path, _logger);
+	}
+
+	/// <summary>
 	/// Filters to only entities of a derived type.
 	/// OData V4 supports querying derived types via type casting.
 	/// Example: GET People/Microsoft.OData.SampleService.Models.TripPin.Employee

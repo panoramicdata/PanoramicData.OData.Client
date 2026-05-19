@@ -70,6 +70,8 @@ See the [CHANGELOG](https://github.com/panoramicdata/PanoramicData.OData.Client/
 | Server-driven paging | ✅ Supported | [Querying](Documentation/querying.md#server-driven-paging) |
 | Retry logic | ✅ Supported | [Configuration](#configuration-options) |
 | Custom headers | ✅ Supported | [Querying](Documentation/querying.md#custom-headers) |
+| Navigation properties | ✅ Supported | [NavigateTo](#navigating-related-entities-navigateto) |
+| Vendor query options | ✅ Supported | [QueryOptions](#vendor-specific-query-options-queryoptions) |
 
 ## Installation
 
@@ -103,8 +105,11 @@ var response = await client.GetAsync(query);
 // Get all pages automatically
 var allProducts = await client.GetAllAsync(query, cancellationToken);
 
-// Get by key
+// Get by key (throws ODataNotFoundException if not found)
 var product = await client.GetByKeyAsync<Product, int>(123);
+
+// Get by key - returns null if not found
+var product = await client.GetByKeyOrDefaultAsync<Product, int>(123);
 
 // Create
 var newProduct = await client.CreateAsync("Products", new Product { Name = "Widget" });
@@ -217,6 +222,39 @@ var maybeOne = await client.For<Product>("Products")
 var count = await client.For<Product>("Products")
     .Filter("Price gt 50")
     .GetCountAsync(cancellationToken);
+```
+
+## Navigating Related Entities (NavigateTo)
+
+Navigate from a keyed entity to a dependent collection using `NavigateTo`, then use `As<T>()` to type the result:
+
+```csharp
+// Produces: Mailboxes('user@example.com')/MailboxPermissions
+var permissions = await client.For<Mailbox>()
+    .Key("user@example.com")
+    .NavigateTo(x => x.MailboxPermissions)
+    .As<MailboxPermission>()
+    .GetAsync(cancellationToken);
+
+// Or use the typed string overload when you know the target type statically
+var permissions = await client.For<Mailbox>()
+    .Key("user@example.com")
+    .NavigateTo<MailboxPermission>("MailboxPermissions")
+    .GetAsync(cancellationToken);
+```
+
+## Vendor-Specific Query Options (QueryOptions)
+
+Append raw, non-standard query parameters verbatim using `QueryOptions`. Values are not quoted or URL-encoded, matching Simple.OData.Client's string overload:
+
+```csharp
+// Produces: ...&PropertySet=Minimum,AddressList
+var propertySets = string.Join(",", new[] { "Minimum", "AddressList" });
+var mailboxes = await client.For<Mailbox>()
+    .Select(m => new { m.UserPrincipalName, m.Alias })
+    .QueryOptions($"PropertySet={propertySets}")
+    .Filter(m => m.RecipientTypeDetails == "SharedMailbox")
+    .GetAsync(cancellationToken);
 ```
 
 ## Raw OData Queries
@@ -371,7 +409,10 @@ var client = new ODataClient(new ODataClientOptions
     {
         request.Headers.Add("Custom-Header", "value");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "token");
-    }
+    },
+
+    // Optional: Return null instead of throwing ODataNotFoundException on 404
+    IgnoreResourceNotFoundException = true
 });
 ```
 
