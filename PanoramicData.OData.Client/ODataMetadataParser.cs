@@ -21,23 +21,29 @@ internal static partial class ODataMetadataParser
 		var doc = XDocument.Parse(xml);
 		var metadata = new ODataMetadata();
 
-		var schemaElement = FindSchemaElement(doc);
-		if (schemaElement is null)
+		var schemaElements = doc.Descendants(EdmNs + "Schema").ToList();
+		if (schemaElements.Count == 0)
+		{
+			schemaElements = doc.Descendants().Where(e => e.Name.LocalName == "Schema").ToList();
+		}
+
+		if (schemaElements.Count == 0)
 		{
 			return metadata;
 		}
 
-		metadata.Namespace = schemaElement.Attribute("Namespace")?.Value ?? string.Empty;
+		// Use the namespace from the first schema
+		metadata.Namespace = schemaElements[0].Attribute("Namespace")?.Value ?? string.Empty;
 
-		ParseSchemaTypes(schemaElement, metadata);
-		ParseEntityContainer(schemaElement, metadata);
+		// Parse all schemas - some services (e.g. Northwind) split types and the entity container across multiple schemas
+		foreach (var schemaElement in schemaElements)
+		{
+			ParseSchemaTypes(schemaElement, metadata);
+			ParseEntityContainer(schemaElement, metadata);
+		}
 
 		return metadata;
 	}
-
-	private static XElement? FindSchemaElement(XDocument doc) =>
-		doc.Descendants(EdmNs + "Schema").FirstOrDefault()
-		?? doc.Descendants().FirstOrDefault(e => e.Name.LocalName == "Schema");
 
 	private static void ParseSchemaTypes(XElement schemaElement, ODataMetadata metadata)
 	{

@@ -682,4 +682,46 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 		""";
 
 	#endregion
+
+	#region Multi-Schema Tests
+
+	/// <summary>
+	/// Regression test: services like Northwind split types and EntityContainer across multiple Schema elements.
+	/// The parser must read all schemas, not just the first.
+	/// </summary>
+	[Fact]
+	public async Task Parse_MultipleSchemas_ParsesTypesAndEntitySetsFromAllSchemas()
+	{
+		// Arrange - two Schema elements: first has the EntityType, second has the EntityContainer
+		var xml = """
+			<?xml version="1.0" encoding="utf-8"?>
+			<edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+				<edmx:DataServices>
+					<Schema Namespace="NorthwindModel" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+						<EntityType Name="Product">
+							<Key><PropertyRef Name="ProductID" /></Key>
+							<Property Name="ProductID" Type="Edm.Int32" Nullable="false" />
+							<Property Name="ProductName" Type="Edm.String" />
+						</EntityType>
+					</Schema>
+					<Schema Namespace="ODataWebExperimental.Northwind.Model" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+						<EntityContainer Name="NorthwindEntities">
+							<EntitySet Name="Products" EntityType="NorthwindModel.Product" />
+						</EntityContainer>
+					</Schema>
+				</edmx:DataServices>
+			</edmx:Edmx>
+			""";
+
+		SetupMetadataResponse(xml);
+
+		// Act
+		var metadata = await _client.GetMetadataAsync(CancellationToken);
+
+		// Assert
+		metadata.EntityTypes.Should().ContainSingle(et => et.Name == "Product");
+		metadata.EntitySets.Should().ContainSingle(es => es.Name == "Products");
+	}
+
+	#endregion
 }
