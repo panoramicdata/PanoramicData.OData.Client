@@ -108,8 +108,9 @@ public partial class ODataClient
 			innerRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
 		}
 
-		var content = new HttpMessageContent(innerRequest);
-		content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/http");
+		var baseUri = new Uri(_options.BaseUrl.TrimEnd('/') + "/");
+		var content = new HttpMessageContent(innerRequest, baseUri);
+		content.Headers.ContentType = new MediaTypeHeaderValue("application/http");
 		content.Headers.TryAddWithoutValidation("Content-Transfer-Encoding", "binary");
 
 		return content;

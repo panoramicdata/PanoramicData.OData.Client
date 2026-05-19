@@ -706,5 +706,36 @@ public class ODataClientBatchTests : TestBase, IDisposable
 		_ => "Unknown"
 	};
 
+	/// <summary>
+	/// Regression test for issue #6: batch operations with relative URLs should not throw
+	/// "This operation is not supported for a relative URI".
+	/// </summary>
+	[Fact]
+	public async Task Batch_Create_WithRelativeUrl_DoesNotThrow()
+	{
+		// Arrange
+		var responseContent = BuildMultipartResponse([(201, """{"Id":1,"Name":"test"}""")]);
+		var response = new HttpResponseMessage(HttpStatusCode.OK)
+		{
+			Content = new StringContent(responseContent)
+		};
+		response.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("multipart/mixed; boundary=batch_response");
+
+		_mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.ReturnsAsync(response);
+
+		// Act - this previously threw "This operation is not supported for a relative URI"
+		var act = async () => await _client.CreateBatch()
+			.Create("Tests", new Product { Name = "test" })
+			.ExecuteAsync(CancellationToken);
+
+		// Assert
+		await act.Should().NotThrowAsync();
+	}
+
 	#endregion
 }

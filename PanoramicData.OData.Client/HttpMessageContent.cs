@@ -6,15 +6,18 @@ namespace PanoramicData.OData.Client;
 internal sealed class HttpMessageContent : HttpContent
 {
 	private readonly HttpRequestMessage _request;
+	private readonly Uri? _baseUri;
 	private byte[]? _content;
 
 	/// <summary>
 	/// Creates a new HttpMessageContent wrapping an HTTP request.
 	/// </summary>
 	/// <param name="request">The HTTP request message to wrap.</param>
-	public HttpMessageContent(HttpRequestMessage request)
+	/// <param name="baseUri">The base URI used to resolve relative request URIs and supply the Host header.</param>
+	public HttpMessageContent(HttpRequestMessage request, Uri? baseUri = null)
 	{
 		_request = request ?? throw new ArgumentNullException(nameof(request));
+		_baseUri = baseUri;
 
 		Headers.ContentType = new MediaTypeHeaderValue("application/http");
 		Headers.TryAddWithoutValidation("Content-Transfer-Encoding", "binary");
@@ -40,18 +43,23 @@ internal sealed class HttpMessageContent : HttpContent
 	{
 		var sb = new StringBuilder();
 
+		// Resolve to absolute URI if relative, so PathAndQuery and Host are available
+		var effectiveUri = _request.RequestUri is { IsAbsoluteUri: false } && _baseUri is not null
+			? new Uri(_baseUri, _request.RequestUri)
+			: _request.RequestUri;
+
 		// Request line: METHOD path HTTP/1.1
-		var requestUri = _request.RequestUri?.PathAndQuery ?? "/";
+		var requestUri = effectiveUri?.PathAndQuery ?? "/";
 		sb.Append(_request.Method.ToString());
 		sb.Append(' ');
 		sb.Append(requestUri);
 		sb.AppendLine(" HTTP/1.1");
 
 		// Host header
-		if (_request.RequestUri?.Host is not null)
+		if (effectiveUri?.Host is not null)
 		{
 			sb.Append("Host: ");
-			sb.AppendLine(_request.RequestUri.Host);
+			sb.AppendLine(effectiveUri.Host);
 		}
 
 		// Request headers
