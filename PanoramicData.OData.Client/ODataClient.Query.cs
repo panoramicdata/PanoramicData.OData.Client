@@ -381,12 +381,25 @@ public partial class ODataClient
 		ODataQueryBuilder<T> query,
 		CancellationToken cancellationToken = default) where T : class
 	{
-		// $top is only valid on collections; skip it when targeting a single entity by key
-		if (!query.HasKey)
+		// When a key is set, the endpoint returns a single JSON object (not a {"value":[...]} collection).
+		// Use the single-entity deserialization path to match the response shape.
+		if (query.HasKey)
 		{
-			query.Top(1);
+			var url = query.BuildUrl();
+			LoggerMessages.GetAsync(_logger, typeof(T).Name, url);
+			var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
+			var httpResponse = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+			if (_options.IgnoreResourceNotFoundException && httpResponse.StatusCode == HttpStatusCode.NotFound)
+			{
+				return null;
+			}
+
+			await EnsureSuccessAsync(httpResponse, url, cancellationToken).ConfigureAwait(false);
+			return await httpResponse.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false);
 		}
 
+		// Collection path: $top=1 to fetch only one item
+		query.Top(1);
 		var response = await GetAsync(query, cancellationToken).ConfigureAwait(false);
 		return response.Value.FirstOrDefault();
 	}
@@ -403,12 +416,20 @@ public partial class ODataClient
 		ODataQueryBuilder<T> query,
 		CancellationToken cancellationToken = default) where T : class
 	{
-		// $top is only valid on collections; skip it when targeting a single entity by key
-		if (!query.HasKey)
+		// When a key is set, the endpoint returns a single JSON object directly
+		if (query.HasKey)
 		{
-			query.Top(2);
+			var url = query.BuildUrl();
+			LoggerMessages.GetAsync(_logger, typeof(T).Name, url);
+			var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
+			var httpResponse = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+			await EnsureSuccessAsync(httpResponse, url, cancellationToken).ConfigureAwait(false);
+			return await httpResponse.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+				?? throw new InvalidOperationException("Sequence contains no elements");
 		}
 
+		// Collection path: $top=2 to detect multiple matches
+		query.Top(2);
 		var response = await GetAsync(query, cancellationToken).ConfigureAwait(false);
 
 		return response.Value.Count switch

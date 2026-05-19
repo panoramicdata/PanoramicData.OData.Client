@@ -618,12 +618,12 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	}
 
 	/// <summary>
-	/// Tests GetFirstOrDefaultAsync with a key does NOT append $top=1 (single entity endpoint rejects $top).
+	/// Tests GetFirstOrDefaultAsync with a key uses single-object deserialization (no $top, no {"value":[...]} wrapper).
 	/// </summary>
 	[Fact]
-	public async Task GetFirstOrDefaultAsync_WithKey_DoesNotAppendTop()
+	public async Task GetFirstOrDefaultAsync_WithKey_DeserializesSingleObject()
 	{
-		// Arrange
+		// Arrange - single entity endpoints return a plain object, not {"value":[...]}
 		Uri? capturedUri = null;
 		_mockHandler.Protected()
 			.Setup<Task<HttpResponseMessage>>(
@@ -633,17 +633,19 @@ public class ODataClientQueryTests : TestBase, IDisposable
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
-				Content = new StringContent("""{"value": [{"ID": 1, "Name": "Test"}]}""", System.Text.Encoding.UTF8, "application/json")
+				Content = new StringContent("""{"ID": 1, "Name": "Test"}""", System.Text.Encoding.UTF8, "application/json")
 			});
 
 		// Act
-		await _client.GetFirstOrDefaultAsync(
+		var result = await _client.GetFirstOrDefaultAsync(
 			_client.For<Product>("Products").Key(1).QueryOptions("PropertySet=Delivery"),
 			CancellationToken);
 
 		// Assert
 		capturedUri!.ToString().Should().NotContain("$top");
 		capturedUri.ToString().Should().Contain("PropertySet=Delivery");
+		result.Should().NotBeNull();
+		result!.Name.Should().Be("Test");
 	}
 
 	#endregion

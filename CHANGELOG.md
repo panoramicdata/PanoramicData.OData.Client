@@ -5,10 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [10.0.79] - 2026-05-19
+## [10.0.80] - 2026-05-19
 
 ### Fixed
-- Fix `GetFirstOrDefaultAsync` and `GetSingleAsync` appending `$top` when a key is set - single entity endpoints reject `$top` with a `BadRequest` error
+- Fix `GetFirstOrDefaultAsync` and `GetSingleAsync` with a key set: now deserializes the response as a single JSON object instead of expecting a `{"value":[...]}` collection wrapper, matching the actual response shape of single-entity endpoints. Also no longer appends `$top` which is rejected by some APIs (e.g. Exchange Online) on single-entity URLs
 
 ## [10.0.78] - 2026-05-19
 
