@@ -1,6 +1,18 @@
 namespace PanoramicData.OData.Client.Test.UnitTests;
 
 /// <summary>
+/// Simulates a Microsoft.OData.Client-generated DTO with [EntitySet] attribute.
+/// </summary>
+[AttributeUsage(AttributeTargets.Class)]
+internal sealed class EntitySetAttribute(string entitySet) : Attribute
+{
+	public string EntitySet { get; } = entitySet;
+}
+
+[EntitySet("Mailbox")]
+internal sealed class GeneratedMailbox { }
+
+/// <summary>
 /// Unit tests for ODataClient query operations.
 /// </summary>
 public class ODataClientQueryTests : TestBase, IDisposable
@@ -92,6 +104,19 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		// Assert
 		var url = query.BuildUrl();
 		url.Should().Be("CustomProducts");
+	}
+
+	/// <summary>
+	/// Tests that [EntitySet("...")] attribute on generated DTOs is respected, overriding pluralization.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetAttribute_OverridesPluralization()
+	{
+		// Act - GeneratedMailbox has [EntitySet("Mailbox")] so should produce "Mailbox" not "GeneratedMailboxes"
+		var url = _client.For<GeneratedMailbox>().BuildUrl();
+
+		// Assert
+		url.Should().Be("Mailbox");
 	}
 
 	/// <summary>

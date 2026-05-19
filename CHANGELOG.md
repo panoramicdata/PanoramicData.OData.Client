@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Add `AutoPluralization` option to `ODataClientOptions` (default `true`) - set to `false` to use type names as-is, avoiding automatic pluralization for APIs such as Exchange Online that use singular endpoint names (e.g. `Mailbox` instead of `Mailboxes`)
+- Respect `[EntitySet("...")]` attribute on generated DTOs (e.g. from Microsoft.OData.Client tooling) when deriving entity set names in `For<T>()`, without requiring a reference to `Microsoft.OData.Client`
 
 ## [10.0.75] - 2026-05-19
 

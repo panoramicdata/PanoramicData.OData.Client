@@ -440,7 +440,22 @@ public partial class ODataClient
 
 	private string GetEntitySetName<T>()
 	{
-		var name = typeof(T).Name;
+		var type = typeof(T);
+
+		// Respect [EntitySet("...")] attribute from Microsoft.OData.Client generated DTOs
+		var entitySetAttr = type.GetCustomAttributes(false)
+			.FirstOrDefault(a => a.GetType().Name == "EntitySetAttribute");
+		if (entitySetAttr is not null)
+		{
+			var prop = entitySetAttr.GetType().GetProperty("EntitySet")
+				?? entitySetAttr.GetType().GetProperty("Name");
+			if (prop?.GetValue(entitySetAttr) is string entitySetName && !string.IsNullOrWhiteSpace(entitySetName))
+			{
+				return entitySetName;
+			}
+		}
+
+		var name = type.Name;
 
 		if (!_options.AutoPluralization)
 		{
