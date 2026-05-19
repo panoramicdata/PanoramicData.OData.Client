@@ -56,6 +56,13 @@ public partial class ODataClient : IDisposable
 		{
 			_httpClient = options.HttpClient;
 			_ownsHttpClient = false;
+
+			// If the provided HttpClient has no BaseAddress, set it from options so relative URLs resolve correctly
+			if (_httpClient.BaseAddress is null)
+			{
+				_httpClient.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+			}
+
 			LoggerMessages.UsingProvidedHttpClient(_logger, _httpClient.BaseAddress);
 		}
 		else

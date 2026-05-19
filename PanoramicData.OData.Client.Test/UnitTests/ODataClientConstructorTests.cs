@@ -261,4 +261,49 @@ public class ODataClientConstructorTests : TestBase
 	{
 		public int Id { get; set; }
 	}
+
+	/// <summary>
+	/// Tests that a provided HttpClient without a BaseAddress gets its BaseAddress set from options.
+	/// Regression test for issue where passing HttpClient without BaseAddress caused "Invalid request URI".
+	/// </summary>
+	[Fact]
+	public void Constructor_HttpClientWithoutBaseAddress_SetsBaseAddressFromOptions()
+	{
+		// Arrange
+		using var httpClient = new HttpClient(); // no BaseAddress set
+
+		// Act
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://services.odata.org/V4/Northwind/Northwind.svc",
+			HttpClient = httpClient
+		});
+
+		// Assert - BaseAddress should have been set automatically
+		httpClient.BaseAddress.Should().NotBeNull();
+		httpClient.BaseAddress!.ToString().Should().Be("https://services.odata.org/V4/Northwind/Northwind.svc/");
+	}
+
+	/// <summary>
+	/// Tests that a provided HttpClient with an existing BaseAddress is not overwritten.
+	/// </summary>
+	[Fact]
+	public void Constructor_HttpClientWithBaseAddress_PreservesExistingBaseAddress()
+	{
+		// Arrange
+		using var httpClient = new HttpClient
+		{
+			BaseAddress = new Uri("https://services.odata.org/V4/Northwind/Northwind.svc/")
+		};
+
+		// Act
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://services.odata.org/V4/Northwind/Northwind.svc",
+			HttpClient = httpClient
+		});
+
+		// Assert - existing BaseAddress must not be changed
+		httpClient.BaseAddress!.ToString().Should().Be("https://services.odata.org/V4/Northwind/Northwind.svc/");
+	}
 }
