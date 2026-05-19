@@ -617,6 +617,35 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		capturedUri!.ToString().Should().Contain("$top=1");
 	}
 
+	/// <summary>
+	/// Tests GetFirstOrDefaultAsync with a key does NOT append $top=1 (single entity endpoint rejects $top).
+	/// </summary>
+	[Fact]
+	public async Task GetFirstOrDefaultAsync_WithKey_DoesNotAppendTop()
+	{
+		// Arrange
+		Uri? capturedUri = null;
+		_mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
+			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new StringContent("""{"value": [{"ID": 1, "Name": "Test"}]}""", System.Text.Encoding.UTF8, "application/json")
+			});
+
+		// Act
+		await _client.GetFirstOrDefaultAsync(
+			_client.For<Product>("Products").Key(1).QueryOptions("PropertySet=Delivery"),
+			CancellationToken);
+
+		// Assert
+		capturedUri!.ToString().Should().NotContain("$top");
+		capturedUri.ToString().Should().Contain("PropertySet=Delivery");
+	}
+
 	#endregion
 
 	#region GetSingleAsync Tests

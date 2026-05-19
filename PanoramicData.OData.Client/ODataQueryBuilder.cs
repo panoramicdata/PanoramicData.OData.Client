@@ -26,6 +26,9 @@ public partial class ODataQueryBuilder<T> where T : class
 	private string? _derivedType;
 	private readonly List<string> _rawQueryOptions = [];
 
+	/// <summary>Gets a value indicating whether a key has been set on this query.</summary>
+	internal bool HasKey => _key is not null;
+
 	/// <summary>
 	/// Initializes a new instance of the <see cref="ODataQueryBuilder{T}"/> class.
 	/// </summary>

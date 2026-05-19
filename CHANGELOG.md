@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.79] - 2026-05-19
+
+### Fixed
+- Fix `GetFirstOrDefaultAsync` and `GetSingleAsync` appending `$top` when a key is set - single entity endpoints reject `$top` with a `BadRequest` error
+
 ## [10.0.78] - 2026-05-19
 
 ### Added

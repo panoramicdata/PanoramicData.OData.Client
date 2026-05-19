@@ -381,8 +381,11 @@ public partial class ODataClient
 		ODataQueryBuilder<T> query,
 		CancellationToken cancellationToken = default) where T : class
 	{
-		// Ensure we only fetch one item
-		query.Top(1);
+		// $top is only valid on collections; skip it when targeting a single entity by key
+		if (!query.HasKey)
+		{
+			query.Top(1);
+		}
 
 		var response = await GetAsync(query, cancellationToken).ConfigureAwait(false);
 		return response.Value.FirstOrDefault();
@@ -400,8 +403,11 @@ public partial class ODataClient
 		ODataQueryBuilder<T> query,
 		CancellationToken cancellationToken = default) where T : class
 	{
-		// Fetch up to 2 to detect multiple matches
-		query.Top(2);
+		// $top is only valid on collections; skip it when targeting a single entity by key
+		if (!query.HasKey)
+		{
+			query.Top(2);
+		}
 
 		var response = await GetAsync(query, cancellationToken).ConfigureAwait(false);
 
