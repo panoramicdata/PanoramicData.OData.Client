@@ -737,5 +737,47 @@ public class ODataClientBatchTests : TestBase, IDisposable
 		await act.Should().NotThrowAsync();
 	}
 
+	/// <summary>
+	/// Verifies that serialized batch operation content contains the required OData batch headers
+	/// exactly once: Content-Type: application/http and Content-Transfer-Encoding: binary.
+	/// </summary>
+	[Fact]
+	public async Task Batch_OperationContent_ShouldIncludeRequiredHeadersExactlyOnce()
+	{
+		// Arrange
+		var responseContent = BuildMultipartResponse([(201, """{"Id":1,"Name":"test"}""")]);
+		var response = new HttpResponseMessage(HttpStatusCode.OK)
+		{
+			Content = new StringContent(responseContent)
+		};
+		response.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("multipart/mixed; boundary=batch_response");
+
+		HttpRequestMessage? capturedRequest = null;
+		_mockHandler.Protected()
+			.Setup<Task<HttpResponseMessage>>(
+				"SendAsync",
+				ItExpr.IsAny<HttpRequestMessage>(),
+				ItExpr.IsAny<CancellationToken>())
+			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
+			.ReturnsAsync(response);
+
+		// Act
+		await _client.CreateBatch()
+			.Create("Tests", new Product { Name = "test" })
+			.ExecuteAsync(CancellationToken);
+
+		// Assert - inspect the raw multipart body for the headers
+		capturedRequest.Should().NotBeNull();
+		var body = await capturedRequest!.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+		// Content-Type: application/http must appear exactly once per part
+		var contentTypeMatches = System.Text.RegularExpressions.Regex.Matches(body, @"Content-Type:\s*application/http");
+		contentTypeMatches.Should().ContainSingle();
+
+		// Content-Transfer-Encoding: binary must appear exactly once per part (not duplicated)
+		var transferEncodingMatches = System.Text.RegularExpressions.Regex.Matches(body, @"Content-Transfer-Encoding:\s*binary");
+		transferEncodingMatches.Should().ContainSingle();
+	}
+
 	#endregion
 }

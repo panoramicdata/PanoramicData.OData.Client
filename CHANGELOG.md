@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.84] - 2026-05-21
+
+### Fixed
+- Remove duplicate `Content-Transfer-Encoding: binary` header in batch requests; `HttpMessageContent` constructor already adds it, so the extra call in `ODataClient.Batch.cs` was redundant
+
+### Tests
+- Add `Batch_OperationContent_ShouldIncludeRequiredHeadersExactlyOnce` to assert batch part headers appear exactly once in the serialized multipart body
+- Add `DateTimeKind.Utc` assertion to `Read_SimpleDateFormat_ParsesCorrectly` to make intent explicit and guard against future converter changes
+
 ## [10.0.83] - 2026-05-19
 
 ### Fixed

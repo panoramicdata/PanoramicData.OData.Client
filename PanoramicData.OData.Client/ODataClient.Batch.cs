@@ -111,7 +111,6 @@ public partial class ODataClient
 		var baseUri = new Uri(_options.BaseUrl.TrimEnd('/') + "/");
 		var content = new HttpMessageContent(innerRequest, baseUri);
 		content.Headers.ContentType = new MediaTypeHeaderValue("application/http");
-		content.Headers.TryAddWithoutValidation("Content-Transfer-Encoding", "binary");
 
 		return content;
 	}

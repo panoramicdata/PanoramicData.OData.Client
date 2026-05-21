@@ -113,6 +113,7 @@ public class ODataDateTimeConverterTests
 		result.Hour.Should().Be(0);
 		result.Minute.Should().Be(0);
 		result.Second.Should().Be(0);
+		result.Kind.Should().Be(DateTimeKind.Utc);
 	}
 
 	/// <summary>
