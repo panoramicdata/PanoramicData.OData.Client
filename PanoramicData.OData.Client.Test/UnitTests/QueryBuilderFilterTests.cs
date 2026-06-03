@@ -276,6 +276,41 @@ public class QueryBuilderFilterTests
 	}
 
 	/// <summary>
+	/// Tests filter with inline enum literal on a non-nullable enum property.
+	/// </summary>
+	[Fact]
+	public void Filter_WithNonNullableEnumInlineLiteral_UsesEnumMemberName()
+	{
+		// Act
+		var url = new ODataQueryBuilder<Person>("People", NullLogger.Instance)
+			.Filter(p => p.GenderRequired == Gender.Female)
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("GenderRequired%20eq%20%27Female%27");
+		url.Should().NotContain("%271%27");
+	}
+
+	/// <summary>
+	/// Tests filter with captured variable on a non-nullable enum property.
+	/// </summary>
+	[Fact]
+	public void Filter_WithNonNullableEnumCapturedVariable_UsesEnumMemberName()
+	{
+		// Arrange
+		var gender = Gender.Male;
+
+		// Act
+		var url = new ODataQueryBuilder<Person>("People", NullLogger.Instance)
+			.Filter(p => p.GenderRequired == gender)
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("GenderRequired%20eq%20%27Male%27");
+		url.Should().NotContain("%270%27");
+	}
+
+	/// <summary>
 	/// Tests filter with inline enum literal.
 	/// </summary>
 	[Fact]

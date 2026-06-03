@@ -91,9 +91,10 @@ public partial class ODataQueryBuilder<T> where T : class
 
 	private static string ParseLambdaBinaryExpression(BinaryExpression binary, ParameterExpression lambdaParam, string odataParamName, ExpressionType? parentOperator)
 	{
-		// Pass the current operator as parent to child expressions
-		var left = ParseLambdaBody(binary.Left, lambdaParam, odataParamName, binary.NodeType, binary.Right.Type);
-		var right = ParseLambdaBody(binary.Right, lambdaParam, odataParamName, binary.NodeType, binary.Left.Type);
+		// Pass the current operator as parent to child expressions.
+		// Use GetEffectiveType to unwrap Convert nodes so non-nullable enum types are preserved.
+		var left = ParseLambdaBody(binary.Left, lambdaParam, odataParamName, binary.NodeType, GetEffectiveType(binary.Right));
+		var right = ParseLambdaBody(binary.Right, lambdaParam, odataParamName, binary.NodeType, GetEffectiveType(binary.Left));
 
 		var op = binary.NodeType switch
 		{

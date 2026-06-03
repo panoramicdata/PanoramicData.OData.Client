@@ -121,11 +121,33 @@ public partial class ODataQueryBuilder<T> where T : class
 		return true;
 	}
 
+	/// <summary>
+	/// Gets the effective type of an expression, unwrapping Convert nodes to reveal the actual enum type.
+	/// The C# compiler wraps non-nullable enum operands in Convert(expr, int) for comparisons,
+	/// which would hide the enum type from the expectedType logic.
+	/// </summary>
+	private static Type GetEffectiveType(Expression expression)
+	{
+		if (expression is UnaryExpression { NodeType: ExpressionType.Convert } unary)
+		{
+			var operandType = unary.Operand.Type;
+			var underlying = Nullable.GetUnderlyingType(operandType) ?? operandType;
+
+			if (underlying.IsEnum)
+			{
+				return operandType;
+			}
+		}
+
+		return expression.Type;
+	}
+
 	private static string ParseBinaryExpression(BinaryExpression binary, ExpressionType? parentOperator)
 	{
-		// Pass the current operator as parent to child expressions
-		var left = ExpressionToODataFilter(binary.Left, binary.NodeType, binary.Right.Type);
-		var right = ExpressionToODataFilter(binary.Right, binary.NodeType, binary.Left.Type);
+		// Pass the current operator as parent to child expressions.
+		// Use GetEffectiveType to unwrap Convert nodes so non-nullable enum types are preserved.
+		var left = ExpressionToODataFilter(binary.Left, binary.NodeType, GetEffectiveType(binary.Right));
+		var right = ExpressionToODataFilter(binary.Right, binary.NodeType, GetEffectiveType(binary.Left));
 
 		if (!OperatorMap.TryGetValue(binary.NodeType, out var op))
 		{

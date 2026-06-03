@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [10.0.85] - 2026-06-02
+## [10.0.86] - 2026-06-03
+
+### Fixed
+- Fix non-nullable enum properties in LINQ filter expressions emitting integer values instead of quoted OData enum member names
+
+## [10.0.85] - 2026-06-03
 
 ### Fixed
 - Render enum literals in LINQ filter expressions as quoted OData enum member names instead of underlying numeric values

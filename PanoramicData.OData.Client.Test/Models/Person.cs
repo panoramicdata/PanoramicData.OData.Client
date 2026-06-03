@@ -32,6 +32,11 @@ public class Person
 	public Gender? Gender { get; set; }
 
 	/// <summary>
+	/// Gets or sets the gender (non-nullable).
+	/// </summary>
+	public Gender GenderRequired { get; set; }
+
+	/// <summary>
 	/// Gets or sets the age.
 	/// </summary>
 	public long? Age { get; set; }
