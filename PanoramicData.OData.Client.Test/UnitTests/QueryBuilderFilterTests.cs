@@ -6,16 +6,6 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// </summary>
 public class QueryBuilderFilterTests
 {
-	private readonly ODataQueryBuilder<Product> _builder;
-
-	/// <summary>
-	/// Initializes a new instance of the test class.
-	/// </summary>
-	public QueryBuilderFilterTests()
-	{
-		_builder = new ODataQueryBuilder<Product>("Products", NullLogger.Instance);
-	}
-
 	#region Comparison Operators
 
 	/// <summary>
@@ -283,6 +273,58 @@ public class QueryBuilderFilterTests
 
 		// Assert
 		url.Should().Contain("Price%20gt%20100");
+	}
+
+	/// <summary>
+	/// Tests filter with inline enum literal.
+	/// </summary>
+	[Fact]
+	public void Filter_WithInlineEnumLiteral_UsesEnumMemberName()
+	{
+		// Act
+		var url = new ODataQueryBuilder<Person>("People", NullLogger.Instance)
+			.Filter(p => p.Gender == Gender.Female)
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("Gender%20eq%20%27Female%27");
+		url.Should().NotContain("Gender%20eq%20%34");
+	}
+
+	/// <summary>
+	/// Tests filter with captured enum variable.
+	/// </summary>
+	[Fact]
+	public void Filter_WithCapturedEnumVariable_UsesEnumMemberName()
+	{
+		// Arrange
+		var gender = Gender.Male;
+
+		// Act
+		var url = new ODataQueryBuilder<Person>("People", NullLogger.Instance)
+			.Filter(p => p.Gender == gender)
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("Gender%20eq%20%27Male%27");
+	}
+
+	/// <summary>
+	/// Tests filter with captured nullable enum variable.
+	/// </summary>
+	[Fact]
+	public void Filter_WithCapturedNullableEnumVariable_UsesEnumMemberName()
+	{
+		// Arrange
+		Gender? gender = Gender.Female;
+
+		// Act
+		var url = new ODataQueryBuilder<Person>("People", NullLogger.Instance)
+			.Filter(p => p.Gender == gender)
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("Gender%20eq%20%27Female%27");
 	}
 
 	/// <summary>

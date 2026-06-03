@@ -30,7 +30,6 @@ public partial class ODataQueryBuilder<T> where T : class
 
 		var parameterName = predicateLambda.Parameters[0].Name ?? "x";
 		var predicateBody = ParseLambdaBody(predicateLambda.Body, predicateLambda.Parameters[0], parameterName, parentOperator: null);
-
 		return $"{collectionPath}/{odataMethodName}({parameterName}: {predicateBody})";
 	}
 
@@ -78,14 +77,14 @@ public partial class ODataQueryBuilder<T> where T : class
 		_ => string.Empty
 	};
 
-	private static string ParseLambdaBody(Expression body, ParameterExpression lambdaParam, string odataParamName, ExpressionType? parentOperator) => body switch
+	private static string ParseLambdaBody(Expression body, ParameterExpression lambdaParam, string odataParamName, ExpressionType? parentOperator, Type? expectedType = null) => body switch
 	{
 		BinaryExpression binary => ParseLambdaBinaryExpression(binary, lambdaParam, odataParamName, parentOperator),
 		MethodCallExpression methodCall => ParseLambdaMethodCall(methodCall, lambdaParam, odataParamName),
-		UnaryExpression u when u.NodeType == ExpressionType.Not => $"not ({ParseLambdaBody(u.Operand, lambdaParam, odataParamName, parentOperator)})",
-		UnaryExpression u when u.NodeType == ExpressionType.Convert => ParseLambdaBody(u.Operand, lambdaParam, odataParamName, parentOperator),
+		UnaryExpression u when u.NodeType == ExpressionType.Not => $"not ({ParseLambdaBody(u.Operand, lambdaParam, odataParamName, parentOperator, expectedType)})",
+		UnaryExpression u when u.NodeType == ExpressionType.Convert => ParseLambdaBody(u.Operand, lambdaParam, odataParamName, parentOperator, expectedType),
 		MemberExpression member => GetLambdaMemberPath(member, lambdaParam, odataParamName),
-		ConstantExpression constant => FormatValue(constant.Value),
+		ConstantExpression constant => FormatValue(constant.Value, expectedType),
 		ParameterExpression param when param == lambdaParam => odataParamName,
 		_ => throw new NotSupportedException($"Expression type {body.NodeType} is not supported in lambda body")
 	};
@@ -93,8 +92,8 @@ public partial class ODataQueryBuilder<T> where T : class
 	private static string ParseLambdaBinaryExpression(BinaryExpression binary, ParameterExpression lambdaParam, string odataParamName, ExpressionType? parentOperator)
 	{
 		// Pass the current operator as parent to child expressions
-		var left = ParseLambdaBody(binary.Left, lambdaParam, odataParamName, binary.NodeType);
-		var right = ParseLambdaBody(binary.Right, lambdaParam, odataParamName, binary.NodeType);
+		var left = ParseLambdaBody(binary.Left, lambdaParam, odataParamName, binary.NodeType, binary.Right.Type);
+		var right = ParseLambdaBody(binary.Right, lambdaParam, odataParamName, binary.NodeType, binary.Left.Type);
 
 		var op = binary.NodeType switch
 		{
@@ -182,7 +181,6 @@ public partial class ODataQueryBuilder<T> where T : class
 
 		var innerParamName = predicateLambda.Parameters[0].Name ?? "x";
 		var predicateBody = ParseLambdaBody(predicateLambda.Body, predicateLambda.Parameters[0], innerParamName, parentOperator: null);
-
 		return $"{collectionPath}/{odataMethodName}({innerParamName}: {predicateBody})";
 	}
 

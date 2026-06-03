@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.85] - 2026-06-02
+
+### Fixed
+- Render enum literals in LINQ filter expressions as quoted OData enum member names instead of underlying numeric values
+
 ## [10.0.84] - 2026-05-21
 
 ### Fixed
@@ -13,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Tests
 - Add `Batch_OperationContent_ShouldIncludeRequiredHeadersExactlyOnce` to assert batch part headers appear exactly once in the serialized multipart body
 - Add `DateTimeKind.Utc` assertion to `Read_SimpleDateFormat_ParsesCorrectly` to make intent explicit and guard against future converter changes
+- Add regression coverage for inline enum literals and captured enum variables in filter expressions
 
 ## [10.0.83] - 2026-05-19
 

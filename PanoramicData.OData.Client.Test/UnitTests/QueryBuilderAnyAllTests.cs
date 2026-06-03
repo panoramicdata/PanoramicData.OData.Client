@@ -273,5 +273,20 @@ public class QueryBuilderAnyAllTests
 		url.Should().Contain("contains%28e%2C%27%40example.com%27%29");
 	}
 
+	/// <summary>
+	/// Tests that enum comparisons inside Any lambda use enum member names.
+	/// </summary>
+	[Fact]
+	public void Filter_AnyWithEnumComparison_GeneratesCorrectUrl()
+	{
+		// Act
+		var url = _queryBuilder
+			.Filter(p => p.Friends!.Any(f => f.Gender == Gender.Female))
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("Friends%2Fany%28f%3A%20f%2FGender%20eq%20%27Female%27%29");
+	}
+
 	#endregion
 }

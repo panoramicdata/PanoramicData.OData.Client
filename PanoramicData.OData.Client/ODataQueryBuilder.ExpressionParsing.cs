@@ -24,18 +24,18 @@ public partial class ODataQueryBuilder<T> where T : class
 	}.ToFrozenDictionary();
 
 	private static string ExpressionToODataFilter(Expression expression) =>
-		ExpressionToODataFilter(expression, parentOperator: null);
+		ExpressionToODataFilter(expression, parentOperator: null, expectedType: null);
 
-	private static string ExpressionToODataFilter(Expression expression, ExpressionType? parentOperator) => expression switch
+	private static string ExpressionToODataFilter(Expression expression, ExpressionType? parentOperator, Type? expectedType) => expression switch
 	{
 		BinaryExpression binary => ParseBinaryExpression(binary, parentOperator),
 		MethodCallExpression methodCall => ParseMethodCallExpression(methodCall),
-		UnaryExpression unary when unary.NodeType == ExpressionType.Not => $"not ({ExpressionToODataFilter(unary.Operand, parentOperator)})",
-		UnaryExpression unary when unary.NodeType == ExpressionType.Convert => ExpressionToODataFilter(unary.Operand, parentOperator),
+		UnaryExpression unary when unary.NodeType == ExpressionType.Not => $"not ({ExpressionToODataFilter(unary.Operand, parentOperator, expectedType)})",
+		UnaryExpression unary when unary.NodeType == ExpressionType.Convert => ExpressionToODataFilter(unary.Operand, parentOperator, expectedType),
 		MemberExpression member when member.Type == typeof(bool) && !ShouldEvaluate(member) => GetMemberPath(member),
-		MemberExpression member when ShouldEvaluate(member) => FormatValue(EvaluateExpression(member)),
+		MemberExpression member when ShouldEvaluate(member) => FormatValue(EvaluateExpression(member), expectedType),
 		MemberExpression member => GetMemberPath(member),
-		ConstantExpression constant => FormatValue(constant.Value),
+		ConstantExpression constant => FormatValue(constant.Value, expectedType),
 		_ => throw new NotSupportedException($"Expression type {expression.NodeType} is not supported")
 	};
 
@@ -124,8 +124,8 @@ public partial class ODataQueryBuilder<T> where T : class
 	private static string ParseBinaryExpression(BinaryExpression binary, ExpressionType? parentOperator)
 	{
 		// Pass the current operator as parent to child expressions
-		var left = ExpressionToODataFilter(binary.Left, binary.NodeType);
-		var right = ExpressionToODataFilter(binary.Right, binary.NodeType);
+		var left = ExpressionToODataFilter(binary.Left, binary.NodeType, binary.Right.Type);
+		var right = ExpressionToODataFilter(binary.Right, binary.NodeType, binary.Left.Type);
 
 		if (!OperatorMap.TryGetValue(binary.NodeType, out var op))
 		{
@@ -299,17 +299,54 @@ public partial class ODataQueryBuilder<T> where T : class
 		return getter();
 	}
 
-	private static string FormatValue(object? value) => value switch
+	private static string FormatValue(object? value, Type? expectedType = null)
 	{
-		null => "null",
-		string s => $"'{s.Replace("'", "''")}'",
-		bool b => b.ToString().ToLowerInvariant(),
-		DateTime dt => FormatDateTime(dt),
-		DateTimeOffset dto => $"{dto.UtcDateTime:yyyy-MM-ddTHH:mm:ssZ}",
-		Guid g => g.ToString(),
-		Enum e => $"'{e}'",
-		_ => value.ToString() ?? "null"
-	};
+		if (expectedType is not null)
+		{
+			expectedType = Nullable.GetUnderlyingType(expectedType) ?? expectedType;
+		}
+
+		if (value is not null && expectedType?.IsEnum == true)
+		{
+			if (value is Enum enumValue)
+			{
+				return $"'{enumValue}'";
+			}
+
+			if (TryFormatEnumFromUnderlyingValue(expectedType, value, out var formattedEnum))
+			{
+				return formattedEnum;
+			}
+		}
+
+		return value switch
+		{
+			null => "null",
+			string s => $"'{s.Replace("'", "''")}'",
+			bool b => b.ToString().ToLowerInvariant(),
+			DateTime dt => FormatDateTime(dt),
+			DateTimeOffset dto => $"{dto.UtcDateTime:yyyy-MM-ddTHH:mm:ssZ}",
+			Guid g => g.ToString(),
+			Enum e => $"'{e}'",
+			_ => value.ToString() ?? "null"
+		};
+	}
+
+	private static bool TryFormatEnumFromUnderlyingValue(Type enumType, object value, out string formatted)
+	{
+		formatted = string.Empty;
+
+		try
+		{
+			var enumValue = Enum.ToObject(enumType, value);
+			formatted = $"'{enumValue}'";
+			return true;
+		}
+		catch
+		{
+			return false;
+		}
+	}
 
 	private static string FormatDateTime(DateTime dt)
 	{
