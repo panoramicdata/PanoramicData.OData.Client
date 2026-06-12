@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.87] - 2026-06-12
+
+### Added
+- Add `RetryAttemptLogLevel` option to `ODataClientOptions` (default `Debug`) controlling the level at which individual failed attempts that will be retried are logged - set to `Warning` to log every attempt prominently, or `None` to disable per-attempt logging entirely
+- Log a single `Warning` when all retries are exhausted (new EventIds 22 and 23), including the transient-exception path which previously logged nothing on the final failed attempt
+
+### Changed
+- Individual failed attempts that will be retried are now logged at `Debug` by default instead of `Warning`, so transient failures that recover no longer flood consumer logs
+
 ## [10.0.86] - 2026-06-03
 
 ### Fixed

@@ -72,17 +72,9 @@ internal static partial class LoggerMessages
 		Message = "{ResponseDetails}")]
 	public static partial void LogResponseTrace(ILogger logger, string responseDetails);
 
-	[LoggerMessage(
-		EventId = 18,
-		Level = LogLevel.Warning,
-		Message = "Request to {Url} failed with {StatusCode}, attempt {Attempt}/{MaxRetries}")]
-	public static partial void RetryWarning(ILogger logger, Uri? url, HttpStatusCode statusCode, int attempt, int maxRetries);
-
-	[LoggerMessage(
-		EventId = 19,
-		Level = LogLevel.Warning,
-		Message = "Request to {Url} {Reason}, attempt {Attempt}/{MaxRetries}")]
-	public static partial void RetryException(ILogger logger, Exception ex, Uri? url, string reason, int attempt, int maxRetries);
+	// EventIds 18 (per-attempt status) and 19 (per-attempt exception) are logged dynamically in
+	// ODataClient.LogRetryAttemptStatus/LogRetryAttemptException because their level is
+	// configurable via ODataClientOptions.RetryAttemptLogLevel.
 
 	[LoggerMessage(
 		EventId = 20,
@@ -95,6 +87,18 @@ internal static partial class LoggerMessages
 		Level = LogLevel.Error,
 		Message = "Request to {Url} returned HTML content instead of JSON (Content-Type: {ContentType}). Response preview: {Preview}")]
 	public static partial void UnexpectedHtmlResponse(ILogger logger, string url, string contentType, string preview);
+
+	[LoggerMessage(
+		EventId = 22,
+		Level = LogLevel.Warning,
+		Message = "Request to {Url} failed with {StatusCode} after {MaxRetries} attempts")]
+	public static partial void RetriesExhaustedStatus(ILogger logger, Uri? url, HttpStatusCode statusCode, int maxRetries);
+
+	[LoggerMessage(
+		EventId = 23,
+		Level = LogLevel.Warning,
+		Message = "Request to {Url} {Reason} after {MaxRetries} attempts")]
+	public static partial void RetriesExhaustedException(ILogger logger, Exception ex, Uri? url, string reason, int maxRetries);
 
 	#endregion
 

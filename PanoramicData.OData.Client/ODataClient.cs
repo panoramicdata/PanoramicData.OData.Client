@@ -161,20 +161,80 @@ public partial class ODataClient : IDisposable
 				return (true, response);
 			}
 
-			LoggerMessages.RetryWarning(_logger, request.RequestUri, response.StatusCode, retryCount + 1, _options.RetryCount + 1);
+			// Individual failed attempts are logged at the configurable RetryAttemptLogLevel
+			// (Debug by default); a single Warning is logged once retries are exhausted, so
+			// transient failures that recover do not flood the logs.
+			if (retryCount < _options.RetryCount)
+			{
+				LogRetryAttemptStatus(request.RequestUri, response.StatusCode, retryCount + 1);
+			}
+			else
+			{
+				LoggerMessages.RetriesExhaustedStatus(_logger, request.RequestUri, response.StatusCode, _options.RetryCount + 1);
+			}
+
 			return (false, response);
 		}
-		catch (HttpRequestException ex) when (retryCount < _options.RetryCount)
+		catch (HttpRequestException ex)
 		{
-			LoggerMessages.RetryException(_logger, ex, request.RequestUri, "failed with exception", retryCount + 1, _options.RetryCount + 1);
+			if (retryCount >= _options.RetryCount)
+			{
+				LoggerMessages.RetriesExhaustedException(_logger, ex, request.RequestUri, "failed with exception", _options.RetryCount + 1);
+				throw;
+			}
+
+			LogRetryAttemptException(ex, request.RequestUri, "failed with exception", retryCount + 1);
 		}
-		catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested && retryCount < _options.RetryCount)
+		catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
 		{
-			LoggerMessages.RetryException(_logger, ex, request.RequestUri, "timed out", retryCount + 1, _options.RetryCount + 1);
+			if (retryCount >= _options.RetryCount)
+			{
+				LoggerMessages.RetriesExhaustedException(_logger, ex, request.RequestUri, "timed out", _options.RetryCount + 1);
+				throw;
+			}
+
+			LogRetryAttemptException(ex, request.RequestUri, "timed out", retryCount + 1);
 		}
 
 		return (false, null);
 	}
+
+	// The per-attempt log level is configurable at runtime (ODataClientOptions.RetryAttemptLogLevel),
+	// so these cannot use the compile-time LoggerMessage pattern. CA1848 is suppressed because the
+	// dynamic level rules out the source-generated delegates; the IsEnabled guard avoids the
+	// allocation cost when the level is disabled, and retries are off the hot path by definition.
+#pragma warning disable CA1848 // Use the LoggerMessage delegates
+	private void LogRetryAttemptStatus(Uri? url, HttpStatusCode statusCode, int attempt)
+	{
+		if (_options.RetryAttemptLogLevel != LogLevel.None && _logger.IsEnabled(_options.RetryAttemptLogLevel))
+		{
+			_logger.Log(
+				_options.RetryAttemptLogLevel,
+				new EventId(18, nameof(LogRetryAttemptStatus)),
+				"Request to {Url} failed with {StatusCode}, attempt {Attempt}/{MaxRetries}",
+				url,
+				statusCode,
+				attempt,
+				_options.RetryCount + 1);
+		}
+	}
+
+	private void LogRetryAttemptException(Exception ex, Uri? url, string reason, int attempt)
+	{
+		if (_options.RetryAttemptLogLevel != LogLevel.None && _logger.IsEnabled(_options.RetryAttemptLogLevel))
+		{
+			_logger.Log(
+				_options.RetryAttemptLogLevel,
+				new EventId(19, nameof(LogRetryAttemptException)),
+				ex,
+				"Request to {Url} {Reason}, attempt {Attempt}/{MaxRetries}",
+				url,
+				reason,
+				attempt,
+				_options.RetryCount + 1);
+		}
+	}
+#pragma warning restore CA1848 // Use the LoggerMessage delegates
 
 	private async Task LogRequestTraceAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
