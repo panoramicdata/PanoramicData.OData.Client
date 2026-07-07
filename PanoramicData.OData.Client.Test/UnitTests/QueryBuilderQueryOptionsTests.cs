@@ -32,7 +32,7 @@ public class QueryBuilderQueryOptionsTests
 			.BuildUrl();
 
 		url.Should().Contain("$select=");
-		url.Should().Contain("Id");
+		url.Should().Contain("ID");
 		url.Should().Contain("Name");
 	}
 
