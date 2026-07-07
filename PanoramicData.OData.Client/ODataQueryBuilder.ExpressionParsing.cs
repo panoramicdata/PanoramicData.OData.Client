@@ -286,7 +286,8 @@ public partial class ODataQueryBuilder<T> where T : class
 
 		while (current is MemberExpression memberExpr)
 		{
-			pathStack.Push(memberExpr.Member.Name);
+			var jsonPropertyNameAttribute = memberExpr.Member.GetCustomAttribute<JsonPropertyNameAttribute>();
+			pathStack.Push(jsonPropertyNameAttribute?.Name ?? memberExpr.Member.Name);
 			current = memberExpr.Expression;
 		}
 
