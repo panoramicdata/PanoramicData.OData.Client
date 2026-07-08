@@ -45,4 +45,96 @@ internal static class MemberPathResolver
 			_ => string.Join("/", segments.Select(s => s.Name))
 		};
 	}
+
+	/// <summary>
+	/// Resolves a member access chain to a root-to-leaf list of <see cref="ExpandSegment"/>,
+	/// each flagged as navigation (entity reference/collection) or scalar. Returns
+	/// <see langword="null"/> only when <paramref name="member"/>'s chain is empty, which
+	/// cannot occur given a non-null <see cref="MemberExpression"/> input - preserved to
+	/// mirror the original implementation's guard exactly.
+	/// </summary>
+	internal static List<ExpandSegment>? GetExpandSegments(MemberExpression member)
+	{
+		var (chain, _) = WalkChain(member);
+
+		if (chain.Count == 0)
+		{
+			return null;
+		}
+
+		var segments = new List<ExpandSegment>(chain.Count);
+
+		foreach (var (name, memberInfo) in chain)
+		{
+			segments.Add(memberInfo is PropertyInfo propInfo
+				? new ExpandSegment(propInfo.Name, IsNavigationProperty(propInfo))
+				: new ExpandSegment(name, false));
+		}
+
+		return segments;
+	}
+
+	/// <summary>
+	/// Determines if a property is a navigation property (vs a scalar property).
+	/// Navigation properties are entity references or collections of entities.
+	/// Scalar properties are primitives, strings, dates, guids, etc.
+	/// </summary>
+	internal static bool IsNavigationProperty(PropertyInfo property)
+	{
+		var propertyType = property.PropertyType;
+
+		// Check for nullable types - get underlying type
+		var underlyingType = Nullable.GetUnderlyingType(propertyType);
+		if (underlyingType is not null)
+		{
+			propertyType = underlyingType;
+		}
+
+		// Primitives are scalar
+		if (propertyType.IsPrimitive)
+		{
+			return false;
+		}
+
+		// Common scalar types
+		if (propertyType == typeof(string) ||
+			propertyType == typeof(DateTime) ||
+			propertyType == typeof(DateTimeOffset) ||
+			propertyType == typeof(DateOnly) ||
+			propertyType == typeof(TimeOnly) ||
+			propertyType == typeof(TimeSpan) ||
+			propertyType == typeof(Guid) ||
+			propertyType == typeof(decimal))
+		{
+			return false;
+		}
+
+		// Enums are scalar
+		if (propertyType.IsEnum)
+		{
+			return false;
+		}
+
+		// byte[] is scalar (used for binary data)
+		if (propertyType == typeof(byte[]))
+		{
+			return false;
+		}
+
+		// Collections of entities are navigation properties (but not string which is IEnumerable<char>)
+		if (typeof(System.Collections.IEnumerable).IsAssignableFrom(propertyType) &&
+			propertyType != typeof(string))
+		{
+			return true;
+		}
+
+		// Reference types that are classes are typically navigation properties
+		// (entity references like Tenant, Role, etc.)
+		return propertyType.IsClass;
+	}
 }
+
+/// <summary>
+/// Represents a segment in an expand path with property type information.
+/// </summary>
+internal sealed record ExpandSegment(string Name, bool IsNavigation);

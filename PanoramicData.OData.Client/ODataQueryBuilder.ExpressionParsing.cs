@@ -579,88 +579,9 @@ public partial class ODataQueryBuilder<T> where T : class
 			return null;
 		}
 
-		var segments = new List<ExpandSegment>();
-		Expression? current = member;
+		var segments = MemberPathResolver.GetExpandSegments(member);
 
-		while (current is MemberExpression memberExpr)
-		{
-			if (memberExpr.Member is PropertyInfo propInfo)
-			{
-				segments.Insert(0, new ExpandSegment(propInfo.Name, IsNavigationProperty(propInfo)));
-			}
-			else
-			{
-				segments.Insert(0, new ExpandSegment(memberExpr.Member.Name, false));
-			}
-
-			current = memberExpr.Expression;
-		}
-
-		if (segments.Count == 0)
-		{
-			return null;
-		}
-
-		return new ExpandPathInfo(segments);
-	}
-
-	/// <summary>
-	/// Determines if a property is a navigation property (vs a scalar property).
-	/// Navigation properties are entity references or collections of entities.
-	/// Scalar properties are primitives, strings, dates, guids, etc.
-	/// </summary>
-	private static bool IsNavigationProperty(PropertyInfo property)
-	{
-		var propertyType = property.PropertyType;
-
-		// Check for nullable types - get underlying type
-		var underlyingType = Nullable.GetUnderlyingType(propertyType);
-		if (underlyingType is not null)
-		{
-			propertyType = underlyingType;
-		}
-
-		// Primitives are scalar
-		if (propertyType.IsPrimitive)
-		{
-			return false;
-		}
-
-		// Common scalar types
-		if (propertyType == typeof(string) ||
-			propertyType == typeof(DateTime) ||
-			propertyType == typeof(DateTimeOffset) ||
-			propertyType == typeof(DateOnly) ||
-			propertyType == typeof(TimeOnly) ||
-			propertyType == typeof(TimeSpan) ||
-			propertyType == typeof(Guid) ||
-			propertyType == typeof(decimal))
-		{
-			return false;
-		}
-
-		// Enums are scalar
-		if (propertyType.IsEnum)
-		{
-			return false;
-		}
-
-		// byte[] is scalar (used for binary data)
-		if (propertyType == typeof(byte[]))
-		{
-			return false;
-		}
-
-		// Collections of entities are navigation properties (but not string which is IEnumerable<char>)
-		if (typeof(System.Collections.IEnumerable).IsAssignableFrom(propertyType) &&
-			propertyType != typeof(string))
-		{
-			return true;
-		}
-
-		// Reference types that are classes are typically navigation properties
-		// (entity references like Tenant, Role, etc.)
-		return propertyType.IsClass;
+		return segments is null ? null : new ExpandPathInfo(segments);
 	}
 
 	/// <summary>
@@ -749,11 +670,6 @@ public partial class ODataQueryBuilder<T> where T : class
 		// Continue with remaining segments as children
 		AddPathToTreeWithInfo(node.Children, segments, index + 1);
 	}
-
-	/// <summary>
-	/// Represents a segment in an expand path with property type information.
-	/// </summary>
-	private sealed record ExpandSegment(string Name, bool IsNavigation);
 
 	/// <summary>
 	/// Represents an expand path with its segments and property type information.
