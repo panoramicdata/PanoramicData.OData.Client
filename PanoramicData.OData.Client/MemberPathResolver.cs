@@ -75,6 +75,24 @@ internal static class MemberPathResolver
 	}
 
 	/// <summary>
+	/// Resolves the leaf (immediate) member name of a single-hop selector body (e.g. <c>p.Orders</c>),
+	/// unwrapping a single <see cref="ExpressionType.Convert"/> (such as the null-forgiving operator)
+	/// if present. Does NOT walk nested chains - returns just the last segment's name for a
+	/// multi-hop selector (e.g. <c>p.Nav.Prop</c> resolves to <c>"Prop"</c>). Returns
+	/// <see cref="string.Empty"/> if <paramref name="expression"/> isn't (optionally Convert-wrapped)
+	/// a <see cref="MemberExpression"/>.
+	/// </summary>
+	internal static string GetLeafMemberNameOrEmpty(Expression expression)
+	{
+		if (expression is UnaryExpression unary && unary.NodeType == ExpressionType.Convert)
+		{
+			expression = unary.Operand;
+		}
+
+		return expression is MemberExpression member ? member.Member.Name : string.Empty;
+	}
+
+	/// <summary>
 	/// Determines if a property is a navigation property (vs a scalar property).
 	/// Navigation properties are entity references or collections of entities.
 	/// Scalar properties are primitives, strings, dates, guids, etc.

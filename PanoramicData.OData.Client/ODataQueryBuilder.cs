@@ -463,41 +463,11 @@ public partial class ODataQueryBuilder<T> where T : class
 		return this;
 	}
 
-	private static string GetNavigationPropertyName<TNav>(Expression<Func<T, TNav?>> selector)
-	{
-		var body = selector.Body;
+	private static string GetNavigationPropertyName<TNav>(Expression<Func<T, TNav?>> selector) =>
+		MemberPathResolver.GetLeafMemberNameOrEmpty(selector.Body);
 
-		// Handle null-forgiving operator (!.)
-		if (body is UnaryExpression unary && unary.NodeType == ExpressionType.Convert)
-		{
-			body = unary.Operand;
-		}
-
-		if (body is MemberExpression member)
-		{
-			return member.Member.Name;
-		}
-
-		return string.Empty;
-	}
-
-	private static string GetCollectionNavigationPropertyName<TNav>(Expression<Func<T, IEnumerable<TNav>?>> selector)
-	{
-		var body = selector.Body;
-
-		// Handle null-forgiving operator (!.)
-		if (body is UnaryExpression unary && unary.NodeType == ExpressionType.Convert)
-		{
-			body = unary.Operand;
-		}
-
-		if (body is MemberExpression member)
-		{
-			return member.Member.Name;
-		}
-
-		return string.Empty;
-	}
+	private static string GetCollectionNavigationPropertyName<TNav>(Expression<Func<T, IEnumerable<TNav>?>> selector) =>
+		MemberPathResolver.GetLeafMemberNameOrEmpty(selector.Body);
 
 	private static List<string> GetSelectFieldNames<TEntity>(Expression<Func<TEntity, object?>> selector)
 	{
