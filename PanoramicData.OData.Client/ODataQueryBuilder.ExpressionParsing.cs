@@ -509,7 +509,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	}
 
 	private static string GetMemberName(Expression<Func<T, object?>> selector) =>
-		MemberPathResolver.TryGetLeafMemberNameLoose(selector.Body, out var name)
+		MemberPathResolver.TryGetPathLoose(selector.Body, out var name)
 			? name
 			: throw new ArgumentException("Invalid selector expression");
 

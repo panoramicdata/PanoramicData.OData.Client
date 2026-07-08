@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.88] - 2026-07-08
+
+### Fixed
+- Fix `.OrderBy(p => p.Nav.Prop)` and `.NavigateTo(p => p.Nav.Prop)` resolving only the leaf property name (e.g. `$orderby=FirstName`) instead of the full navigation path (`$orderby=BestFriend/FirstName`) for nested (dotted) property selectors
+
 ## [10.0.87] - 2026-06-12
 
 ### Added
