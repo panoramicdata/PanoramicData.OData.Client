@@ -196,24 +196,19 @@ public partial class ODataQueryBuilder<T> where T : class
 
 	private static string GetLambdaMemberPath(MemberExpression member, ParameterExpression lambdaParam, string odataParamName)
 	{
-		var path = new List<string>();
-		Expression? current = member;
+		var (segments, root) = MemberPathResolver.WalkChain(member);
+		var names = segments.Select(s => s.Name);
 
-		while (current is MemberExpression memberExpr)
+		if (root == lambdaParam)
 		{
-			path.Insert(0, memberExpr.Member.Name);
-			current = memberExpr.Expression;
+			return string.Join("/", new[] { odataParamName }.Concat(names));
 		}
 
-		if (current == lambdaParam)
-		{
-			path.Insert(0, odataParamName);
-		}
-		else if (current is ConstantExpression)
+		if (root is ConstantExpression)
 		{
 			return FormatValue(EvaluateExpression(member));
 		}
 
-		return string.Join("/", path);
+		return string.Join("/", names);
 	}
 }
