@@ -278,26 +278,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		return $"{propertyPath} in ({string.Join(",", formattedValues)})";
 	}
 
-	private static string GetMemberPath(MemberExpression member)
-	{
-		// Use a stack to avoid List.Insert(0) which is O(n)
-		var pathStack = new Stack<string>();
-		Expression? current = member;
-
-		while (current is MemberExpression memberExpr)
-		{
-			pathStack.Push(memberExpr.Member.Name);
-			current = memberExpr.Expression;
-		}
-
-		// For small paths (common case), avoid string.Join allocation
-		return pathStack.Count switch
-		{
-			0 => string.Empty,
-			1 => pathStack.Pop(),
-			_ => string.Join("/", pathStack)
-		};
-	}
+	private static string GetMemberPath(MemberExpression member) => MemberPathResolver.GetFlatPath(member);
 
 	private static object? GetValue(Expression expression) => expression switch
 	{
