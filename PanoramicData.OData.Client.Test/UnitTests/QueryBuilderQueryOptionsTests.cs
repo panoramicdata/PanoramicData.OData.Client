@@ -226,21 +226,31 @@ public class QueryBuilderQueryOptionsTests
 	}
 
 	/// <summary>
-	/// Tests orderby with a nested (dotted) member path.
-	/// Characterization test: GetMemberName reads only the selector body's immediate
-	/// Member.Name (no chain walk), so a nested selector silently truncates to the leaf
-	/// segment, dropping the navigation property. Pins this bug as a safety net before
-	/// the MemberPathResolver consolidation.
+	/// Tests orderby with a nested (dotted) member path resolves the full navigation path.
+	/// OData v4's $orderby grammar supports "/"-paths through navigation properties, so this
+	/// is spec-compliant (unlike the still-deferred $select-family nested-path fixes).
 	/// </summary>
 	[Fact]
-	public void OrderBy_WithNestedExpression_TruncatesToLeafSegment_CharacterizationOfExistingBehavior()
+	public void OrderBy_WithNestedExpression_ResolvesFullPath()
 	{
 		var url = new ODataQueryBuilder<Person>("People", NullLogger.Instance)
 			.OrderBy(p => p.BestFriend!.FirstName)
 			.BuildUrl();
 
-		url.Should().Contain("$orderby=FirstName");
-		url.Should().NotContain("BestFriend");
+		url.Should().Contain("$orderby=BestFriend/FirstName");
+	}
+
+	/// <summary>
+	/// Tests orderby with a 3-level nested member path resolves the full navigation path.
+	/// </summary>
+	[Fact]
+	public void OrderBy_WithThreeLevelNestedExpression_ResolvesFullPath()
+	{
+		var url = new ODataQueryBuilder<Person>("People", NullLogger.Instance)
+			.OrderBy(p => p.BestFriend!.BestFriend!.FirstName)
+			.BuildUrl();
+
+		url.Should().Contain("$orderby=BestFriend/BestFriend/FirstName");
 	}
 
 	/// <summary>

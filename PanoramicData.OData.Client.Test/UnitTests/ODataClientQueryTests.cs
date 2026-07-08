@@ -242,19 +242,18 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	}
 
 	/// <summary>
-	/// Tests that non-generic NavigateTo(expr) with a nested (dotted) member path truncates
-	/// to the leaf segment. Characterization test: NavigateTo shares GetMemberName with
-	/// OrderBy, which reads only the selector body's immediate Member.Name (no chain walk).
-	/// Pins this bug as a safety net before the MemberPathResolver consolidation.
+	/// Tests that non-generic NavigateTo(expr) with a nested (dotted) member path resolves the
+	/// full navigation path. NavigateTo shares GetMemberName with OrderBy; both now walk the
+	/// full chain instead of returning just the leaf segment.
 	/// </summary>
 	[Fact]
-	public void NavigateTo_NonGenericExprNested_TruncatesToLeafSegment_CharacterizationOfExistingBehavior()
+	public void NavigateTo_NonGenericExprNested_ResolvesFullPath()
 	{
 		// Act
 		var url = _client.For<Person>("People").Key("russellwhyte").NavigateTo(x => x.BestFriend!.Friends).BuildUrl();
 
-		// Assert - "BestFriend/" is silently dropped, leaving just the leaf segment
-		url.Should().Be("People('russellwhyte')/Friends");
+		// Assert
+		url.Should().Be("People('russellwhyte')/BestFriend/Friends");
 	}
 
 	/// <summary>

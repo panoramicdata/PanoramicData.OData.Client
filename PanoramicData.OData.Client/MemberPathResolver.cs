@@ -120,6 +120,33 @@ internal static class MemberPathResolver
 	}
 
 	/// <summary>
+	/// Resolves the full, slash-separated OData path of a selector body, using the same loose
+	/// Unary-gated unwrap as <see cref="TryGetLeafMemberNameLoose"/>. Unlike that method, this
+	/// walks the full chain via <see cref="GetFlatPath"/> instead of returning just the leaf
+	/// segment (e.g. <c>p.BestFriend.FirstName</c> resolves to <c>"BestFriend/FirstName"</c>).
+	/// Kept deliberately distinct from <see cref="TryGetLeafMemberNameLoose"/> for the same
+	/// reason that method is kept distinct from <see cref="GetLeafMemberNameOrEmpty"/> - the
+	/// gates coincide today but must not be silently unified.
+	/// </summary>
+	internal static bool TryGetPathLoose(Expression expression, out string path)
+	{
+		if (expression is MemberExpression member)
+		{
+			path = GetFlatPath(member);
+			return true;
+		}
+
+		if (expression is UnaryExpression unary && unary.Operand is MemberExpression unaryMember)
+		{
+			path = GetFlatPath(unaryMember);
+			return true;
+		}
+
+		path = string.Empty;
+		return false;
+	}
+
+	/// <summary>
 	/// Well-known scalar (non-navigation) reference/value types that aren't caught by
 	/// <see cref="Type.IsPrimitive"/> or <see cref="Type.IsEnum"/>.
 	/// </summary>
