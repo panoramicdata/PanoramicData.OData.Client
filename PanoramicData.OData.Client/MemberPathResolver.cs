@@ -120,6 +120,23 @@ internal static class MemberPathResolver
 	}
 
 	/// <summary>
+	/// Well-known scalar (non-navigation) reference/value types that aren't caught by
+	/// <see cref="Type.IsPrimitive"/> or <see cref="Type.IsEnum"/>.
+	/// </summary>
+	private static readonly HashSet<Type> _scalarTypes =
+	[
+		typeof(string),
+		typeof(DateTime),
+		typeof(DateTimeOffset),
+		typeof(DateOnly),
+		typeof(TimeOnly),
+		typeof(TimeSpan),
+		typeof(Guid),
+		typeof(decimal),
+		typeof(byte[])
+	];
+
+	/// <summary>
 	/// Determines if a property is a navigation property (vs a scalar property).
 	/// Navigation properties are entity references or collections of entities.
 	/// Scalar properties are primitives, strings, dates, guids, etc.
@@ -135,40 +152,14 @@ internal static class MemberPathResolver
 			propertyType = underlyingType;
 		}
 
-		// Primitives are scalar
-		if (propertyType.IsPrimitive)
+		// Primitives, enums, and well-known scalar types (string, dates, guid, decimal, byte[]) are scalar
+		if (propertyType.IsPrimitive || propertyType.IsEnum || _scalarTypes.Contains(propertyType))
 		{
 			return false;
 		}
 
-		// Common scalar types
-		if (propertyType == typeof(string) ||
-			propertyType == typeof(DateTime) ||
-			propertyType == typeof(DateTimeOffset) ||
-			propertyType == typeof(DateOnly) ||
-			propertyType == typeof(TimeOnly) ||
-			propertyType == typeof(TimeSpan) ||
-			propertyType == typeof(Guid) ||
-			propertyType == typeof(decimal))
-		{
-			return false;
-		}
-
-		// Enums are scalar
-		if (propertyType.IsEnum)
-		{
-			return false;
-		}
-
-		// byte[] is scalar (used for binary data)
-		if (propertyType == typeof(byte[]))
-		{
-			return false;
-		}
-
-		// Collections of entities are navigation properties (but not string which is IEnumerable<char>)
-		if (typeof(System.Collections.IEnumerable).IsAssignableFrom(propertyType) &&
-			propertyType != typeof(string))
+		// Collections are navigation properties (string, the one scalar IEnumerable, is already handled above)
+		if (typeof(System.Collections.IEnumerable).IsAssignableFrom(propertyType))
 		{
 			return true;
 		}
