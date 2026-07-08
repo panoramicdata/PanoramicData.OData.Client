@@ -485,7 +485,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		{
 			foreach (var arg in newExpr.Arguments)
 			{
-				var memberName = GetDirectMemberName(arg);
+				var memberName = MemberPathResolver.GetLeafMemberNameOrEmpty(arg);
 				if (!string.IsNullOrEmpty(memberName) && !results.Contains(memberName))
 				{
 					results.Add(memberName);
@@ -498,21 +498,6 @@ public partial class ODataQueryBuilder<T> where T : class
 		}
 
 		return results;
-	}
-
-	private static string GetDirectMemberName(Expression expression)
-	{
-		if (expression is UnaryExpression unary && unary.NodeType == ExpressionType.Convert)
-		{
-			expression = unary.Operand;
-		}
-
-		if (expression is MemberExpression member)
-		{
-			return member.Member.Name;
-		}
-
-		return string.Empty;
 	}
 
 	/// <summary>
