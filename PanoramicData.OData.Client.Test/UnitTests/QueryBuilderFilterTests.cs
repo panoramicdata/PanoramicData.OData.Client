@@ -380,4 +380,25 @@ public class QueryBuilderFilterTests
 	}
 
 	#endregion
+
+	#region Nested Member Paths
+
+	/// <summary>
+	/// Tests filter with a nested (dotted) member path resolves the full path.
+	/// Characterization test: pins the currently-correct full-chain walk in GetMemberPath
+	/// as a safety net before the MemberPathResolver consolidation.
+	/// </summary>
+	[Fact]
+	public void Filter_WithNestedMemberPath_GeneratesCorrectUrl()
+	{
+		// Arrange & Act
+		var url = new ODataQueryBuilder<Person>("People", NullLogger.Instance)
+			.Filter(p => p.BestFriend!.FirstName == "John")
+			.BuildUrl();
+
+		// Assert - BestFriend/FirstName eq 'John'
+		url.Should().Contain("BestFriend%2FFirstName%20eq%20%27John%27");
+	}
+
+	#endregion
 }
