@@ -29,7 +29,7 @@ public class NestedExpandBuilder<T> where T : class
 		{
 			foreach (var arg in newExpr.Arguments)
 			{
-				var memberName = GetDirectMemberName(arg);
+				var memberName = MemberPathResolver.GetLeafMemberNameOrEmpty(arg);
 				if (!string.IsNullOrEmpty(memberName) && !_selectFields.Contains(memberName))
 				{
 					_selectFields.Add(memberName);
@@ -62,16 +62,11 @@ public class NestedExpandBuilder<T> where T : class
 	/// </summary>
 	public NestedExpandBuilder<T> Expand(Expression<Func<T, object?>> selector)
 	{
-		var body = selector.Body;
+		var memberName = MemberPathResolver.GetLeafMemberNameOrEmpty(selector.Body);
 
-		if (body is UnaryExpression unary && unary.NodeType == ExpressionType.Convert)
+		if (!string.IsNullOrEmpty(memberName))
 		{
-			body = unary.Operand;
-		}
-
-		if (body is MemberExpression member)
-		{
-			_expandFields.Add(member.Member.Name);
+			_expandFields.Add(memberName);
 		}
 
 		return this;
@@ -173,20 +168,5 @@ public class NestedExpandBuilder<T> where T : class
 		}
 
 		return string.Join(";", options);
-	}
-
-	private static string GetDirectMemberName(Expression expression)
-	{
-		if (expression is UnaryExpression unary && unary.NodeType == ExpressionType.Convert)
-		{
-			expression = unary.Operand;
-		}
-
-		if (expression is MemberExpression member)
-		{
-			return member.Member.Name;
-		}
-
-		return string.Empty;
 	}
 }
