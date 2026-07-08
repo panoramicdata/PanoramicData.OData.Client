@@ -92,6 +92,34 @@ internal static class MemberPathResolver
 	}
 
 	/// <summary>
+	/// Resolves the leaf (immediate) member name of a single-hop selector body, using a looser
+	/// unwrap than <see cref="GetLeafMemberNameOrEmpty"/>: matches ANY <see cref="UnaryExpression"/>
+	/// wrapping a <see cref="MemberExpression"/>, not just <see cref="ExpressionType.Convert"/>, and
+	/// does not itself unwrap before the primary check (only the fallback branch inspects a
+	/// Unary's <see cref="UnaryExpression.Operand"/>). Kept deliberately distinct from
+	/// <see cref="GetLeafMemberNameOrEmpty"/> - the two gates coincide for every expression shape
+	/// the C# compiler currently emits here, but must not be silently unified. Does NOT walk nested
+	/// chains - returns just the last segment's name for a multi-hop selector.
+	/// </summary>
+	internal static bool TryGetLeafMemberNameLoose(Expression expression, out string name)
+	{
+		if (expression is MemberExpression member)
+		{
+			name = member.Member.Name;
+			return true;
+		}
+
+		if (expression is UnaryExpression unary && unary.Operand is MemberExpression unaryMember)
+		{
+			name = unaryMember.Member.Name;
+			return true;
+		}
+
+		name = string.Empty;
+		return false;
+	}
+
+	/// <summary>
 	/// Determines if a property is a navigation property (vs a scalar property).
 	/// Navigation properties are entity references or collections of entities.
 	/// Scalar properties are primitives, strings, dates, guids, etc.

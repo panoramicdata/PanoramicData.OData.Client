@@ -508,20 +508,10 @@ public partial class ODataQueryBuilder<T> where T : class
 		return string.Empty;
 	}
 
-	private static string GetMemberName(Expression<Func<T, object?>> selector)
-	{
-		if (selector.Body is MemberExpression member)
-		{
-			return member.Member.Name;
-		}
-
-		if (selector.Body is UnaryExpression unary && unary.Operand is MemberExpression unaryMember)
-		{
-			return unaryMember.Member.Name;
-		}
-
-		throw new ArgumentException("Invalid selector expression");
-	}
+	private static string GetMemberName(Expression<Func<T, object?>> selector) =>
+		MemberPathResolver.TryGetLeafMemberNameLoose(selector.Body, out var name)
+			? name
+			: throw new ArgumentException("Invalid selector expression");
 
 	/// <summary>
 	/// Gets full member paths from an expand expression.
