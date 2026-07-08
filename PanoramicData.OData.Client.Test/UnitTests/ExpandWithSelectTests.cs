@@ -126,6 +126,49 @@ public class ExpandWithSelectTests : IDisposable
 		url.Should().Contain("$top=10");
 	}
 
+	/// <summary>
+	/// Tests ExpandWithSelect with a nested (dotted) property in the select selector.
+	/// Characterization test: GetSelectFieldNames/GetDirectMemberName read only the
+	/// immediate Member.Name (no chain walk), so a nested selector silently truncates
+	/// to the leaf segment, dropping the intermediate navigation property. Pins this
+	/// bug as a safety net before the MemberPathResolver consolidation.
+	/// </summary>
+	[Fact]
+	public void ExpandWithSelect_NestedPropertyInSelector_TruncatesToLeafSegment_CharacterizationOfExistingBehavior()
+	{
+		// Arrange & Act
+		var url = _client.For<ReportBatchJob>("ReportBatchJobs")
+			.ExpandWithSelect(
+				rbj => rbj.ReportSchedule,
+				rs => rs.Owner!.Name);
+
+		var builtUrl = url.BuildUrl();
+
+		// Assert - "Owner/" is silently dropped, leaving just the leaf segment
+		builtUrl.Should().Contain("$expand=ReportSchedule($select=Name)");
+	}
+
+	/// <summary>
+	/// Tests ExpandWithSelect with a NewExpression selector mixing a direct property and a
+	/// nested (dotted) property. Characterization test: same truncation as above, but via
+	/// the NewExpression/GetDirectMemberName branch - note this silently produces the same
+	/// output as selecting ReportSchedule's own Id/Name directly.
+	/// </summary>
+	[Fact]
+	public void ExpandWithSelect_NewExpressionWithNestedProperty_TruncatesToLeafSegment_CharacterizationOfExistingBehavior()
+	{
+		// Arrange & Act
+		var url = _client.For<ReportBatchJob>("ReportBatchJobs")
+			.ExpandWithSelect(
+				rbj => rbj.ReportSchedule,
+				rs => new { rs.Id, rs.Owner!.Name });
+
+		var builtUrl = url.BuildUrl();
+
+		// Assert - "Owner/" is silently dropped from the second field
+		builtUrl.Should().Contain("$expand=ReportSchedule($select=Id,Name)");
+	}
+
 	#endregion
 
 	#region Expand with NestedExpandBuilder Tests
@@ -146,6 +189,29 @@ public class ExpandWithSelectTests : IDisposable
 
 		// Assert
 		url.Should().Contain("$expand=ReportSchedule($select=Id,Name)");
+	}
+
+	/// <summary>
+	/// Tests Expand with a nested Select using a nested (dotted) property.
+	/// Characterization test: NestedExpandBuilder.Select's private GetDirectMemberName
+	/// reads only the immediate Member.Name (no chain walk), so a nested selector
+	/// silently truncates to the leaf segment, dropping the intermediate navigation
+	/// property. Pins this bug as a safety net before the MemberPathResolver
+	/// consolidation.
+	/// </summary>
+	[Fact]
+	public void Expand_NestedSelectWithNestedProperty_TruncatesToLeafSegment_CharacterizationOfExistingBehavior()
+	{
+		// Arrange & Act
+		var query = _client.For<ReportBatchJob>("ReportBatchJobs")
+			.Expand(
+				rbj => rbj.ReportSchedule,
+				nested => nested.Select(rs => rs.Owner!.Name));
+
+		var url = query.BuildUrl();
+
+		// Assert - "Owner/" is silently dropped, leaving just the leaf segment
+		url.Should().Contain("$expand=ReportSchedule($select=Name)");
 	}
 
 	/// <summary>

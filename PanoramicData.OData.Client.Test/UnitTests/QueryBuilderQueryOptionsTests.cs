@@ -50,6 +50,24 @@ public class QueryBuilderQueryOptionsTests
 		url.Should().Contain("$select=ID,Name,Price");
 	}
 
+	/// <summary>
+	/// Tests select with a nested (dotted) member path.
+	/// Characterization test: GetMemberNames currently takes only the FIRST path segment
+	/// (Split('/')[0]) of the full path GetMemberPath resolves, so a nested selector
+	/// silently collapses to just the navigation property name. Pins this quirk as a
+	/// safety net before the MemberPathResolver consolidation.
+	/// </summary>
+	[Fact]
+	public void Select_WithNestedExpression_UsesOnlyFirstSegment_CharacterizationOfExistingBehavior()
+	{
+		var url = new ODataQueryBuilder<Person>("People", NullLogger.Instance)
+			.Select(p => p.BestFriend!.FirstName)
+			.BuildUrl();
+
+		url.Should().Contain("$select=BestFriend");
+		url.Should().NotContain("FirstName");
+	}
+
 	#endregion
 
 	#region $expand
@@ -205,6 +223,24 @@ public class QueryBuilderQueryOptionsTests
 			.BuildUrl();
 
 		url.Should().Contain("$orderby=Price desc");
+	}
+
+	/// <summary>
+	/// Tests orderby with a nested (dotted) member path.
+	/// Characterization test: GetMemberName reads only the selector body's immediate
+	/// Member.Name (no chain walk), so a nested selector silently truncates to the leaf
+	/// segment, dropping the navigation property. Pins this bug as a safety net before
+	/// the MemberPathResolver consolidation.
+	/// </summary>
+	[Fact]
+	public void OrderBy_WithNestedExpression_TruncatesToLeafSegment_CharacterizationOfExistingBehavior()
+	{
+		var url = new ODataQueryBuilder<Person>("People", NullLogger.Instance)
+			.OrderBy(p => p.BestFriend!.FirstName)
+			.BuildUrl();
+
+		url.Should().Contain("$orderby=FirstName");
+		url.Should().NotContain("BestFriend");
 	}
 
 	/// <summary>
