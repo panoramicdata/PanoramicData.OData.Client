@@ -403,6 +403,10 @@ var client = new ODataClient(new ODataClientOptions
     
     // Optional: Custom JSON serialization settings
     JsonSerializerOptions = customOptions,
+
+    // Optional: Override entity set names used by For<T>()
+    // Return null to use the existing attribute and pluralization conventions
+    EntitySetNameResolver = type => type == typeof(LegacyProduct) ? "legacy_products" : null,
     
     // Optional: Configure headers for every request
     ConfigureRequest = request =>

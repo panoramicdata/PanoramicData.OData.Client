@@ -5,6 +5,7 @@ This document covers all query options supported by the PanoramicData.OData.Clie
 ## Table of Contents
 
 - [Basic Queries](#basic-queries)
+- [Entity Set Name Resolution](#entity-set-name-resolution)
 - [Fluent Query Execution](#fluent-query-execution)
 - [Filtering ($filter)](#filtering-filter)
 - [Selecting Fields ($select)](#selecting-fields-select)
@@ -41,6 +42,49 @@ foreach (var product in response.Value)
 {
     Console.WriteLine($"{product.Id}: {product.Name}");
 }
+```
+
+## Entity Set Name Resolution
+
+The parameterless `For<T>()` overload resolves an entity set name using these rules, in order:
+
+1. `ODataClientOptions.EntitySetNameResolver`, when it returns a non-empty value.
+2. An `[EntitySet]` attribute on the model type.
+3. The built-in type-name convention, including pluralization when `AutoPluralization` is enabled.
+
+Use `EntitySetNameResolver` to integrate an application-specific model convention without repeating an entity set name at every call site. Return `null`, an empty string, or whitespace to use the remaining conventions.
+
+A non-empty resolver value is used verbatim and short-circuits both the `[EntitySet]` attribute lookup and `AutoPluralization`. The resolver runs on every parameterless `For<T>()` call, so keep it fast and side-effect free.
+
+```csharp
+using System.Reflection;
+
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class CollectionNameAttribute(string name) : Attribute
+{
+    public string Name { get; } = name;
+}
+
+[CollectionName("service_products")]
+public sealed class Product
+{
+    public int Id { get; init; }
+}
+
+var client = new ODataClient(new ODataClientOptions
+{
+    BaseUrl = "https://api.example.com/odata",
+    EntitySetNameResolver = type =>
+        type.GetCustomAttribute<CollectionNameAttribute>()?.Name
+});
+
+var query = client.For<Product>(); // service_products
+```
+
+Passing an entity set name explicitly always takes precedence and does not invoke the resolver:
+
+```csharp
+var query = client.For<Product>("products_override");
 ```
 
 ## Fluent Query Execution

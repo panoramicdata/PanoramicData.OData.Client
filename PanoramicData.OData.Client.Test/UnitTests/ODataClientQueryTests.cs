@@ -12,6 +12,21 @@ internal sealed class EntitySetAttribute(string entitySet) : Attribute
 [EntitySet("Mailbox")]
 internal sealed class GeneratedMailbox { }
 
+internal sealed class CustomResolvedEntity { }
+
+/// <summary>
+/// Mirrors an application-defined entity-set attribute (as used by the Integration Team OData
+/// extensions) to exercise attribute-based <see cref="ODataClientOptions.EntitySetNameResolver"/> wiring.
+/// </summary>
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
+internal sealed class CollectionNameAttribute(string name) : Attribute
+{
+	public string Name { get; } = name;
+}
+
+[CollectionName("service_products")]
+internal sealed class AttributeResolvedEntity { }
+
 /// <summary>
 /// Unit tests for ODataClient query operations.
 /// </summary>
@@ -117,6 +132,183 @@ public class ODataClientQueryTests : TestBase, IDisposable
 
 		// Assert
 		url.Should().Be("Mailbox");
+	}
+
+	/// <summary>
+	/// Tests that the configured entity set name resolver overrides the built-in conventions.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolver_UsesResolvedName()
+	{
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			EntitySetNameResolver = type => type == typeof(CustomResolvedEntity) ? "custom_entities" : null
+		});
+
+		var url = client.For<CustomResolvedEntity>().BuildUrl();
+
+		url.Should().Be("custom_entities");
+	}
+
+	/// <summary>
+	/// Tests that the configured entity set name resolver takes precedence over the entity set attribute.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolver_OverridesEntitySetAttribute()
+	{
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			EntitySetNameResolver = type => type == typeof(GeneratedMailbox) ? "custom_mailboxes" : null
+		});
+
+		var url = client.For<GeneratedMailbox>().BuildUrl();
+
+		url.Should().Be("custom_mailboxes");
+	}
+
+	/// <summary>
+	/// Tests that a whitespace resolver result uses the existing entity set attribute convention.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolverReturnsWhitespace_UsesEntitySetAttribute()
+	{
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			EntitySetNameResolver = _ => " "
+		});
+
+		var url = client.For<GeneratedMailbox>().BuildUrl();
+
+		url.Should().Be("Mailbox");
+	}
+
+	/// <summary>
+	/// Tests that a null resolver result uses the existing pluralization convention.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolverReturnsNull_UsesPluralization()
+	{
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			EntitySetNameResolver = _ => null
+		});
+
+		var url = client.For<Product>().BuildUrl();
+
+		url.Should().Be("Products");
+	}
+
+	/// <summary>
+	/// Tests that an explicit entity set name does not invoke the configured resolver.
+	/// </summary>
+	[Fact]
+	public void For_WithExplicitEntitySetName_DoesNotInvokeResolver()
+	{
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			EntitySetNameResolver = _ => throw new InvalidOperationException("Resolver should not be invoked.")
+		});
+
+		var url = client.For<Product>("CustomProducts").BuildUrl();
+
+		url.Should().Be("CustomProducts");
+	}
+
+	/// <summary>
+	/// Tests that an empty resolver result falls back to the existing pluralization convention.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolverReturnsEmpty_UsesPluralization()
+	{
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			EntitySetNameResolver = _ => string.Empty
+		});
+
+		var url = client.For<Product>().BuildUrl();
+
+		url.Should().Be("Products");
+	}
+
+	/// <summary>
+	/// Tests that the resolver is invoked with the requested entity type.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolver_ReceivesRequestedType()
+	{
+		Type? observedType = null;
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			EntitySetNameResolver = type =>
+			{
+				observedType = type;
+				return null;
+			}
+		});
+
+		client.For<Product>().BuildUrl();
+
+		observedType.Should().Be<Product>();
+	}
+
+	/// <summary>
+	/// Tests that an attribute-based resolver (the Integration Team OData extensions pattern)
+	/// resolves the entity set name from a custom attribute on the model type.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolver_ResolvesFromCustomAttribute()
+	{
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			EntitySetNameResolver = type => type
+				.GetCustomAttributes(typeof(CollectionNameAttribute), inherit: false)
+				.OfType<CollectionNameAttribute>()
+				.FirstOrDefault()?.Name
+		});
+
+		var url = client.For<AttributeResolvedEntity>().BuildUrl();
+
+		url.Should().Be("service_products");
 	}
 
 	/// <summary>
