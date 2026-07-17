@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Add `EntitySetNameResolver` option to `ODataClientOptions`, an opt-in `Func<Type, string?>` that resolves entity set names for the parameterless `For<T>()` overload. A non-empty result is used verbatim and short-circuits the `[EntitySet]` attribute lookup and `AutoPluralization`; returning `null`, empty, or whitespace falls through to the existing conventions. The explicit `For<T>("EntitySetName")` overload never invokes the resolver. This lets consumers wire attribute-based conventions (e.g. a custom `[CollectionName]`/`[EntitySetName]` attribute) without repeating the entity set name at every call site
+
 ## [10.0.106] - 2026-07-08
 
 ### Fixed

@@ -54,6 +54,8 @@ The parameterless `For<T>()` overload resolves an entity set name using these ru
 
 Use `EntitySetNameResolver` to integrate an application-specific model convention without repeating an entity set name at every call site. Return `null`, an empty string, or whitespace to use the remaining conventions.
 
+A non-empty resolver value is used verbatim and short-circuits both the `[EntitySet]` attribute lookup and `AutoPluralization`. The resolver runs on every parameterless `For<T>()` call, so keep it fast and side-effect free.
+
 ```csharp
 using System.Reflection;
 
