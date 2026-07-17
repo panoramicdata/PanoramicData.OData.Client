@@ -88,12 +88,28 @@ public class ODataClientOptions
 	public bool AutoPluralization { get; set; } = true;
 
 	/// <summary>
-	/// Gets or sets a function that resolves entity set names for <c>For&lt;T&gt;()</c> calls.
+	/// Gets or sets a function that resolves entity set names for the parameterless
+	/// <c>For&lt;T&gt;()</c> overload.
 	/// </summary>
 	/// <remarks>
-	/// When the function returns a non-empty value, the client uses it instead of the built-in
-	/// entity-set attribute and pluralization conventions. Return <c>null</c> or whitespace to
-	/// use those existing conventions.
+	/// <para>
+	/// The resolver is the first step in entity set name resolution. When it returns a non-empty
+	/// value that value is used verbatim, short-circuiting the <c>[EntitySet]</c> attribute lookup
+	/// and the <see cref="AutoPluralization"/> convention. Return <c>null</c>, an empty string, or
+	/// whitespace to fall through to those existing conventions.
+	/// </para>
+	/// <para>
+	/// The function is invoked on every parameterless <c>For&lt;T&gt;()</c> call, so it should be
+	/// fast and free of side effects. The explicit <c>For&lt;T&gt;("EntitySetName")</c> overload
+	/// never invokes the resolver. A typical use is mapping a model type to an entity set via a
+	/// custom attribute:
+	/// </para>
+	/// <example>
+	/// <code>
+	/// EntitySetNameResolver = type =>
+	///     type.GetCustomAttribute&lt;CollectionNameAttribute&gt;()?.Name
+	/// </code>
+	/// </example>
 	/// </remarks>
 	public Func<Type, string?>? EntitySetNameResolver { get; set; }
 
