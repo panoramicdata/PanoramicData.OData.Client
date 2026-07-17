@@ -12,6 +12,8 @@ internal sealed class EntitySetAttribute(string entitySet) : Attribute
 [EntitySet("Mailbox")]
 internal sealed class GeneratedMailbox { }
 
+internal sealed class CustomResolvedEntity { }
+
 /// <summary>
 /// Unit tests for ODataClient query operations.
 /// </summary>
@@ -117,6 +119,111 @@ public class ODataClientQueryTests : TestBase, IDisposable
 
 		// Assert
 		url.Should().Be("Mailbox");
+	}
+
+	/// <summary>
+	/// Tests that the configured entity set name resolver overrides the built-in conventions.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolver_UsesResolvedName()
+	{
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			EntitySetNameResolver = type => type == typeof(CustomResolvedEntity) ? "custom_entities" : null
+		});
+
+		var url = client.For<CustomResolvedEntity>().BuildUrl();
+
+		url.Should().Be("custom_entities");
+	}
+
+	/// <summary>
+	/// Tests that the configured entity set name resolver takes precedence over the entity set attribute.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolver_OverridesEntitySetAttribute()
+	{
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			EntitySetNameResolver = type => type == typeof(GeneratedMailbox) ? "custom_mailboxes" : null
+		});
+
+		var url = client.For<GeneratedMailbox>().BuildUrl();
+
+		url.Should().Be("custom_mailboxes");
+	}
+
+	/// <summary>
+	/// Tests that a whitespace resolver result uses the existing entity set attribute convention.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolverReturnsWhitespace_UsesEntitySetAttribute()
+	{
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			EntitySetNameResolver = _ => " "
+		});
+
+		var url = client.For<GeneratedMailbox>().BuildUrl();
+
+		url.Should().Be("Mailbox");
+	}
+
+	/// <summary>
+	/// Tests that a null resolver result uses the existing pluralization convention.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolverReturnsNull_UsesPluralization()
+	{
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			EntitySetNameResolver = _ => null
+		});
+
+		var url = client.For<Product>().BuildUrl();
+
+		url.Should().Be("Products");
+	}
+
+	/// <summary>
+	/// Tests that an explicit entity set name does not invoke the configured resolver.
+	/// </summary>
+	[Fact]
+	public void For_WithExplicitEntitySetName_DoesNotInvokeResolver()
+	{
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			EntitySetNameResolver = _ => throw new InvalidOperationException("Resolver should not be invoked.")
+		});
+
+		var url = client.For<Product>("CustomProducts").BuildUrl();
+
+		url.Should().Be("CustomProducts");
 	}
 
 	/// <summary>

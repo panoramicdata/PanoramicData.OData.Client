@@ -88,6 +88,16 @@ public class ODataClientOptions
 	public bool AutoPluralization { get; set; } = true;
 
 	/// <summary>
+	/// Gets or sets a function that resolves entity set names for <c>For&lt;T&gt;()</c> calls.
+	/// </summary>
+	/// <remarks>
+	/// When the function returns a non-empty value, the client uses it instead of the built-in
+	/// entity-set attribute and pluralization conventions. Return <c>null</c> or whitespace to
+	/// use those existing conventions.
+	/// </remarks>
+	public Func<Type, string?>? EntitySetNameResolver { get; set; }
+
+	/// <summary>
 	/// Gets or sets a value indicating whether a 404 Not Found response should return <c>null</c>
 	/// instead of throwing an <see cref="ODataNotFoundException"/>.
 	/// </summary>

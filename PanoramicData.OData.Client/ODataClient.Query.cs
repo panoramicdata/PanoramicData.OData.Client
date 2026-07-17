@@ -469,6 +469,12 @@ public partial class ODataClient
 	{
 		var type = typeof(T);
 
+		var resolvedEntitySetName = _options.EntitySetNameResolver?.Invoke(type);
+		if (!string.IsNullOrWhiteSpace(resolvedEntitySetName))
+		{
+			return resolvedEntitySetName;
+		}
+
 		// Respect [EntitySet("...")] attribute from Microsoft.OData.Client generated DTOs
 		var entitySetAttr = type.GetCustomAttributes(false)
 			.FirstOrDefault(a => a.GetType().Name == "EntitySetAttribute");
