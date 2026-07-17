@@ -12,6 +12,8 @@ internal sealed class EntitySetAttribute(string entitySet) : Attribute
 [EntitySet("Mailbox")]
 internal sealed class GeneratedMailbox { }
 
+internal sealed class CustomResolvedEntity { }
+
 /// <summary>
 /// Unit tests for ODataClient query operations.
 /// </summary>
@@ -116,6 +118,48 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		var url = _client.For<GeneratedMailbox>().BuildUrl();
 
 		// Assert
+		url.Should().Be("Mailbox");
+	}
+
+	/// <summary>
+	/// Tests that the configured entity set name resolver overrides the built-in conventions.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolver_UsesResolvedName()
+	{
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			EntitySetNameResolver = type => type == typeof(CustomResolvedEntity) ? "custom_entities" : null
+		});
+
+		var url = client.For<CustomResolvedEntity>().BuildUrl();
+
+		url.Should().Be("custom_entities");
+	}
+
+	/// <summary>
+	/// Tests that a whitespace resolver result uses the existing entity set attribute convention.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolverReturnsWhitespace_UsesEntitySetAttribute()
+	{
+		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var client = new ODataClient(new ODataClientOptions
+		{
+			BaseUrl = "https://test.odata.org/",
+			HttpClient = httpClient,
+			Logger = NullLogger.Instance,
+			RetryCount = 0,
+			EntitySetNameResolver = _ => " "
+		});
+
+		var url = client.For<GeneratedMailbox>().BuildUrl();
+
 		url.Should().Be("Mailbox");
 	}
 
