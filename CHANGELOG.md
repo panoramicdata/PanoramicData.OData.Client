@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [vNext]
+## [10.0.109] - 2026-08-07
 
 ### Added
 - Add `MaximumRetryAfterDelay` option to `ODataClientOptions` (default 30 seconds). A server-supplied `Retry-After` header is now honoured in preference to `RetryDelay`, bounded by this value so that a large or malformed header cannot stall the caller. Set to `TimeSpan.Zero` to ignore `Retry-After` entirely and always use `RetryDelay`
