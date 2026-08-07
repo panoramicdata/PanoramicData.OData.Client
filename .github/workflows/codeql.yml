@@ -25,6 +25,10 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v6
+      with:
+        # Nerdbank.GitVersioning needs full history to calculate version height;
+        # a shallow clone fails the build and so defeats Autobuild. Matches ci.yml.
+        fetch-depth: 0
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
