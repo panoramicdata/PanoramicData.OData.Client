@@ -73,6 +73,26 @@ public class QueryBuilderAnyAllTests
 	}
 
 	/// <summary>
+	/// Tests that Any() with a nested (two-hop) member path inside the predicate generates
+	/// correct URL. Characterization test: GetLambdaMemberPath currently walks the full
+	/// chain correctly here, but this exact scenario was previously untested. Pins it as a
+	/// safety net before the MemberPathResolver consolidation (which changes the internal
+	/// List.Insert(0,...) walk to a Stack-based one with byte-identical output).
+	/// </summary>
+	[Fact]
+	public void Filter_WithAnyNestedMemberPath_GeneratesCorrectUrl()
+	{
+		// Arrange & Act
+		var url = _queryBuilder
+			.Filter(p => p.Friends!.Any(f => f.BestFriend!.FirstName == "John"))
+			.BuildUrl();
+
+		// Assert
+		// Friends/any(f: f/BestFriend/FirstName eq 'John')
+		url.Should().Contain("Friends%2Fany%28f%3A%20f%2FBestFriend%2FFirstName%20eq%20%27John%27%29");
+	}
+
+	/// <summary>
 	/// Tests that Any() with greater than comparison generates correct URL.
 	/// </summary>
 	[Fact]
@@ -249,6 +269,30 @@ public class QueryBuilderAnyAllTests
 		// Act
 		var url = _queryBuilder
 			.Filter(p => p.Friends!.Any(f => f.Age >= minAge))
+			.BuildUrl();
+
+		// Assert
+		url.Should().Contain("f%2FAge%20ge%2021");
+	}
+
+	/// <summary>
+	/// Tests that a two-hop closure member access (a captured anonymous object's property,
+	/// rather than a captured local directly) works in an Any lambda. Characterization test:
+	/// GetLambdaMemberPath walks the chain until it hits the ConstantExpression root, then
+	/// discards the partially-built path and evaluates the original member expression
+	/// directly - this exercises that discard-and-evaluate branch with more than one hop
+	/// before the root, which the existing single-hop closure tests don't reach. Pins this
+	/// as a safety net before the MemberPathResolver consolidation.
+	/// </summary>
+	[Fact]
+	public void Filter_WithAnyNestedClosureMemberAccess_GeneratesCorrectUrl()
+	{
+		// Arrange
+		var ageFilter = new { MinAge = 21 };
+
+		// Act
+		var url = _queryBuilder
+			.Filter(p => p.Friends!.Any(f => f.Age >= ageFilter.MinAge))
 			.BuildUrl();
 
 		// Assert

@@ -58,10 +58,7 @@ public partial class ODataClient : IDisposable
 			_ownsHttpClient = false;
 
 			// If the provided HttpClient has no BaseAddress, set it from options so relative URLs resolve correctly
-			if (_httpClient.BaseAddress is null)
-			{
-				_httpClient.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
-			}
+			_httpClient.BaseAddress ??= new Uri(options.BaseUrl.TrimEnd('/') + "/");
 
 			LoggerMessages.UsingProvidedHttpClient(_logger, _httpClient.BaseAddress);
 		}
@@ -128,11 +125,56 @@ public partial class ODataClient : IDisposable
 
 			if (retryCount <= _options.RetryCount)
 			{
-				await Task.Delay(_options.RetryDelay, cancellationToken).ConfigureAwait(false);
+				await Task.Delay(GetRetryDelay(lastResponse), cancellationToken).ConfigureAwait(false);
 			}
 		}
 
 		return lastResponse ?? throw new ODataClientException("Request failed after all retries");
+	}
+
+	/// <summary>
+	/// Whether a status code represents a transient failure that is worth retrying.
+	/// </summary>
+	/// <remarks>
+	/// 408 and 429 join 5xx here because in both cases the server rejected the request <em>without
+	/// processing it</em> - a 408 means it was never fully received, a 429 that it was refused outright -
+	/// so retrying is safe even for methods that are not idempotent.
+	///
+	/// Every other 4xx is a genuine rejection and must not be retried. 409 in particular is a routine
+	/// "already exists" outcome for callers that create-or-overwrite, and retrying it would be wrong.
+	/// </remarks>
+	private static bool IsRetryableStatusCode(HttpStatusCode statusCode)
+		=> statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests
+			|| (int)statusCode >= 500;
+
+	/// <summary>
+	/// How long to wait before the next attempt, honouring a Retry-After header when the server sends one.
+	/// </summary>
+	/// <remarks>
+	/// Retrying a 429 on a fixed delay while ignoring Retry-After amplifies the very condition that
+	/// produced it, so the server's own figure wins where it gives one, bounded by
+	/// <see cref="ODataClientOptions.MaximumRetryAfterDelay"/>.
+	/// </remarks>
+	private TimeSpan GetRetryDelay(HttpResponseMessage? response)
+	{
+		if (_options.MaximumRetryAfterDelay <= TimeSpan.Zero)
+		{
+			return _options.RetryDelay;
+		}
+
+		var serverRequestedDelay = response?.Headers.RetryAfter switch
+		{
+			{ Delta: { } delta } => delta,
+			{ Date: { } date } => date - DateTimeOffset.UtcNow,
+			_ => (TimeSpan?)null
+		};
+
+		if (serverRequestedDelay is not { } requested || requested <= TimeSpan.Zero)
+		{
+			return _options.RetryDelay;
+		}
+
+		return requested > _options.MaximumRetryAfterDelay ? _options.MaximumRetryAfterDelay : requested;
 	}
 
 	private async Task<(bool ShouldReturn, HttpResponseMessage? Response)> TrySendRequestAsync(
@@ -156,7 +198,7 @@ public partial class ODataClient : IDisposable
 			// Log full response details at Trace level
 			await LogResponseTraceAsync(response, cancellationToken).ConfigureAwait(false);
 
-			if (response.IsSuccessStatusCode || (int)response.StatusCode < 500)
+			if (response.IsSuccessStatusCode || !IsRetryableStatusCode(response.StatusCode))
 			{
 				return (true, response);
 			}
@@ -265,12 +307,10 @@ public partial class ODataClient : IDisposable
 			sb.AppendLine(body);
 		}
 
-		#pragma warning disable CA1873 // Method is already guarded by IsEnabled check at method entry
-			LoggerMessages.LogRequestTrace(_logger, sb.ToString());
-		#pragma warning restore CA1873
-		}
+		LoggerMessages.LogRequestTrace(_logger, sb.ToString());
+	}
 
-		private async Task LogResponseTraceAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+	private async Task LogResponseTraceAsync(HttpResponseMessage response, CancellationToken cancellationToken)
 	{
 		if (!_logger.IsEnabled(LogLevel.Trace))
 		{
@@ -295,13 +335,10 @@ public partial class ODataClient : IDisposable
 		sb.AppendLine("--- Response Body ---");
 		var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 		sb.AppendLine(body);
+		LoggerMessages.LogResponseTrace(_logger, sb.ToString());
+	}
 
-		#pragma warning disable CA1873 // Method is already guarded by IsEnabled check at method entry
-			LoggerMessages.LogResponseTrace(_logger, sb.ToString());
-		#pragma warning restore CA1873
-		}
-
-		private static async Task<HttpRequestMessage> CloneRequestAsync(HttpRequestMessage request)
+	private static async Task<HttpRequestMessage> CloneRequestAsync(HttpRequestMessage request)
 	{
 		var clone = new HttpRequestMessage(request.Method, request.RequestUri);
 

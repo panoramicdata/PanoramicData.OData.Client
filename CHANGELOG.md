@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.109] - 2026-08-07
+
+### Added
+- Add `MaximumRetryAfterDelay` option to `ODataClientOptions` (default 30 seconds). A server-supplied `Retry-After` header is now honoured in preference to `RetryDelay`, bounded by this value so that a large or malformed header cannot stall the caller. Set to `TimeSpan.Zero` to ignore `Retry-After` entirely and always use `RetryDelay`
+
+### Fixed
+- Retry HTTP 408 (Request Timeout) and 429 (Too Many Requests) alongside 5xx. Previously any status below 500 was returned to the caller immediately, so a 408 from an intervening proxy or a 429 from a rate limiter was never retried. Both are cases where the server rejected the request without processing it, so retrying is safe even for methods that are not idempotent. Other 4xx statuses remain non-retryable, in particular 409, which is a routine "already exists" outcome for callers that create-or-overwrite
+
+## [10.0.106] - 2026-07-08
+
+### Fixed
+- Fix `.OrderBy(p => p.Nav.Prop)` and `.NavigateTo(p => p.Nav.Prop)` resolving only the leaf property name (e.g. `$orderby=FirstName`) instead of the full navigation path (`$orderby=BestFriend/FirstName`) for nested (dotted) property selectors
+
 ## [10.0.87] - 2026-06-12
 
 ### Added

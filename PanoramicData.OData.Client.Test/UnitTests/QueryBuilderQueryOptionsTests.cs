@@ -50,6 +50,24 @@ public class QueryBuilderQueryOptionsTests
 		url.Should().Contain("$select=ID,Name,Price");
 	}
 
+	/// <summary>
+	/// Tests select with a nested (dotted) member path.
+	/// Characterization test: GetMemberNames currently takes only the FIRST path segment
+	/// (Split('/')[0]) of the full path GetMemberPath resolves, so a nested selector
+	/// silently collapses to just the navigation property name. Pins this quirk as a
+	/// safety net before the MemberPathResolver consolidation.
+	/// </summary>
+	[Fact]
+	public void Select_WithNestedExpression_UsesOnlyFirstSegment_CharacterizationOfExistingBehavior()
+	{
+		var url = new ODataQueryBuilder<Person>("People", NullLogger.Instance)
+			.Select(p => p.BestFriend!.FirstName)
+			.BuildUrl();
+
+		url.Should().Contain("$select=BestFriend");
+		url.Should().NotContain("FirstName");
+	}
+
 	#endregion
 
 	#region $expand
@@ -205,6 +223,34 @@ public class QueryBuilderQueryOptionsTests
 			.BuildUrl();
 
 		url.Should().Contain("$orderby=Price desc");
+	}
+
+	/// <summary>
+	/// Tests orderby with a nested (dotted) member path resolves the full navigation path.
+	/// OData v4's $orderby grammar supports "/"-paths through navigation properties, so this
+	/// is spec-compliant (unlike the still-deferred $select-family nested-path fixes).
+	/// </summary>
+	[Fact]
+	public void OrderBy_WithNestedExpression_ResolvesFullPath()
+	{
+		var url = new ODataQueryBuilder<Person>("People", NullLogger.Instance)
+			.OrderBy(p => p.BestFriend!.FirstName)
+			.BuildUrl();
+
+		url.Should().Contain("$orderby=BestFriend/FirstName");
+	}
+
+	/// <summary>
+	/// Tests orderby with a 3-level nested member path resolves the full navigation path.
+	/// </summary>
+	[Fact]
+	public void OrderBy_WithThreeLevelNestedExpression_ResolvesFullPath()
+	{
+		var url = new ODataQueryBuilder<Person>("People", NullLogger.Instance)
+			.OrderBy(p => p.BestFriend!.BestFriend!.FirstName)
+			.BuildUrl();
+
+		url.Should().Contain("$orderby=BestFriend/BestFriend/FirstName");
 	}
 
 	/// <summary>

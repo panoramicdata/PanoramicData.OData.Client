@@ -242,6 +242,21 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	}
 
 	/// <summary>
+	/// Tests that non-generic NavigateTo(expr) with a nested (dotted) member path resolves the
+	/// full navigation path. NavigateTo shares GetMemberName with OrderBy; both now walk the
+	/// full chain instead of returning just the leaf segment.
+	/// </summary>
+	[Fact]
+	public void NavigateTo_NonGenericExprNested_ResolvesFullPath()
+	{
+		// Act
+		var url = _client.For<Person>("People").Key("russellwhyte").NavigateTo(x => x.BestFriend!.Friends).BuildUrl();
+
+		// Assert
+		url.Should().Be("People('russellwhyte')/BestFriend/Friends");
+	}
+
+	/// <summary>
 	/// Tests that As&lt;T&gt;() after non-generic NavigateTo preserves the navigation path.
 	/// </summary>
 	[Fact]

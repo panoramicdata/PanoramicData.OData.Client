@@ -33,7 +33,25 @@ public class ODataClientOptions
 	/// <summary>
 	/// Delay between retry attempts. Default is 1 second.
 	/// </summary>
+	/// <remarks>
+	/// Used when the server does not supply a Retry-After header. When it does, that value is preferred,
+	/// bounded by <see cref="MaximumRetryAfterDelay"/>.
+	/// </remarks>
 	public TimeSpan RetryDelay { get; set; } = TimeSpan.FromSeconds(1);
+
+	/// <summary>
+	/// Upper bound on a delay requested by a server via a Retry-After header. Default is 30 seconds.
+	/// </summary>
+	/// <remarks>
+	/// A Retry-After is honoured in preference to <see cref="RetryDelay"/>, because retrying a 429 on a
+	/// fixed delay while ignoring the server's own figure amplifies the condition that produced it.
+	///
+	/// It is bounded so that a large or malformed header cannot stall the caller for as long as it asks:
+	/// a client that hangs for an hour is worse than one that asks again too soon and is refused a second
+	/// time. Set to <see cref="TimeSpan.Zero"/> to ignore Retry-After entirely and always use
+	/// <see cref="RetryDelay"/>.
+	/// </remarks>
+	public TimeSpan MaximumRetryAfterDelay { get; set; } = TimeSpan.FromSeconds(30);
 
 	/// <summary>
 	/// Gets or sets the level at which individual failed attempts that will be retried are logged.
