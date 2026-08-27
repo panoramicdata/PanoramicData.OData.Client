@@ -726,29 +726,58 @@ PanoramicData.OData.Client.Test/
 
 ## Running Coverage
 
-### Using dotnet-coverage
+Coverage is collected by `Microsoft.Testing.Extensions.CodeCoverage`, which plugs
+directly into the Microsoft.Testing.Platform (MTP) test host. The repository opts
+into the MTP-based `dotnet test` via `global.json`:
+
+```json
+{
+  "test": { "runner": "Microsoft.Testing.Platform" }
+}
+```
+
+Collection settings (which modules and attributes to include or exclude) live in
+[`PanoramicData.OData.Client.Test/coverage.config`](PanoramicData.OData.Client.Test/coverage.config).
+
+### Recommended: Run-Coverage.ps1
+
+The script runs the tests, collects coverage and generates the HTML report,
+badges and a Markdown summary under `coverage/report/`:
 
 ```powershell
-# Install coverage tool
-dotnet tool install --global dotnet-coverage
+# Full run
+.\Run-Coverage.ps1
 
-# Run tests with coverage
-dotnet coverage collect `
-    --output coverage.cobertura.xml `
-    --output-format cobertura `
-    -- dotnet test
+# Full run, then open the HTML report
+.\Run-Coverage.ps1 -OpenReport
+
+# Restrict to a subset of tests
+.\Run-Coverage.ps1 -Filter "FullyQualifiedName~QueryBuilder"
+```
+
+It installs `dotnet-reportgenerator-globaltool` automatically if it is missing.
+
+### Manual: dotnet test
+
+```powershell
+dotnet test --project PanoramicData.OData.Client.Test\PanoramicData.OData.Client.Test.csproj `
+    --configuration Release `
+    --coverage `
+    --coverage-output-format cobertura `
+    --coverage-output coverage.cobertura.xml `
+    --coverage-settings PanoramicData.OData.Client.Test\coverage.config `
+    --results-directory coverage
 
 # Generate HTML report
 dotnet tool install --global dotnet-reportgenerator-globaltool
-reportgenerator -reports:coverage.cobertura.xml -targetdir:coveragereport
+reportgenerator -reports:coverage\coverage.cobertura.xml -targetdir:coveragereport
 ```
 
-### Using Coverlet
-
-```powershell
-# Run with coverlet
-dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura
-```
+> **Note:** The VSTest-era flags (`--collect:"XPlat Code Coverage"`, `--settings`,
+> and the Coverlet MSBuild properties `/p:CollectCoverage=true` /
+> `/p:CoverletOutputFormat=cobertura`) no longer work. Microsoft.Testing.Platform
+> dropped its VSTest bridge on the .NET 10 SDK, so Coverlet and the
+> `xunit.runner.visualstudio` adapter have been removed from the test project.
 
 ---
 

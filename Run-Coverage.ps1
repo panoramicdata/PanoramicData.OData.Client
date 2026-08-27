@@ -48,14 +48,13 @@ New-Item -ItemType Directory -Path $coverageDir -Force | Out-Null
 # Build test command
 $testArgs = @(
     "test",
-    $testProject,
+    "--project", $testProject,
     "--configuration", "Release",
-    "--collect:""XPlat Code Coverage""",
     "--results-directory", $coverageDir,
-    "--settings", (Join-Path $solutionRoot "PanoramicData.OData.Client.Test\coverlet.runsettings.json"),
-    "-p:CollectCoverage=true",
-    "-p:CoverletOutputFormat=cobertura",
-    "-p:CoverletOutput=$coverageDir/"
+    "--coverage",
+    "--coverage-output-format", "cobertura",
+    "--coverage-output", "coverage.cobertura.xml",
+    "--coverage-settings", (Join-Path $solutionRoot "PanoramicData.OData.Client.Test\coverage.config")
 )
 
 if ($Filter) {
