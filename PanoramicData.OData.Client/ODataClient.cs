@@ -133,19 +133,40 @@ public partial class ODataClient : IDisposable
 	}
 
 	/// <summary>
-	/// Whether a status code represents a transient failure that is worth retrying.
+	/// Whether a status code represents a transient failure that is worth retrying, for a request
+	/// using the given method.
 	/// </summary>
 	/// <remarks>
-	/// 408 and 429 join 5xx here because in both cases the server rejected the request <em>without
-	/// processing it</em> - a 408 means it was never fully received, a 429 that it was refused outright -
-	/// so retrying is safe even for methods that are not idempotent.
+	/// 408 and 429 are retryable for <em>any</em> method, because in both cases the server rejected
+	/// the request <em>without processing it</em> - a 408 means it was never fully received, a 429
+	/// that it was refused outright - so repeating it cannot duplicate any effect.
+	///
+	/// 5xx is different, and only safe for an idempotent method (issue #43). A 504 in particular
+	/// means the opposite of a 408: the request reached the server, the server began work, and a
+	/// proxy gave up waiting - so the work may still be running. 502 and 503 can likewise be
+	/// returned after an upstream has accepted a request. Retrying a POST in that state either
+	/// duplicates its effect or repeats expensive work whose first result is still on its way.
+	///
+	/// This is the rule nginx itself applies: it will not retry a non-idempotent request to another
+	/// upstream unless explicitly configured with <c>non_idempotent</c>.
 	///
 	/// Every other 4xx is a genuine rejection and must not be retried. 409 in particular is a routine
 	/// "already exists" outcome for callers that create-or-overwrite, and retrying it would be wrong.
 	/// </remarks>
-	private static bool IsRetryableStatusCode(HttpStatusCode statusCode)
+	private static bool IsRetryableStatusCode(HttpStatusCode statusCode, HttpMethod method)
 		=> statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests
-			|| (int)statusCode >= 500;
+			|| ((int)statusCode >= 500 && IsIdempotent(method));
+
+	/// <summary>
+	/// Whether repeating a request with this method is guaranteed to have the same effect as making
+	/// it once, per RFC 9110 section 9.2.2.
+	/// </summary>
+	/// <remarks>
+	/// POST and PATCH are the exceptions. DELETE is idempotent despite appearances: deleting the
+	/// same resource twice leaves the same state, even though the second call may report 404.
+	/// </remarks>
+	private static bool IsIdempotent(HttpMethod method)
+		=> method != HttpMethod.Post && method != HttpMethod.Patch;
 
 	/// <summary>
 	/// How long to wait before the next attempt, honouring a Retry-After header when the server sends one.
@@ -198,7 +219,7 @@ public partial class ODataClient : IDisposable
 			// Log full response details at Trace level
 			await LogResponseTraceAsync(response, cancellationToken).ConfigureAwait(false);
 
-			if (response.IsSuccessStatusCode || !IsRetryableStatusCode(response.StatusCode))
+			if (response.IsSuccessStatusCode || !IsRetryableStatusCode(response.StatusCode, request.Method))
 			{
 				return (true, response);
 			}
@@ -229,6 +250,15 @@ public partial class ODataClient : IDisposable
 		}
 		catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
 		{
+			// A client-side timeout is the strongest signal there is that the server is still
+			// working on the request, so repeating a non-idempotent one is the least safe retry of
+			// all - it duplicates work that is still in flight (issue #43).
+			if (!IsIdempotent(request.Method))
+			{
+				LoggerMessages.RetriesExhaustedException(_logger, ex, request.RequestUri, "timed out", 1);
+				throw;
+			}
+
 			if (retryCount >= _options.RetryCount)
 			{
 				LoggerMessages.RetriesExhaustedException(_logger, ex, request.RequestUri, "timed out", _options.RetryCount + 1);
