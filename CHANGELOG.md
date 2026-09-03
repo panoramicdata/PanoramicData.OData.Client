@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [vNext]
+
+### Changed
+- Rename four builder parameters that duplicated their method name, so that they read
+  distinctly in IntelliSense: `Key(key)` to `Key(keyValue)`, `Filter(filter)` to
+  `Filter(filterExpression)`, `OrderBy(orderBy)` to `OrderBy(orderByExpression)` and
+  `QueryOptions(queryOptions)` to `QueryOptions(rawQueryOptions)`, on
+  `ODataQueryBuilder<T>`, `FluentODataQueryBuilder`, `NestedExpandBuilder<T>` and
+  `ODataCrossJoinBuilder`. Source-compatible except for callers passing these arguments
+  by name
+- Share `ODataQueryBuilder<T>`'s operator table and reflection cache across all closed
+  generic types instead of rebuilding them per entity type. They were `static` fields of a
+  generic type, so each `ODataQueryBuilder<Product>`, `ODataQueryBuilder<Order>` and so on
+  had its own copy and could never share a cache hit
+- Rename `Run-Benchmarks.ps1`'s `-Profile` switch to `-EnableProfiling`, because `$Profile`
+  shadows a PowerShell automatic variable. `-Profile` still works, as an alias
+
+### Fixed
+- Preserve the original stack trace when a request fails after its retries are exhausted
+
 ## [10.0.109] - 2026-08-07
 
 ### Added

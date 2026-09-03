@@ -19,8 +19,18 @@ Thank you for your interest in contributing to this project!
 - Use file-scoped namespaces
 - Use the `required` keyword for DTO properties where appropriate
 - Ensure `TreatWarningsAsErrors` remains enabled
-- All code must compile with zero diagnostics
-
+- All code must compile with zero diagnostics
+- Console output in the repository's PowerShell scripts goes through `Write-BuildMessage`
+  (dot-source `Build/BuildOutput.ps1`) rather than `Write-Host`, so it stays capturable
+
+## Static analysis
+
+Codacy runs SonarCSharp, Lizard and PSScriptAnalyzer over this repository. A handful of its
+findings are false positives or deliberate design decisions;
+[Documentation/static-analysis.md](Documentation/static-analysis.md) records which, and why.
+Read it before refactoring code to satisfy a finding - and add to it if you decide a new
+finding should stand.
+
 ## Testing
 
 - Use xUnit v3 for all tests
