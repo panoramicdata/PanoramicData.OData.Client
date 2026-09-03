@@ -53,6 +53,11 @@
   <ItemGroup>
     <InternalsVisibleTo Include="PanoramicData.OData.Client.Test" />
   </ItemGroup>
+  <!-- Declared centrally in Directory.Build.props. Named here as well so that tooling looking
+       for the versioning dependency at project level, Publish.ps1 among it, can find it. -->
+  <ItemGroup>
+    <PackageReference Update="Nerdbank.GitVersioning" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="..\README.md" Pack="true" PackagePath="" />
     <None Include="Panoramic Data.png" Pack="true" PackagePath="icon.png" />
