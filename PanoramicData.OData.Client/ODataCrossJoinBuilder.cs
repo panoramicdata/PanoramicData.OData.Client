@@ -39,13 +39,13 @@ public class ODataCrossJoinBuilder
 	/// Adds a filter clause.
 	/// Use qualified property names like "Products/Name" or "Categories/Id".
 	/// </summary>
-	/// <param name="filter">The OData filter expression.</param>
+	/// <param name="filterExpression">The OData filter expression.</param>
 	/// <returns>This builder.</returns>
-	public ODataCrossJoinBuilder Filter(string filter)
+	public ODataCrossJoinBuilder Filter(string filterExpression)
 	{
-		if (!string.IsNullOrWhiteSpace(filter))
+		if (!string.IsNullOrWhiteSpace(filterExpression))
 		{
-			_filterClauses.Add(filter);
+			_filterClauses.Add(filterExpression);
 		}
 
 		return this;
@@ -86,13 +86,13 @@ public class ODataCrossJoinBuilder
 	/// Adds an order by clause.
 	/// Use qualified property names like "Products/Name desc".
 	/// </summary>
-	/// <param name="orderBy">The order by expression.</param>
+	/// <param name="orderByExpression">The order by expression.</param>
 	/// <returns>This builder.</returns>
-	public ODataCrossJoinBuilder OrderBy(string orderBy)
+	public ODataCrossJoinBuilder OrderBy(string orderByExpression)
 	{
-		if (!string.IsNullOrWhiteSpace(orderBy))
+		if (!string.IsNullOrWhiteSpace(orderByExpression))
 		{
-			_orderByClauses.Add(orderBy);
+			_orderByClauses.Add(orderByExpression);
 		}
 
 		return this;

@@ -1,4 +1,3 @@
-using System.Collections.Frozen;
 using System.Reflection;
 
 namespace PanoramicData.OData.Client;
@@ -8,21 +7,6 @@ namespace PanoramicData.OData.Client;
 /// </summary>
 public partial class ODataQueryBuilder<T> where T : class
 {
-	/// <summary>
-	/// Frozen dictionary for O(1) operator lookups - initialized once, thread-safe.
-	/// </summary>
-	private static readonly FrozenDictionary<ExpressionType, string> OperatorMap = new Dictionary<ExpressionType, string>
-	{
-		[ExpressionType.Equal] = "eq",
-		[ExpressionType.NotEqual] = "ne",
-		[ExpressionType.GreaterThan] = "gt",
-		[ExpressionType.GreaterThanOrEqual] = "ge",
-		[ExpressionType.LessThan] = "lt",
-		[ExpressionType.LessThanOrEqual] = "le",
-		[ExpressionType.AndAlso] = "and",
-		[ExpressionType.OrElse] = "or"
-	}.ToFrozenDictionary();
-
 	private static string ExpressionToODataFilter(Expression expression) =>
 		ExpressionToODataFilter(expression, parentOperator: null, expectedType: null);
 
@@ -149,7 +133,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		var left = ExpressionToODataFilter(binary.Left, binary.NodeType, GetEffectiveType(binary.Right));
 		var right = ExpressionToODataFilter(binary.Right, binary.NodeType, GetEffectiveType(binary.Left));
 
-		if (!OperatorMap.TryGetValue(binary.NodeType, out var op))
+		if (!ODataExpressionLookups.OperatorMap.TryGetValue(binary.NodeType, out var op))
 		{
 			throw new NotSupportedException($"Binary operator {binary.NodeType} is not supported");
 		}
@@ -373,18 +357,12 @@ public partial class ODataQueryBuilder<T> where T : class
 		_ => key.ToString() ?? throw new ArgumentException("Invalid key value")
 	};
 
-	/// <summary>
-	/// Cache for PropertyInfo arrays by type - anonymous types used in Function() calls.
-	/// Uses ConditionalWeakTable to allow garbage collection of types.
-	/// </summary>
-	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Type, PropertyInfo[]> PropertyCache = [];
-
 	private static string FormatFunctionParameters(object parameters)
 	{
 		var type = parameters.GetType();
 
 		// Get or create cached PropertyInfo array
-		var props = PropertyCache.GetValue(type, t =>
+		var props = ODataExpressionLookups.PropertyCache.GetValue(type, t =>
 			t.GetProperties(BindingFlags.Public | BindingFlags.Instance));
 
 		var paramStrings = props
@@ -684,7 +662,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		public bool IsNavigation { get; }
 		public Dictionary<string, ExpandNode> Children { get; } = [];
 
-		public ExpandNode(string name, bool isNavigation = true)
+		public ExpandNode(string name, bool isNavigation)
 		{
 			Name = name;
 			IsNavigation = isNavigation;

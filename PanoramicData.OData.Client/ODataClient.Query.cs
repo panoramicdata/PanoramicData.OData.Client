@@ -330,7 +330,7 @@ public partial class ODataClient
 	/// <returns>A task that represents the asynchronous operation. The task result contains the total number of entities of type T.</returns>
 	public Task<long> GetCountAsync<T>(
 	CancellationToken cancellationToken) where T : class
-		=> GetCountAsync<T>(null, cancellationToken);
+		=> GetCountCoreAsync<T>(null, cancellationToken);
 
 	/// <summary>
 	/// Gets only the count of entities matching the query, without retrieving the entities.
@@ -339,9 +339,14 @@ public partial class ODataClient
 	/// <param name="query">The query builder (optional filter, etc.).</param>
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>The count of matching entities.</returns>
-	public async Task<long> GetCountAsync<T>(
+	public Task<long> GetCountAsync<T>(
 		ODataQueryBuilder<T>? query = null,
 		CancellationToken cancellationToken = default) where T : class
+		=> GetCountCoreAsync(query, cancellationToken);
+
+	private async Task<long> GetCountCoreAsync<T>(
+		ODataQueryBuilder<T>? query,
+		CancellationToken cancellationToken) where T : class
 	{
 		query ??= For<T>();
 		var baseUrl = query.BuildUrl();

@@ -158,9 +158,9 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <summary>
 	/// Sets the key for a single entity query.
 	/// </summary>
-	public ODataQueryBuilder<T> Key<TKey>(TKey key)
+	public ODataQueryBuilder<T> Key<TKey>(TKey keyValue)
 	{
-		_key = key;
+		_key = keyValue;
 		return this;
 	}
 
@@ -522,11 +522,11 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <summary>
 	/// Adds a raw order by string.
 	/// </summary>
-	public ODataQueryBuilder<T> OrderBy(string orderBy)
+	public ODataQueryBuilder<T> OrderBy(string orderByExpression)
 	{
-		if (!string.IsNullOrWhiteSpace(orderBy))
+		if (!string.IsNullOrWhiteSpace(orderByExpression))
 		{
-			_orderByClauses.Add(orderBy);
+			_orderByClauses.Add(orderByExpression);
 		}
 
 		return this;
@@ -596,7 +596,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <summary>
 	/// Appends a raw, vendor-specific query option to the request URL.
 	/// </summary>
-	/// <param name="queryOptions">
+	/// <param name="rawQueryOptions">
 	/// A raw query string segment to append, e.g. <c>"PropertySet=Minimum,AddressList"</c>.
 	/// The value is appended verbatim - no quoting or URL encoding is applied.
 	/// Multiple calls are combined with <c>&amp;</c>.
@@ -607,11 +607,11 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// Unlike Simple.OData.Client's <c>QueryOptions(IDictionary)</c> overload,
 	/// this method does not wrap values in single quotes.
 	/// </remarks>
-	public ODataQueryBuilder<T> QueryOptions(string queryOptions)
+	public ODataQueryBuilder<T> QueryOptions(string rawQueryOptions)
 	{
-		if (!string.IsNullOrWhiteSpace(queryOptions))
+		if (!string.IsNullOrWhiteSpace(rawQueryOptions))
 		{
-			_rawQueryOptions.Add(queryOptions);
+			_rawQueryOptions.Add(rawQueryOptions);
 		}
 
 		return this;

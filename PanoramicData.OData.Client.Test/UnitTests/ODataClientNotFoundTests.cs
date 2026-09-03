@@ -25,7 +25,7 @@ public sealed class ODataClientNotFoundTests : TestBase, IDisposable
 	/// <inheritdoc/>
 	public void Dispose() => _httpClient.Dispose();
 
-	private ODataClient CreateClient(bool ignoreResourceNotFoundException = false)
+	private ODataClient CreateClient(bool ignoreResourceNotFoundException)
         => new(new ODataClientOptions
         {
             BaseUrl = "https://test.odata.org/",
@@ -129,7 +129,7 @@ public sealed class ODataClientNotFoundTests : TestBase, IDisposable
     {
         // Arrange
         SetupMockResponse(HttpStatusCode.OK, """{ "ID": 42, "Name": "Gadget", "Price": 19.99 }""");
-        using var client = CreateClient();
+        using var client = CreateClient(ignoreResourceNotFoundException: false);
 
         // Act
         var result = await client.GetByKeyOrDefaultAsync<Product, int>(42, cancellationToken: CancellationToken);
@@ -148,7 +148,7 @@ public sealed class ODataClientNotFoundTests : TestBase, IDisposable
     {
         // Arrange
         SetupMockResponse(HttpStatusCode.InternalServerError, "{}");
-        using var client = CreateClient();
+        using var client = CreateClient(ignoreResourceNotFoundException: false);
 
         // Act
         var act = async () => await client.GetByKeyOrDefaultAsync<Product, int>(1, cancellationToken: CancellationToken);
