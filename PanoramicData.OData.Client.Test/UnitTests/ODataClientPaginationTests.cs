@@ -111,9 +111,8 @@ public class ODataClientPaginationTests : IDisposable
 			.ReturnsAsync(() =>
 			{
 				callCount++;
-				return callCount switch
-				{
-					1 => new HttpResponseMessage(HttpStatusCode.OK)
+				return callCount == 1
+					? new HttpResponseMessage(HttpStatusCode.OK)
 					{
 						Content = new StringContent("""
 						{
@@ -122,16 +121,15 @@ public class ODataClientPaginationTests : IDisposable
 							"@odata.nextLink": "https://test.odata.org/Products?$skip=1"
 						}
 						""")
-					},
-					_ => new HttpResponseMessage(HttpStatusCode.OK)
+					}
+					: new HttpResponseMessage(HttpStatusCode.OK)
 					{
 						Content = new StringContent("""
 						{
 							"value": [{ "ID": 2, "Name": "Item2" }]
 						}
 						""")
-					}
-				};
+					};
 			});
 
 		// Act

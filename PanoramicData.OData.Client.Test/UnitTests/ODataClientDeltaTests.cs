@@ -374,7 +374,7 @@ public class ODataClientDeltaTests : IDisposable
 				"SendAsync",
 				ItExpr.IsAny<HttpRequestMessage>(),
 				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync((HttpRequestMessage req, CancellationToken _) =>
+			.ReturnsAsync((HttpRequestMessage _, CancellationToken _) =>
 			{
 				callCount++;
 				if (callCount == 1)

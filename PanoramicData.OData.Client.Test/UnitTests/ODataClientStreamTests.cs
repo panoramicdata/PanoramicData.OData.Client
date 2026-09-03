@@ -60,9 +60,10 @@ public class ODataClientStreamTests : TestBase, IDisposable
 			});
 
 		// Act
-		var stream = await _client.GetStreamAsync("Photos", 1, cancellationToken: CancellationToken.None);
+		await using var stream = await _client.GetStreamAsync("Photos", 1, cancellationToken: CancellationToken.None);
 
 		// Assert
+		stream.Should().NotBeNull();
 		capturedRequest.Should().NotBeNull();
 		capturedRequest!.Method.Should().Be(HttpMethod.Get);
 		capturedRequest.RequestUri!.PathAndQuery.Should().Be("/Photos(1)/$value");

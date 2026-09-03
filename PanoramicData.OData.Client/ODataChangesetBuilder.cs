@@ -6,13 +6,10 @@ namespace PanoramicData.OData.Client;
 public class ODataChangesetBuilder
 {
 	private readonly ODataChangeset _changeset;
-	private readonly JsonSerializerOptions _jsonOptions;
 
-	internal ODataChangesetBuilder(ODataChangeset changeset, JsonSerializerOptions jsonOptions)
+	internal ODataChangesetBuilder(ODataChangeset changeset)
 	{
 		_changeset = changeset;
-		_jsonOptions = jsonOptions;
-		_ = _jsonOptions; // Reserved for future use
 	}
 
 	/// <summary>

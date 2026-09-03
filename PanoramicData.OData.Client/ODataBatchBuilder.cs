@@ -140,7 +140,7 @@ public class ODataBatchBuilder
 	public ODataBatchBuilder Changeset(Action<ODataChangesetBuilder> configure)
 	{
 		var changeset = new ODataChangeset();
-		var builder = new ODataChangesetBuilder(changeset, _jsonOptions);
+		var builder = new ODataChangesetBuilder(changeset);
 		configure(builder);
 		_items.Add(changeset);
 		return this;
