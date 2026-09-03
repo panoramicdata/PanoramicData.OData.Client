@@ -5,7 +5,7 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for ODataClient error handling.
 /// </summary>
-public class ODataClientErrorTests : MockedODataClientTestBase
+public class ODataClientErrorTests : ODataMetadataTestBase
 {
 	#region HTTP Status Code Error Tests
 
@@ -215,26 +215,12 @@ public class ODataClientErrorTests : MockedODataClientTestBase
 	public async Task GetMetadataAsync_XmlResponse_DoesNotThrowHtmlError()
 	{
 		// Arrange
-		var xmlContent = """
-			<?xml version="1.0" encoding="utf-8"?>
-			<edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
-				<edmx:DataServices>
-					<Schema Namespace="Test" xmlns="http://docs.oasis-open.org/odata/ns/edm">
-						<EntityType Name="Product">
-							<Key><PropertyRef Name="ID"/></Key>
-							<Property Name="ID" Type="Edm.Int32" Nullable="false"/>
-						</EntityType>
-					</Schema>
-				</edmx:DataServices>
-			</edmx:Edmx>
-			""";
-
-		var response = new HttpResponseMessage(HttpStatusCode.OK)
-		{
-			Content = new StringContent(xmlContent, System.Text.Encoding.UTF8, "application/xml")
-		};
-
-		SetupResponse(response);
+		SetupMetadataResponse(CreateMetadataXml("""
+			<EntityType Name="Product">
+				<Key><PropertyRef Name="ID"/></Key>
+				<Property Name="ID" Type="Edm.Int32" Nullable="false"/>
+			</EntityType>
+			"""));
 
 		// Act
 		var metadata = await Client.GetMetadataAsync(CancellationToken);
