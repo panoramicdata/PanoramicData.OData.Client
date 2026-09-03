@@ -3,39 +3,8 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for nested expand functionality tested through ODataQueryBuilder.
 /// </summary>
-public class NestedExpandBuilderTests : TestBase, IDisposable
+public class NestedExpandBuilderTests : MockedODataClientTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-	private readonly ODataClient _client;
-
-	/// <summary>
-	/// Initializes a new instance of the test class with mocked dependencies.
-	/// </summary>
-	public NestedExpandBuilderTests()
-	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 0
-		});
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_client.Dispose();
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
-	}
-
 	#region Expand With Nested Options Tests
 
 	/// <summary>
@@ -45,7 +14,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 	public void Expand_WithNestedSelect_IncludesSelectInUrl()
 	{
 		// Act - Using Category->Products since Category has Products navigation property
-		var url = _client.For<Category>("Categories")
+		var url = Client.For<Category>("Categories")
 			.Expand(c => c.Products, builder => builder.Select(p => p.Name))
 			.BuildUrl();
 
@@ -61,7 +30,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 	public void Expand_WithNestedSelectMultiple_IncludesAllFields()
 	{
 		// Act
-		var url = _client.For<Category>("Categories")
+		var url = Client.For<Category>("Categories")
 			.Expand(c => c.Products, builder => builder.Select(p => new { p.Id, p.Name }))
 			.BuildUrl();
 
@@ -77,7 +46,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 	public void Expand_WithNestedSelectString_Works()
 	{
 		// Act
-		var url = _client.For<Category>("Categories")
+		var url = Client.For<Category>("Categories")
 			.Expand(c => c.Products, builder => builder.Select("Id,Name,Description"))
 			.BuildUrl();
 
@@ -92,7 +61,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 	public void Expand_WithNestedFilter_IncludesFilterInUrl()
 	{
 		// Act
-		var url = _client.For<Category>("Categories")
+		var url = Client.For<Category>("Categories")
 			.Expand(c => c.Products, builder => builder.Filter("Rating gt 3"))
 			.BuildUrl();
 
@@ -109,7 +78,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 	public void Expand_WithNestedOrderBy_IncludesOrderByInUrl()
 	{
 		// Act
-		var url = _client.For<Category>("Categories")
+		var url = Client.For<Category>("Categories")
 			.Expand(c => c.Products, builder => builder.OrderBy("Name"))
 			.BuildUrl();
 
@@ -125,7 +94,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 	public void Expand_WithNestedTop_IncludesTopInUrl()
 	{
 		// Act
-		var url = _client.For<Category>("Categories")
+		var url = Client.For<Category>("Categories")
 			.Expand(c => c.Products, builder => builder.Top(5))
 			.BuildUrl();
 
@@ -141,7 +110,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 	public void Expand_WithNestedSkip_IncludesSkipInUrl()
 	{
 		// Act
-		var url = _client.For<Category>("Categories")
+		var url = Client.For<Category>("Categories")
 			.Expand(c => c.Products, builder => builder.Skip(10))
 			.BuildUrl();
 
@@ -157,7 +126,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 	public void Expand_WithMultipleNestedOptions_IncludesAllInUrl()
 	{
 		// Act
-		var url = _client.For<Category>("Categories")
+		var url = Client.For<Category>("Categories")
 			.Expand(c => c.Products, builder => builder
 				.Select(p => new { p.Id, p.Name })
 				.Filter("Rating gt 3")
@@ -182,7 +151,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 	public void Expand_WithNestedExpand_Works()
 	{
 		// Act
-		var url = _client.For<Category>("Categories")
+		var url = Client.For<Category>("Categories")
 			.Expand(c => c.Products, builder => builder.Expand("Supplier"))
 			.BuildUrl();
 
@@ -202,7 +171,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 	public void NestedBuilder_FluentChaining_Works()
 	{
 		// Act
-		var url = _client.For<Category>("Categories")
+		var url = Client.For<Category>("Categories")
 			.Expand(c => c.Products, builder =>
 			{
 				builder.Select("Name");
@@ -226,11 +195,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 	{
 		// Arrange
 		Uri? capturedUri = null;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -238,7 +203,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 			});
 
 		// Act - Using fluent GetAsync on query builder
-		await _client.For<Category>("Categories")
+		await Client.For<Category>("Categories")
 			.Expand(c => c.Products, builder => builder.Select(p => p.Name))
 			.GetAsync(CancellationToken);
 
@@ -260,7 +225,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 	public void Expand_WithEmptyNestedOptions_Works()
 	{
 		// Act
-		var url = _client.For<Category>("Categories")
+		var url = Client.For<Category>("Categories")
 			.Expand(c => c.Products, _ => { })
 			.BuildUrl();
 
@@ -275,7 +240,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 	public void Expand_WithEmptySelectString_Ignored()
 	{
 		// Act
-		var url = _client.For<Category>("Categories")
+		var url = Client.For<Category>("Categories")
 			.Expand(c => c.Products, builder => builder.Select(""))
 			.BuildUrl();
 
@@ -291,7 +256,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 	public void Expand_WithEmptyFilterString_Ignored()
 	{
 		// Act
-		var url = _client.For<Category>("Categories")
+		var url = Client.For<Category>("Categories")
 			.Expand(c => c.Products, builder => builder.Filter(""))
 			.BuildUrl();
 
@@ -306,7 +271,7 @@ public class NestedExpandBuilderTests : TestBase, IDisposable
 	public void Expand_WithEmptyOrderByString_Ignored()
 	{
 		// Act
-		var url = _client.For<Category>("Categories")
+		var url = Client.For<Category>("Categories")
 			.Expand(c => c.Products, builder => builder.OrderBy(""))
 			.BuildUrl();
 

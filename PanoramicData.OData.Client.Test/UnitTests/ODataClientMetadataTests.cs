@@ -3,39 +3,8 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for OData metadata parsing support.
 /// </summary>
-public class ODataClientMetadataTests : TestBase, IDisposable
+public class ODataClientMetadataTests : MockedODataClientTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-	private readonly ODataClient _client;
-
-	/// <summary>
-	/// Initializes a new instance of the test class.
-	/// </summary>
-	public ODataClientMetadataTests()
-	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 0
-		});
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_client.Dispose();
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
-	}
-
 	#region GetMetadataAsync Tests
 
 	/// <summary>
@@ -47,11 +16,7 @@ public class ODataClientMetadataTests : TestBase, IDisposable
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -59,7 +24,7 @@ public class ODataClientMetadataTests : TestBase, IDisposable
 			});
 
 		// Act
-		await _client.GetMetadataAsync(CancellationToken);
+		await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -73,18 +38,14 @@ public class ODataClientMetadataTests : TestBase, IDisposable
 	public async Task GetMetadataAsync_ParsesNamespace()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(SimpleMetadataXml)
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.Namespace.Should().Be("TestService");
@@ -97,18 +58,14 @@ public class ODataClientMetadataTests : TestBase, IDisposable
 	public async Task GetMetadataAsync_ParsesEntityTypes()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(SimpleMetadataXml)
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EntityTypes.Should().HaveCount(2);
@@ -123,18 +80,14 @@ public class ODataClientMetadataTests : TestBase, IDisposable
 	public async Task GetMetadataAsync_ParsesEntityTypeProperties()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(SimpleMetadataXml)
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 		var productType = metadata.GetEntityType("Product");
 
 		// Assert
@@ -156,18 +109,14 @@ public class ODataClientMetadataTests : TestBase, IDisposable
 	public async Task GetMetadataAsync_ParsesEntityTypeKey()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(SimpleMetadataXml)
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 		var productType = metadata.GetEntityType("Product");
 
 		// Assert
@@ -183,18 +132,14 @@ public class ODataClientMetadataTests : TestBase, IDisposable
 	public async Task GetMetadataAsync_ParsesNavigationProperties()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(SimpleMetadataXml)
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 		var productType = metadata.GetEntityType("Product");
 
 		// Assert
@@ -214,18 +159,14 @@ public class ODataClientMetadataTests : TestBase, IDisposable
 	public async Task GetMetadataAsync_ParsesEntitySets()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(SimpleMetadataXml)
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EntitySets.Should().HaveCount(2);
@@ -243,18 +184,14 @@ public class ODataClientMetadataTests : TestBase, IDisposable
 	public async Task GetMetadataAsync_ParsesComplexTypes()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(ComplexMetadataXml)
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.ComplexTypes.Should().ContainSingle();
@@ -270,18 +207,14 @@ public class ODataClientMetadataTests : TestBase, IDisposable
 	public async Task GetMetadataAsync_ParsesEnumTypes()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(ComplexMetadataXml)
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EnumTypes.Should().ContainSingle();
@@ -299,18 +232,14 @@ public class ODataClientMetadataTests : TestBase, IDisposable
 	public async Task GetMetadataAsync_ParsesSingletons()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(ComplexMetadataXml)
 			});
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.Singletons.Should().ContainSingle();
@@ -329,18 +258,14 @@ public class ODataClientMetadataTests : TestBase, IDisposable
 	public async Task GetMetadataXmlAsync_ReturnsRawXml()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(SimpleMetadataXml)
 			});
 
 		// Act
-		var xml = await _client.GetMetadataXmlAsync(CancellationToken);
+		var xml = await Client.GetMetadataXmlAsync(CancellationToken);
 
 		// Assert
 		xml.Should().Contain("edmx:Edmx");

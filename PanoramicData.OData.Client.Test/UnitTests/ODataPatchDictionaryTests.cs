@@ -13,39 +13,12 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// ASP.NET OData Delta&lt;T&gt; model binder on the server to return null and produce a 400
 /// "A PATCH request body is required" response.
 /// </summary>
-public class ODataPatchDictionaryTests : TestBase, IDisposable
+public class ODataPatchDictionaryTests : MockedODataClientTestBase
 {
-    private readonly Mock<HttpMessageHandler> _mockHandler;
-    private readonly HttpClient _httpClient;
-    private readonly ODataClient _client;
     private string? _capturedBody;
 
-    public ODataPatchDictionaryTests()
-    {
-        _mockHandler = new Mock<HttpMessageHandler>();
-        _httpClient = new HttpClient(_mockHandler.Object)
-        {
-            BaseAddress = new Uri("https://test.odata.org/")
-        };
-        _client = new ODataClient(new ODataClientOptions
-        {
-            BaseUrl = "https://test.odata.org/",
-            HttpClient = _httpClient,
-            Logger = NullLogger.Instance,
-            RetryCount = 0
-        });
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        _client.Dispose();
-        _httpClient.Dispose();
-        GC.SuppressFinalize(this);
-    }
-
     private void SetupCaptureAndReturn(HttpStatusCode statusCode, string responseBody) =>
-        _mockHandler.Protected()
+        MockHandler.Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
@@ -204,7 +177,7 @@ public class ODataPatchDictionaryTests : TestBase, IDisposable
         var patch = new Dictionary<string, object?> { ["description"] = "new value" };
 
         // Act
-        await _client.UpdateAsync<SimpleEntity>("Entities", 1, patch, cancellationToken: CancellationToken);
+        await Client.UpdateAsync<SimpleEntity>("Entities", 1, patch, cancellationToken: CancellationToken);
 
         // Assert
         _capturedBody.Should().NotBeNull();
@@ -228,7 +201,7 @@ public class ODataPatchDictionaryTests : TestBase, IDisposable
         var patch = new Dictionary<string, object?> { ["name"] = "New Name", ["description"] = "new desc" };
 
         // Act
-        await _client.UpdateAsync<SimpleEntity>("Entities", 5, patch, cancellationToken: CancellationToken);
+        await Client.UpdateAsync<SimpleEntity>("Entities", 5, patch, cancellationToken: CancellationToken);
 
         // Assert
         _capturedBody.Should().Contain("\"name\"");
@@ -252,7 +225,7 @@ public class ODataPatchDictionaryTests : TestBase, IDisposable
         var patch = new Dictionary<string, object?> { ["description"] = null };
 
         // Act
-        await _client.UpdateAsync<SimpleEntity>("Entities", 3, patch, cancellationToken: CancellationToken);
+        await Client.UpdateAsync<SimpleEntity>("Entities", 3, patch, cancellationToken: CancellationToken);
 
         // Assert - null fields are omitted by WhenWritingNull, but no @odata.type
         _capturedBody.Should().NotContain("@odata.type");

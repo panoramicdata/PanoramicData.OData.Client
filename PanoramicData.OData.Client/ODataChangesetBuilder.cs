@@ -6,13 +6,10 @@ namespace PanoramicData.OData.Client;
 public class ODataChangesetBuilder
 {
 	private readonly ODataChangeset _changeset;
-	private readonly JsonSerializerOptions _jsonOptions;
 
-	internal ODataChangesetBuilder(ODataChangeset changeset, JsonSerializerOptions jsonOptions)
+	internal ODataChangesetBuilder(ODataChangeset changeset)
 	{
 		_changeset = changeset;
-		_jsonOptions = jsonOptions;
-		_ = _jsonOptions; // Reserved for future use
 	}
 
 	/// <summary>
@@ -106,7 +103,7 @@ public class ODataChangesetBuilder
 		int i => i.ToString(CultureInfo.InvariantCulture),
 		long l => l.ToString(CultureInfo.InvariantCulture),
 		Guid g => g.ToString(),
-		string s => $"'{s.Replace("'", "''")}'",
+		string s => ODataLiteral.Quote(s),
 		_ => key?.ToString() ?? throw new ArgumentException("Invalid key value")
 	};
 }

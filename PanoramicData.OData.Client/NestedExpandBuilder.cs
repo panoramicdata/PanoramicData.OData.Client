@@ -88,11 +88,11 @@ public class NestedExpandBuilder<T> where T : class
 	/// <summary>
 	/// Adds a filter to the expanded collection.
 	/// </summary>
-	public NestedExpandBuilder<T> Filter(string filter)
+	public NestedExpandBuilder<T> Filter(string filterExpression)
 	{
-		if (!string.IsNullOrWhiteSpace(filter))
+		if (!string.IsNullOrWhiteSpace(filterExpression))
 		{
-			_filterClauses.Add(filter);
+			_filterClauses.Add(filterExpression);
 		}
 
 		return this;
@@ -101,11 +101,11 @@ public class NestedExpandBuilder<T> where T : class
 	/// <summary>
 	/// Adds ordering to the expanded collection.
 	/// </summary>
-	public NestedExpandBuilder<T> OrderBy(string orderBy)
+	public NestedExpandBuilder<T> OrderBy(string orderByExpression)
 	{
-		if (!string.IsNullOrWhiteSpace(orderBy))
+		if (!string.IsNullOrWhiteSpace(orderByExpression))
 		{
-			_orderByClauses.Add(orderBy);
+			_orderByClauses.Add(orderByExpression);
 		}
 
 		return this;

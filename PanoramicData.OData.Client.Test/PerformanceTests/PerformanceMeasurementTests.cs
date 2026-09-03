@@ -63,10 +63,10 @@ public class PerformanceMeasurementTests
 			new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
 				.Filter(p => p.Price > 100 && (p.Rating == 4 || p.Rating == 5)).BuildUrl());
 
-		// Document results
-		var baseline = simpleQueryTime;
-
 		// Verify basic operations are reasonably fast
+		// The simple query is the baseline every other measurement is read against.
+		simpleQueryTime.Should().BePositive();
+
 		// Raw filter should complete without issues (no relative threshold - too noisy)
 		rawFilterTime.Should().BePositive();
 
@@ -81,6 +81,9 @@ public class PerformanceMeasurementTests
 
 		// Function with reflection should complete
 		functionTime.Should().BePositive();
+
+		// String functions should complete
+		stringContainsTime.Should().BePositive();
 	}
 
 	/// <summary>
@@ -136,6 +139,7 @@ public class PerformanceMeasurementTests
 				.Function("Search", new { Term = "test", Max = 10 }).BuildUrl());
 
 		// Function calls should complete - we're documenting the overhead exists
+		simpleQueryTime.Should().BePositive();
 		functionTime.Should().BePositive();
 
 		// Document: Functions are expected to be slower due to reflection

@@ -6,39 +6,8 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for ETag and concurrency control support.
 /// </summary>
-public class ODataClientETagTests : IDisposable
+public class ODataClientETagTests : MockedODataClientTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-	private readonly ODataClient _client;
-
-	/// <summary>
-	/// Initializes a new instance of the test class.
-	/// </summary>
-	public ODataClientETagTests()
-	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 0
-		});
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_client.Dispose();
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
-	}
-
 	#region GetByKeyWithETagAsync Tests
 
 	/// <summary>
@@ -54,15 +23,10 @@ public class ODataClientETagTests : IDisposable
 		};
 		response.Headers.ETag = new EntityTagHeaderValue("\"abc123\"", isWeak: true);
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
 		// Act
-		var result = await _client.GetByKeyWithETagAsync<Product, int>(1, cancellationToken: CancellationToken.None);
+		var result = await Client.GetByKeyWithETagAsync<Product, int>(1, cancellationToken: CancellationToken.None);
 
 		// Assert
 		result.Value.Should().NotBeNull();
@@ -82,15 +46,10 @@ public class ODataClientETagTests : IDisposable
 			Content = new StringContent("""{"Id": 1, "Name": "Widget"}""")
 		};
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
 		// Act
-		var result = await _client.GetByKeyWithETagAsync<Product, int>(1, cancellationToken: CancellationToken.None);
+		var result = await Client.GetByKeyWithETagAsync<Product, int>(1, cancellationToken: CancellationToken.None);
 
 		// Assert
 		result.Value.Should().NotBeNull();
@@ -110,11 +69,7 @@ public class ODataClientETagTests : IDisposable
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -122,7 +77,7 @@ public class ODataClientETagTests : IDisposable
 			});
 
 		// Act
-		await _client.UpdateAsync<Product>("Products", 1, new { Name = "Updated Widget" }, "W/\"abc123\"", cancellationToken: CancellationToken.None);
+		await Client.UpdateAsync<Product>("Products", 1, new { Name = "Updated Widget" }, "W/\"abc123\"", cancellationToken: CancellationToken.None);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -139,11 +94,7 @@ public class ODataClientETagTests : IDisposable
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -151,7 +102,7 @@ public class ODataClientETagTests : IDisposable
 			});
 
 		// Act
-		await _client.UpdateAsync<Product>("Products", 1, new { Name = "Updated Widget" }, cancellationToken: CancellationToken.None);
+		await Client.UpdateAsync<Product>("Products", 1, new { Name = "Updated Widget" }, cancellationToken: CancellationToken.None);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -171,15 +122,10 @@ public class ODataClientETagTests : IDisposable
 		};
 		response.Headers.ETag = new EntityTagHeaderValue("\"def456\"", isWeak: true);
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
 		// Act
-		var act = async () => await _client.UpdateAsync<Product>(
+		var act = async () => await Client.UpdateAsync<Product>(
 			"Products", 1, new { Name = "Updated" }, "W/\"abc123\"", cancellationToken: CancellationToken.None);
 
 		// Assert
@@ -202,16 +148,12 @@ public class ODataClientETagTests : IDisposable
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
 
 		// Act
-		await _client.DeleteAsync("Products", 1, "W/\"abc123\"", cancellationToken: CancellationToken.None);
+		await Client.DeleteAsync("Products", 1, "W/\"abc123\"", cancellationToken: CancellationToken.None);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -231,15 +173,10 @@ public class ODataClientETagTests : IDisposable
 			Content = new StringContent("""{"error": {"message": "Precondition Failed"}}""")
 		};
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
 		// Act
-		var act = async () => await _client.DeleteAsync("Products", 1, "W/\"abc123\"", cancellationToken: CancellationToken.None);
+		var act = async () => await Client.DeleteAsync("Products", 1, "W/\"abc123\"", cancellationToken: CancellationToken.None);
 
 		// Assert
 		await act.Should().ThrowAsync<ODataConcurrencyException>();
@@ -262,16 +199,11 @@ public class ODataClientETagTests : IDisposable
 		};
 		response.Headers.ETag = new EntityTagHeaderValue("\"collection123\"", isWeak: true);
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
 		// Act
-		var query = _client.For<Product>("Products").Top(10);
-		var result = await _client.GetAsync(query, CancellationToken.None);
+		var query = Client.For<Product>("Products").Top(10);
+		var result = await Client.GetAsync(query, CancellationToken.None);
 
 		// Assert
 		result.ETag.Should().Be("W/\"collection123\"");
@@ -292,11 +224,7 @@ public class ODataClientETagTests : IDisposable
 		var callCount = 0;
 		HttpRequestMessage? updateRequest = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync((HttpRequestMessage req, CancellationToken _) =>
 			{
 				callCount++;
@@ -322,11 +250,11 @@ public class ODataClientETagTests : IDisposable
 			});
 
 		// Act - Get the entity with ETag
-		var entityWithETag = await _client.GetByKeyWithETagAsync<Product, int>(1, cancellationToken: CancellationToken.None);
+		var entityWithETag = await Client.GetByKeyWithETagAsync<Product, int>(1, cancellationToken: CancellationToken.None);
 		var etag = entityWithETag.ETag;
 
 		// Update using the ETag
-		var updated = await _client.UpdateAsync<Product>("Products", 1, new { Name = "Updated Widget" }, etag, cancellationToken: CancellationToken.None);
+		var updated = await Client.UpdateAsync<Product>("Products", 1, new { Name = "Updated Widget" }, etag, cancellationToken: CancellationToken.None);
 
 		// Assert
 		etag.Should().Be("W/\"v1\"");

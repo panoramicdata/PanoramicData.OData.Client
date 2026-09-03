@@ -3,39 +3,8 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for ODataClient async long-running operations.
 /// </summary>
-public class ODataClientAsyncTests : TestBase, IDisposable
+public class ODataClientAsyncTests : MockedODataClientTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-	private readonly ODataClient _client;
-
-	/// <summary>
-	/// Initializes a new instance of the test class with mocked dependencies.
-	/// </summary>
-	public ODataClientAsyncTests()
-	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 0
-		});
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_client.Dispose();
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
-	}
-
 	#region CallActionAsyncWithPreferAsync Tests
 
 	/// <summary>
@@ -49,7 +18,7 @@ public class ODataClientAsyncTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.OK, responseJson);
 
 		// Act
-		var result = await _client.CallActionAsyncWithPreferAsync<ActionResult>(
+		var result = await Client.CallActionAsyncWithPreferAsync<ActionResult>(
 			"Products(1)/DoWork",
 			new { Param = "test" },
 			cancellationToken: CancellationToken);
@@ -72,15 +41,10 @@ public class ODataClientAsyncTests : TestBase, IDisposable
 		var response = new HttpResponseMessage(HttpStatusCode.Accepted);
 		response.Headers.Location = new Uri("https://test.odata.org/async-monitor/12345");
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
 		// Act
-		var result = await _client.CallActionAsyncWithPreferAsync<ActionResult>(
+		var result = await Client.CallActionAsyncWithPreferAsync<ActionResult>(
 			"Products(1)/LongRunningAction",
 			cancellationToken: CancellationToken);
 
@@ -100,15 +64,10 @@ public class ODataClientAsyncTests : TestBase, IDisposable
 		var response = new HttpResponseMessage(HttpStatusCode.Accepted);
 		// No Location header
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
 		// Act
-		var act = async () => await _client.CallActionAsyncWithPreferAsync<ActionResult>(
+		var act = async () => await Client.CallActionAsyncWithPreferAsync<ActionResult>(
 			"Products(1)/LongRunningAction",
 			cancellationToken: CancellationToken);
 
@@ -125,11 +84,7 @@ public class ODataClientAsyncTests : TestBase, IDisposable
 	{
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -137,7 +92,7 @@ public class ODataClientAsyncTests : TestBase, IDisposable
 			});
 
 		// Act
-		await _client.CallActionAsyncWithPreferAsync<ActionResult>("Products(1)/Action", cancellationToken: CancellationToken);
+		await Client.CallActionAsyncWithPreferAsync<ActionResult>("Products(1)/Action", cancellationToken: CancellationToken);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -155,7 +110,7 @@ public class ODataClientAsyncTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.NoContent, "");
 
 		// Act
-		var result = await _client.CallActionAsyncWithPreferAsync<ActionResult>(
+		var result = await Client.CallActionAsyncWithPreferAsync<ActionResult>(
 			"Products(1)/VoidAction",
 			cancellationToken: CancellationToken);
 
@@ -179,7 +134,7 @@ public class ODataClientAsyncTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.OK, responseJson);
 
 		// Act
-		var result = await _client.CallActionAndWaitAsync<ActionResult>(
+		var result = await Client.CallActionAndWaitAsync<ActionResult>(
 			"Products(1)/QuickAction",
 			cancellationToken: CancellationToken);
 
@@ -201,19 +156,15 @@ public class ODataClientAsyncTests : TestBase, IDisposable
 	{
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(CreateBatchResponse());
 
-		var batch = _client.CreateBatch()
+		var batch = Client.CreateBatch()
 			.Get<TestProduct>("Products", 1);
 
 		// Act
-		await _client.ExecuteBatchAsyncWithPreferAsync(batch, cancellationToken: CancellationToken);
+		await Client.ExecuteBatchAsyncWithPreferAsync(batch, cancellationToken: CancellationToken);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -228,18 +179,13 @@ public class ODataClientAsyncTests : TestBase, IDisposable
 	public async Task ExecuteBatchAsyncWithPreferAsync_SyncCompletion_ReturnsBatchResponse()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(CreateBatchResponse());
+		SetupResponse(CreateBatchResponse());
 
-		var batch = _client.CreateBatch()
+		var batch = Client.CreateBatch()
 			.Get<TestProduct>("Products", 1);
 
 		// Act
-		var result = await _client.ExecuteBatchAsyncWithPreferAsync(batch, cancellationToken: CancellationToken);
+		var result = await Client.ExecuteBatchAsyncWithPreferAsync(batch, cancellationToken: CancellationToken);
 
 		// Assert
 		result.IsAsync.Should().BeFalse();
@@ -256,18 +202,13 @@ public class ODataClientAsyncTests : TestBase, IDisposable
 		var response = new HttpResponseMessage(HttpStatusCode.Accepted);
 		response.Headers.Location = new Uri("https://test.odata.org/async-batch/abc");
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
-		var batch = _client.CreateBatch()
+		var batch = Client.CreateBatch()
 			.Get<TestProduct>("Products", 1);
 
 		// Act
-		var result = await _client.ExecuteBatchAsyncWithPreferAsync(batch, cancellationToken: CancellationToken);
+		var result = await Client.ExecuteBatchAsyncWithPreferAsync(batch, cancellationToken: CancellationToken);
 
 		// Assert
 		result.IsAsync.Should().BeTrue();
@@ -284,18 +225,13 @@ public class ODataClientAsyncTests : TestBase, IDisposable
 		var response = new HttpResponseMessage(HttpStatusCode.Accepted);
 		// No Location header
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
-		var batch = _client.CreateBatch()
+		var batch = Client.CreateBatch()
 			.Get<TestProduct>("Products", 1);
 
 		// Act
-		var act = async () => await _client.ExecuteBatchAsyncWithPreferAsync(batch, cancellationToken: CancellationToken);
+		var act = async () => await Client.ExecuteBatchAsyncWithPreferAsync(batch, cancellationToken: CancellationToken);
 
 		// Assert
 		await act.Should().ThrowAsync<InvalidOperationException>()
@@ -343,11 +279,7 @@ public class ODataClientAsyncTests : TestBase, IDisposable
 
 	#region Helper Methods
 
-	private void SetupMockResponse(HttpStatusCode statusCode, string content) => _mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+	private void SetupMockResponse(HttpStatusCode statusCode, string content) => SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(statusCode)
 			{
 				Content = new StringContent(content, System.Text.Encoding.UTF8, "application/json")
