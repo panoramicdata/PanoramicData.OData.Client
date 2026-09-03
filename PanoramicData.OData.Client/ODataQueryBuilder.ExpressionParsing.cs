@@ -287,29 +287,43 @@ public partial class ODataQueryBuilder<T> where T : class
 	}
 
 	private static string FormatValue(object? value, Type? expectedType = null)
+		=> TryFormatAsEnum(value, expectedType, out var formattedEnum)
+			? formattedEnum
+			: FormatLiteral(value);
+
+	/// <summary>
+	/// Formats a value the expression's target type says is an enum, whether it arrived as the
+	/// enum itself or as its underlying numeric value.
+	/// </summary>
+	/// <returns><see langword="true"/> if the value was formatted as an enum.</returns>
+	private static bool TryFormatAsEnum(object? value, Type? expectedType, out string formatted)
 	{
+		formatted = string.Empty;
+
 		if (expectedType is not null)
 		{
 			expectedType = Nullable.GetUnderlyingType(expectedType) ?? expectedType;
 		}
 
-		if (value is not null && expectedType?.IsEnum == true)
+		if (value is null || expectedType?.IsEnum != true)
 		{
-			if (value is Enum enumValue)
-			{
-				return $"'{enumValue}'";
-			}
-
-			if (TryFormatEnumFromUnderlyingValue(expectedType, value, out var formattedEnum))
-			{
-				return formattedEnum;
-			}
+			return false;
 		}
 
-		return value switch
+		if (value is Enum enumValue)
+		{
+			formatted = $"'{enumValue}'";
+			return true;
+		}
+
+		return TryFormatEnumFromUnderlyingValue(expectedType, value, out formatted);
+	}
+
+	private static string FormatLiteral(object? value)
+		=> value switch
 		{
 			null => "null",
-			string s => $"'{s.Replace("'", "''")}'",
+			string s => ODataLiteral.Quote(s),
 			bool b => b.ToString().ToLowerInvariant(),
 			DateTime dt => FormatDateTime(dt),
 			DateTimeOffset dto => $"{dto.UtcDateTime:yyyy-MM-ddTHH:mm:ssZ}",
@@ -317,7 +331,6 @@ public partial class ODataQueryBuilder<T> where T : class
 			Enum e => $"'{e}'",
 			_ => value.ToString() ?? "null"
 		};
-	}
 
 	private static bool TryFormatEnumFromUnderlyingValue(Type enumType, object value, out string formatted)
 	{
@@ -353,7 +366,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		int i => i.ToString(CultureInfo.InvariantCulture),
 		long l => l.ToString(CultureInfo.InvariantCulture),
 		Guid g => g.ToString(),
-		string s => $"'{s.Replace("'", "''")}'",
+		string s => ODataLiteral.Quote(s),
 		_ => key.ToString() ?? throw new ArgumentException("Invalid key value")
 	};
 
@@ -380,7 +393,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	private static string FormatFunctionParameterValue(object? value) => value switch
 	{
 		null => "null",
-		string s => $"'{s.Replace("'", "''")}'",
+		string s => ODataLiteral.Quote(s),
 		bool b => b.ToString().ToLowerInvariant(),
 		int i => i.ToString(CultureInfo.InvariantCulture),
 		long l => l.ToString(CultureInfo.InvariantCulture),

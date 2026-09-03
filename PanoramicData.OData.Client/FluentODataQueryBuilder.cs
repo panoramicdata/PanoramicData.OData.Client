@@ -571,7 +571,7 @@ public class FluentODataQueryBuilder
 		int i => i.ToString(CultureInfo.InvariantCulture),
 		long l => l.ToString(CultureInfo.InvariantCulture),
 		Guid g => g.ToString(),
-		string s => $"'{s.Replace("'", "''")}'",
+		string s => ODataLiteral.Quote(s),
 		_ => key.ToString() ?? throw new ArgumentException("Invalid key value")
 	};
 
@@ -586,7 +586,7 @@ public class FluentODataQueryBuilder
 			var formattedValue = value switch
 			{
 				null => "null",
-				string s => $"'{s.Replace("'", "''")}'",
+				string s => ODataLiteral.Quote(s),
 				bool b => b.ToString().ToLowerInvariant(),
 				DateTime dt => dt.ToString("O", CultureInfo.InvariantCulture),
 				DateTimeOffset dto => dto.ToString("O", CultureInfo.InvariantCulture),

@@ -103,7 +103,7 @@ public class ODataChangesetBuilder
 		int i => i.ToString(CultureInfo.InvariantCulture),
 		long l => l.ToString(CultureInfo.InvariantCulture),
 		Guid g => g.ToString(),
-		string s => $"'{s.Replace("'", "''")}'",
+		string s => ODataLiteral.Quote(s),
 		_ => key?.ToString() ?? throw new ArgumentException("Invalid key value")
 	};
 }
