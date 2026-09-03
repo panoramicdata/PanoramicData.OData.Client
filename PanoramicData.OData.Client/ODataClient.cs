@@ -96,7 +96,7 @@ public partial class ODataClient : IDisposable
 			foreach (var header in headers)
 			{
 				request.Headers.TryAddWithoutValidation(header.Key, header.Value);
-				LoggerMessages.AddingHeader(_logger, header.Key, header.Value);
+				LoggerMessages.AddingHeader(_logger, header.Key, HttpExtensions.RedactIfSensitive(header.Key, header.Value));
 			}
 		}
 
@@ -322,14 +322,14 @@ public partial class ODataClient : IDisposable
 		sb.AppendLine("--- Request Headers ---");
 		foreach (var header in request.Headers)
 		{
-			sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {string.Join(", ", header.Value)}");
+			sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {HttpExtensions.RedactIfSensitive(header.Key, header.Value)}");
 		}
 
 		if (request.Content is not null)
 		{
 			foreach (var header in request.Content.Headers)
 			{
-				sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {string.Join(", ", header.Value)}");
+				sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {HttpExtensions.RedactIfSensitive(header.Key, header.Value)}");
 			}
 
 			sb.AppendLine("--- Request Body ---");
@@ -354,12 +354,12 @@ public partial class ODataClient : IDisposable
 		sb.AppendLine("--- Response Headers ---");
 		foreach (var header in response.Headers)
 		{
-			sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {string.Join(", ", header.Value)}");
+			sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {HttpExtensions.RedactIfSensitive(header.Key, header.Value)}");
 		}
 
 		foreach (var header in response.Content.Headers)
 		{
-			sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {string.Join(", ", header.Value)}");
+			sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {HttpExtensions.RedactIfSensitive(header.Key, header.Value)}");
 		}
 
 		sb.AppendLine("--- Response Body ---");
