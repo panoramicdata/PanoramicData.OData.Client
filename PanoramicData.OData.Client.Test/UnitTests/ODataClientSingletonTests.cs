@@ -6,39 +6,8 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for OData singleton entity support.
 /// </summary>
-public class ODataClientSingletonTests : IDisposable
+public class ODataClientSingletonTests : MockedODataClientTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-	private readonly ODataClient _client;
-
-	/// <summary>
-	/// Initializes a new instance of the test class.
-	/// </summary>
-	public ODataClientSingletonTests()
-	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 0
-		});
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_client.Dispose();
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
-	}
-
 	#region GetSingletonAsync Tests
 
 	/// <summary>
@@ -48,7 +17,7 @@ public class ODataClientSingletonTests : IDisposable
 	public async Task GetSingletonAsync_ReturnsSingletonEntity()
 	{
 		// Arrange
-		_mockHandler.Protected()
+		MockHandler.Protected()
 			.Setup<Task<HttpResponseMessage>>(
 				"SendAsync",
 				ItExpr.Is<HttpRequestMessage>(m => m.RequestUri!.PathAndQuery == "/Me"),
@@ -65,7 +34,7 @@ public class ODataClientSingletonTests : IDisposable
 			});
 
 		// Act
-		var result = await _client.GetSingletonAsync<Person>("Me", cancellationToken: CancellationToken.None);
+		var result = await Client.GetSingletonAsync<Person>("Me", cancellationToken: CancellationToken.None);
 
 		// Assert
 		result.Should().NotBeNull();
@@ -82,11 +51,7 @@ public class ODataClientSingletonTests : IDisposable
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -94,7 +59,7 @@ public class ODataClientSingletonTests : IDisposable
 			});
 
 		// Act
-		await _client.GetSingletonAsync<Person>("Me", cancellationToken: CancellationToken.None);
+		await Client.GetSingletonAsync<Person>("Me", cancellationToken: CancellationToken.None);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -109,18 +74,14 @@ public class ODataClientSingletonTests : IDisposable
 	public async Task GetSingletonAsync_NotFound_ThrowsNotFoundException()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NotFound)
 			{
 				Content = new StringContent("""{"error": {"message": "Singleton not found"}}""")
 			});
 
 		// Act
-		var act = async () => await _client.GetSingletonAsync<Person>("Me", cancellationToken: CancellationToken.None);
+		var act = async () => await Client.GetSingletonAsync<Person>("Me", cancellationToken: CancellationToken.None);
 
 		// Assert
 		await act.Should().ThrowAsync<ODataNotFoundException>();
@@ -143,15 +104,10 @@ public class ODataClientSingletonTests : IDisposable
 		};
 		response.Headers.ETag = new EntityTagHeaderValue("\"singleton-v1\"", isWeak: true);
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
 		// Act
-		var result = await _client.GetSingletonWithETagAsync<Person>("Me", cancellationToken: CancellationToken.None);
+		var result = await Client.GetSingletonWithETagAsync<Person>("Me", cancellationToken: CancellationToken.None);
 
 		// Assert
 		result.Value.Should().NotBeNull();
@@ -172,11 +128,7 @@ public class ODataClientSingletonTests : IDisposable
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -184,7 +136,7 @@ public class ODataClientSingletonTests : IDisposable
 			});
 
 		// Act
-		var result = await _client.UpdateSingletonAsync<Person>("Me", new { FirstName = "Jane" }, cancellationToken: CancellationToken.None);
+		var result = await Client.UpdateSingletonAsync<Person>("Me", new { FirstName = "Jane" }, cancellationToken: CancellationToken.None);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -202,11 +154,7 @@ public class ODataClientSingletonTests : IDisposable
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -214,7 +162,7 @@ public class ODataClientSingletonTests : IDisposable
 			});
 
 		// Act
-		await _client.UpdateSingletonAsync<Person>("Me", new { FirstName = "Jane" }, "W/\"v1\"", cancellationToken: CancellationToken.None);
+		await Client.UpdateSingletonAsync<Person>("Me", new { FirstName = "Jane" }, "W/\"v1\"", cancellationToken: CancellationToken.None);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -231,11 +179,7 @@ public class ODataClientSingletonTests : IDisposable
 		// Arrange
 		var callCount = 0;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync((HttpRequestMessage req, CancellationToken _) =>
 			{
 				callCount++;
@@ -253,7 +197,7 @@ public class ODataClientSingletonTests : IDisposable
 			});
 
 		// Act
-		var result = await _client.UpdateSingletonAsync<Person>("Me", new { FirstName = "Jane" }, cancellationToken: CancellationToken.None);
+		var result = await Client.UpdateSingletonAsync<Person>("Me", new { FirstName = "Jane" }, cancellationToken: CancellationToken.None);
 
 		// Assert
 		callCount.Should().Be(2); // PATCH + GET
@@ -267,18 +211,14 @@ public class ODataClientSingletonTests : IDisposable
 	public async Task UpdateSingletonAsync_ConcurrencyConflict_ThrowsException()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.PreconditionFailed)
 			{
 				Content = new StringContent("""{"error": {"message": "Precondition Failed"}}""")
 			});
 
 		// Act
-		var act = async () => await _client.UpdateSingletonAsync<Person>("Me", new { FirstName = "Jane" }, "W/\"old\"", cancellationToken: CancellationToken.None);
+		var act = async () => await Client.UpdateSingletonAsync<Person>("Me", new { FirstName = "Jane" }, "W/\"old\"", cancellationToken: CancellationToken.None);
 
 		// Assert
 		await act.Should().ThrowAsync<ODataConcurrencyException>();
@@ -297,11 +237,7 @@ public class ODataClientSingletonTests : IDisposable
 		// Arrange
 		var callCount = 0;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync((HttpRequestMessage _, CancellationToken _) =>
 			{
 				callCount++;
@@ -324,8 +260,8 @@ public class ODataClientSingletonTests : IDisposable
 			});
 
 		// Act
-		var meWithETag = await _client.GetSingletonWithETagAsync<Person>("Me", cancellationToken: CancellationToken.None);
-		var updated = await _client.UpdateSingletonAsync<Person>("Me", new { FirstName = "Jane" }, meWithETag.ETag, cancellationToken: CancellationToken.None);
+		var meWithETag = await Client.GetSingletonWithETagAsync<Person>("Me", cancellationToken: CancellationToken.None);
+		var updated = await Client.UpdateSingletonAsync<Person>("Me", new { FirstName = "Jane" }, meWithETag.ETag, cancellationToken: CancellationToken.None);
 
 		// Assert
 		meWithETag.ETag.Should().Be("W/\"v1\"");

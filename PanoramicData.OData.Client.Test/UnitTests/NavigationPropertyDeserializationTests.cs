@@ -7,42 +7,12 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// Verifies that expanded navigation properties are properly deserialized.
 /// See: https://github.com/panoramicdata/PanoramicData.OData.Client/issues/1
 /// </summary>
-public class NavigationPropertyDeserializationTests : IDisposable
+public class NavigationPropertyDeserializationTests : MockedODataClientTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-	private readonly ODataClient _client;
 	private static readonly JsonSerializerOptions _jsonOptions = new()
 	{
 		PropertyNameCaseInsensitive = true
 	};
-
-	/// <summary>
-	/// Initializes a new instance of the test class.
-	/// </summary>
-	public NavigationPropertyDeserializationTests()
-	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 0
-		});
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_client.Dispose();
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
-	}
 
 	#region Test Models
 
@@ -124,9 +94,9 @@ public class NavigationPropertyDeserializationTests : IDisposable
 		SetupMockResponse(responseJson);
 
 		// Act
-		var query = _client.For<ReportJob>("ReportJobs")
+		var query = Client.For<ReportJob>("ReportJobs")
 			.Expand("ReportBatchJob");
-		var response = await _client.GetAsync(query, CancellationToken.None);
+		var response = await Client.GetAsync(query, CancellationToken.None);
 
 		// Assert
 		response.Value.Should().ContainSingle();
@@ -174,9 +144,9 @@ public class NavigationPropertyDeserializationTests : IDisposable
 		SetupMockResponse(responseJson);
 
 		// Act
-		var query = _client.For<ReportJob>("ReportJobs")
+		var query = Client.For<ReportJob>("ReportJobs")
 			.Expand("ReportBatchJob($expand=ReportSchedule)");
-		var response = await _client.GetAsync(query, CancellationToken.None);
+		var response = await Client.GetAsync(query, CancellationToken.None);
 
 		// Assert
 		response.Value.Should().ContainSingle();
@@ -215,10 +185,10 @@ public class NavigationPropertyDeserializationTests : IDisposable
 		SetupMockResponse(responseJson);
 
 		// Act
-		var query = _client.For<ReportJob>("ReportJobs")
+		var query = Client.For<ReportJob>("ReportJobs")
 			.Expand("ReportBatchJob($select=ReportScheduleId)")
 			.Select("Id,Name,ReportBatchJobId");
-		var response = await _client.GetAsync(query, CancellationToken.None);
+		var response = await Client.GetAsync(query, CancellationToken.None);
 
 		// Assert
 		response.Value.Should().ContainSingle();
@@ -252,9 +222,9 @@ public class NavigationPropertyDeserializationTests : IDisposable
 		SetupMockResponse(responseJson);
 
 		// Act
-		var query = _client.For<ReportJob>("ReportJobs")
+		var query = Client.For<ReportJob>("ReportJobs")
 			.Expand("ReportBatchJob");
-		var response = await _client.GetAsync(query, CancellationToken.None);
+		var response = await Client.GetAsync(query, CancellationToken.None);
 
 		// Assert
 		response.Value.Should().ContainSingle();
@@ -321,9 +291,9 @@ public class NavigationPropertyDeserializationTests : IDisposable
 		SetupMockResponse(responseJson);
 
 		// Act
-		var query = _client.For<ReportJob>("ReportJobs")
+		var query = Client.For<ReportJob>("ReportJobs")
 			.Expand("ReportBatchJob");
-		var reportJob = await _client.GetByKeyAsync<ReportJob, int>(541, query, CancellationToken.None);
+		var reportJob = await Client.GetByKeyAsync<ReportJob, int>(541, query, CancellationToken.None);
 
 		// Assert
 		reportJob.Should().NotBeNull();
@@ -332,11 +302,7 @@ public class NavigationPropertyDeserializationTests : IDisposable
 		reportJob.ReportBatchJob.ReportScheduleId.Should().Be(123);
 	}
 
-	private void SetupMockResponse(string responseJson) => _mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+	private void SetupMockResponse(string responseJson) => SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(responseJson, System.Text.Encoding.UTF8, "application/json")

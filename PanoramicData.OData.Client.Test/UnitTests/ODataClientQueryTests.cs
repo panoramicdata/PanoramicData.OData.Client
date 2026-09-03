@@ -15,39 +15,8 @@ internal sealed class GeneratedMailbox { }
 /// <summary>
 /// Unit tests for ODataClient query operations.
 /// </summary>
-public class ODataClientQueryTests : TestBase, IDisposable
+public class ODataClientQueryTests : MockedODataClientTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-	private readonly ODataClient _client;
-
-	/// <summary>
-	/// Initializes a new instance of the test class with mocked dependencies.
-	/// </summary>
-	public ODataClientQueryTests()
-	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 0
-		});
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_client.Dispose();
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
-	}
-
 	#region For<T>() Tests
 
 	/// <summary>
@@ -57,7 +26,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	public void For_AutoEntitySetName_Pluralizes()
 	{
 		// Act
-		var query = _client.For<Product>();
+		var query = Client.For<Product>();
 
 		// Assert - verify URL contains pluralized name
 		var url = query.BuildUrl();
@@ -71,7 +40,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	public void For_EntityNameEndingInY_PluralizesCorrectly()
 	{
 		// Act
-		var query = _client.For<Category>();
+		var query = Client.For<Category>();
 
 		// Assert
 		var url = query.BuildUrl();
@@ -85,7 +54,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	public void For_EntityNameEndingInS_Uses_Es()
 	{
 		// Act
-		var query = _client.For<Address>();
+		var query = Client.For<Address>();
 
 		// Assert
 		var url = query.BuildUrl();
@@ -99,7 +68,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	public void For_WithEntitySetName_UsesProvidedName()
 	{
 		// Act
-		var query = _client.For<Product>("CustomProducts");
+		var query = Client.For<Product>("CustomProducts");
 
 		// Assert
 		var url = query.BuildUrl();
@@ -113,7 +82,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	public void For_EntitySetAttribute_OverridesPluralization()
 	{
 		// Act - GeneratedMailbox has [EntitySet("Mailbox")] so should produce "Mailbox" not "GeneratedMailboxes"
-		var url = _client.For<GeneratedMailbox>().BuildUrl();
+		var url = Client.For<GeneratedMailbox>().BuildUrl();
 
 		// Assert
 		url.Should().Be("Mailbox");
@@ -126,7 +95,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	public void For_AutoPluralizationDisabled_UsesTypeNameAsIs()
 	{
 		// Arrange
-		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var httpClient = new HttpClient(MockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
 		using var client = new ODataClient(new ODataClientOptions
 		{
 			BaseUrl = "https://test.odata.org/",
@@ -150,7 +119,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	public void For_AutoPluralizationDisabled_AddressStaysSingular()
 	{
 		// Arrange - simulates APIs where endpoint is /Address not /Addresses
-		using var httpClient = new HttpClient(_mockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
+		using var httpClient = new HttpClient(MockHandler.Object) { BaseAddress = new Uri("https://test.odata.org/") };
 		using var client = new ODataClient(new ODataClientOptions
 		{
 			BaseUrl = "https://test.odata.org/",
@@ -178,7 +147,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	public void NavigateTo_WithStringPropertyName_ProducesCorrectPath()
 	{
 		// Act
-		var url = _client.For<Product>("Products").Key(1).NavigateTo<Product>("RelatedProducts").BuildUrl();
+		var url = Client.For<Product>("Products").Key(1).NavigateTo<Product>("RelatedProducts").BuildUrl();
 
 		// Assert
 		url.Should().Be("Products(1)/RelatedProducts");
@@ -191,7 +160,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	public void NavigateTo_WithCollectionExpression_ProducesCorrectPath()
 	{
 		// Act
-		var url = _client.For<Person>("People").Key("russellwhyte").NavigateTo<Person>("Friends").BuildUrl();
+		var url = Client.For<Person>("People").Key("russellwhyte").NavigateTo<Person>("Friends").BuildUrl();
 
 		// Assert
 		url.Should().Be("People('russellwhyte')/Friends");
@@ -204,7 +173,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	public void NavigateTo_WithSelect_ProducesCorrectUrl()
 	{
 		// Act
-		var url = _client.For<Person>("People").Key("russellwhyte").NavigateTo<Person>("Friends").Select(f => new { f.UserName, f.FirstName }).BuildUrl();
+		var url = Client.For<Person>("People").Key("russellwhyte").NavigateTo<Person>("Friends").Select(f => new { f.UserName, f.FirstName }).BuildUrl();
 
 		// Assert
 		url.Should().StartWith("People('russellwhyte')/Friends");
@@ -220,7 +189,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	public void NavigateTo_WithoutKey_ThrowsInvalidOperationException()
 	{
 		// Act
-		var act = () => _client.For<Person>("People").NavigateTo<Person>("Friends");
+		var act = () => Client.For<Person>("People").NavigateTo<Person>("Friends");
 
 		// Assert
 		act.Should().Throw<InvalidOperationException>()
@@ -235,7 +204,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	public void NavigateTo_NonGenericExpr_ProducesCorrectPath()
 	{
 		// Act
-		var url = _client.For<Person>("People").Key("russellwhyte").NavigateTo(x => x.Friends).BuildUrl();
+		var url = Client.For<Person>("People").Key("russellwhyte").NavigateTo(x => x.Friends).BuildUrl();
 
 		// Assert
 		url.Should().Be("People('russellwhyte')/Friends");
@@ -250,7 +219,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	public void NavigateTo_NonGenericExprNested_ResolvesFullPath()
 	{
 		// Act
-		var url = _client.For<Person>("People").Key("russellwhyte").NavigateTo(x => x.BestFriend!.Friends).BuildUrl();
+		var url = Client.For<Person>("People").Key("russellwhyte").NavigateTo(x => x.BestFriend!.Friends).BuildUrl();
 
 		// Assert
 		url.Should().Be("People('russellwhyte')/BestFriend/Friends");
@@ -263,7 +232,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	public void NavigateTo_NonGenericExpr_As_PreservesPath()
 	{
 		// Act
-		var url = _client.For<Person>("People").Key("russellwhyte").NavigateTo(x => x.Friends).As<Person>().BuildUrl();
+		var url = Client.For<Person>("People").Key("russellwhyte").NavigateTo(x => x.Friends).As<Person>().BuildUrl();
 
 		// Assert
 		url.Should().Be("People('russellwhyte')/Friends");
@@ -278,11 +247,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	{
 		// Arrange
 		string? capturedUrl = null;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUrl = req.RequestUri?.PathAndQuery)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -290,7 +255,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 			});
 
 		// Act
-		await _client.For<Person>("People")
+		await Client.For<Person>("People")
 			.Key("russellwhyte")
 			.NavigateTo(x => x.Friends)
 			.As<Person>()
@@ -308,11 +273,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	{
 		// Arrange
 		string? capturedUrl = null;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUrl = req.RequestUri?.PathAndQuery)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -322,7 +283,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 			});
 
 		// Act
-		var results = (await _client.For<Person>("People")
+		var results = (await Client.For<Person>("People")
 			.Key("russellwhyte")
 			.NavigateTo(x => x.Friends)
 			.As<Person>()
@@ -342,11 +303,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	{
 		// Arrange
 		string? capturedUrl = null;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUrl = req.RequestUri?.PathAndQuery)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -356,7 +313,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 			});
 
 		// Act
-		var results = (await _client.For<Person>("People")
+		var results = (await Client.For<Person>("People")
 			.Key("russellwhyte")
 			.NavigateTo(x => x.Friends)
 			.FindEntriesAsync(CancellationToken)).ToList();
@@ -381,7 +338,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.OK, """{"value": []}""");
 
 		// Act
-		var response = await _client.GetAsync(_client.For<Product>("Products"), CancellationToken);
+		var response = await Client.GetAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		response.Value.Should().BeEmpty();
@@ -400,15 +357,10 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		};
 		response.Headers.ETag = new System.Net.Http.Headers.EntityTagHeaderValue("\"abc123\"");
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
 		// Act
-		var result = await _client.GetAsync(_client.For<Product>("Products"), CancellationToken);
+		var result = await Client.GetAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		result.ETag.Should().Be("\"abc123\"");
@@ -438,18 +390,14 @@ public class ODataClientQueryTests : TestBase, IDisposable
 			}
 			""");
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() => new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(responses.Dequeue(), System.Text.Encoding.UTF8, "application/json")
 			});
 
 		// Act
-		var result = await _client.GetAllAsync(_client.For<Product>("Products"), CancellationToken);
+		var result = await Client.GetAllAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		result.Value.Should().HaveCount(2);
@@ -478,18 +426,14 @@ public class ODataClientQueryTests : TestBase, IDisposable
 			}
 			""");
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() => new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(responses.Dequeue(), System.Text.Encoding.UTF8, "application/json")
 			});
 
 		// Act
-		var result = await _client.GetAllAsync(_client.For<Product>("Products").Count(), CancellationToken);
+		var result = await Client.GetAllAsync(Client.For<Product>("Products").Count(), CancellationToken);
 
 		// Assert
 		result.Count.Should().Be(100);
@@ -513,7 +457,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		cts.Cancel();
 
 		// Act
-		var act = async () => await _client.GetAllAsync(_client.For<Product>("Products"), cts.Token);
+		var act = async () => await Client.GetAllAsync(Client.For<Product>("Products"), cts.Token);
 
 		// Assert
 		await act.Should().ThrowAsync<OperationCanceledException>();
@@ -533,7 +477,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.OK, "42");
 
 		// Act
-		var count = await _client.GetCountAsync<Product>(CancellationToken);
+		var count = await Client.GetCountAsync<Product>(CancellationToken);
 
 		// Assert
 		count.Should().Be(42);
@@ -547,11 +491,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	{
 		// Arrange
 		Uri? capturedUri = null;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -559,8 +499,8 @@ public class ODataClientQueryTests : TestBase, IDisposable
 			});
 
 		// Act
-		var query = _client.For<Product>("Products").Filter(p => p.Price > 100);
-		await _client.GetCountAsync(query, CancellationToken);
+		var query = Client.For<Product>("Products").Filter(p => p.Price > 100);
+		await Client.GetCountAsync(query, CancellationToken);
 
 		// Assert
 		capturedUri.Should().NotBeNull();
@@ -582,7 +522,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.OK, """{"value": [{"ID": 1, "Name": "First"}]}""");
 
 		// Act
-		var result = await _client.GetFirstOrDefaultAsync(_client.For<Product>("Products"), CancellationToken);
+		var result = await Client.GetFirstOrDefaultAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		result.Should().NotBeNull();
@@ -599,7 +539,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.OK, """{"value": []}""");
 
 		// Act
-		var result = await _client.GetFirstOrDefaultAsync(_client.For<Product>("Products"), CancellationToken);
+		var result = await Client.GetFirstOrDefaultAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		result.Should().BeNull();
@@ -613,11 +553,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	{
 		// Arrange
 		Uri? capturedUri = null;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -625,7 +561,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 			});
 
 		// Act
-		await _client.GetFirstOrDefaultAsync(_client.For<Product>("Products"), CancellationToken);
+		await Client.GetFirstOrDefaultAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		capturedUri.Should().NotBeNull();
@@ -640,11 +576,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	{
 		// Arrange - single entity endpoints return a plain object, not {"value":[...]}
 		Uri? capturedUri = null;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -652,8 +584,8 @@ public class ODataClientQueryTests : TestBase, IDisposable
 			});
 
 		// Act
-		var result = await _client.GetFirstOrDefaultAsync(
-			_client.For<Product>("Products").Key(1).QueryOptions("PropertySet=Delivery"),
+		var result = await Client.GetFirstOrDefaultAsync(
+			Client.For<Product>("Products").Key(1).QueryOptions("PropertySet=Delivery"),
 			CancellationToken);
 
 		// Assert
@@ -677,7 +609,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.OK, """{"value": [{"ID": 1, "Name": "Single"}]}""");
 
 		// Act
-		var result = await _client.GetSingleAsync(_client.For<Product>("Products"), CancellationToken);
+		var result = await Client.GetSingleAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		result.Should().NotBeNull();
@@ -694,7 +626,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.OK, """{"value": []}""");
 
 		// Act
-		var act = async () => await _client.GetSingleAsync(_client.For<Product>("Products"), CancellationToken);
+		var act = async () => await Client.GetSingleAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		await act.Should().ThrowAsync<InvalidOperationException>()
@@ -711,7 +643,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.OK, """{"value": [{"ID": 1, "Name": "First"}, {"ID": 2, "Name": "Second"}]}""");
 
 		// Act
-		var act = async () => await _client.GetSingleAsync(_client.For<Product>("Products"), CancellationToken);
+		var act = async () => await Client.GetSingleAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		await act.Should().ThrowAsync<InvalidOperationException>()
@@ -732,7 +664,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.OK, """{"value": [{"ID": 1, "Name": "Single"}]}""");
 
 		// Act
-		var result = await _client.GetSingleOrDefaultAsync(_client.For<Product>("Products"), CancellationToken);
+		var result = await Client.GetSingleOrDefaultAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		result.Should().NotBeNull();
@@ -749,7 +681,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.OK, """{"value": []}""");
 
 		// Act
-		var result = await _client.GetSingleOrDefaultAsync(_client.For<Product>("Products"), CancellationToken);
+		var result = await Client.GetSingleOrDefaultAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		result.Should().BeNull();
@@ -765,7 +697,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.OK, """{"value": [{"ID": 1, "Name": "First"}, {"ID": 2, "Name": "Second"}]}""");
 
 		// Act
-		var act = async () => await _client.GetSingleOrDefaultAsync(_client.For<Product>("Products"), CancellationToken);
+		var act = async () => await Client.GetSingleOrDefaultAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		await act.Should().ThrowAsync<InvalidOperationException>()
@@ -786,7 +718,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.OK, """{"value": [{"ID": 1}], "custom": "property"}""");
 
 		// Act
-		using var result = await _client.GetRawAsync("Products", cancellationToken: CancellationToken);
+		using var result = await Client.GetRawAsync("Products", cancellationToken: CancellationToken);
 
 		// Assert
 		result.RootElement.TryGetProperty("custom", out var customProp).Should().BeTrue();
@@ -801,11 +733,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 	{
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -815,7 +743,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		var headers = new Dictionary<string, string> { { "X-Custom", "Value" } };
 
 		// Act
-		using var result = await _client.GetRawAsync("Products", headers, CancellationToken);
+		using var result = await Client.GetRawAsync("Products", headers, CancellationToken);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -840,15 +768,10 @@ public class ODataClientQueryTests : TestBase, IDisposable
 		};
 		response.Headers.ETag = new System.Net.Http.Headers.EntityTagHeaderValue("\"etag-value\"");
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
 		// Act
-		var result = await _client.GetByKeyWithETagAsync<Product, int>(1, cancellationToken: CancellationToken);
+		var result = await Client.GetByKeyWithETagAsync<Product, int>(1, cancellationToken: CancellationToken);
 
 		// Assert
 		result.Value.Should().NotBeNull();
@@ -860,11 +783,7 @@ public class ODataClientQueryTests : TestBase, IDisposable
 
 	#region Helper Methods
 
-	private void SetupMockResponse(HttpStatusCode statusCode, string content) => _mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+	private void SetupMockResponse(HttpStatusCode statusCode, string content) => SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(statusCode)
 			{
 				Content = new StringContent(content, System.Text.Encoding.UTF8, "application/json")

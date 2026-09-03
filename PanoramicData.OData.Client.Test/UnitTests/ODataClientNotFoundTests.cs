@@ -5,46 +5,13 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for 404 Not Found handling: IgnoreResourceNotFoundException option and GetByKeyOrDefaultAsync.
 /// </summary>
-public sealed class ODataClientNotFoundTests : TestBase, IDisposable
+public sealed class ODataClientNotFoundTests : MockedODataClientTestBase
 {
-    private readonly Mock<HttpMessageHandler> _mockHandler;
-    private readonly HttpClient _httpClient;
+    private ODataClient CreateClient(bool ignoreResourceNotFoundException)
+        => CreateClient(options => options.IgnoreResourceNotFoundException = ignoreResourceNotFoundException);
 
-    /// <summary>
-    /// Initializes a new instance of the test class with mocked dependencies.
-    /// </summary>
-    public ODataClientNotFoundTests()
-    {
-        _mockHandler = new Mock<HttpMessageHandler>();
-        _httpClient = new HttpClient(_mockHandler.Object)
-        {
-            BaseAddress = new Uri("https://test.odata.org/")
-        };
-    }
-
-	/// <inheritdoc/>
-	public void Dispose() => _httpClient.Dispose();
-
-	private ODataClient CreateClient(bool ignoreResourceNotFoundException)
-        => new(new ODataClientOptions
-        {
-            BaseUrl = "https://test.odata.org/",
-            HttpClient = _httpClient,
-            Logger = NullLogger.Instance,
-            RetryCount = 0,
-            IgnoreResourceNotFoundException = ignoreResourceNotFoundException
-        });
-
-    private void SetupMockResponse(HttpStatusCode statusCode, string content) =>
-        _mockHandler.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(statusCode)
-            {
-                Content = new StringContent(content, System.Text.Encoding.UTF8, "application/json")
-            });
+    private void SetupMockResponse(HttpStatusCode statusCode, string content)
+        => SetupResponse(statusCode, content);
 
     #region GetByKeyAsync with IgnoreResourceNotFoundException
 

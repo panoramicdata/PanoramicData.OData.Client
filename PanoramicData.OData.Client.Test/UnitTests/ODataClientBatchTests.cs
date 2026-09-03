@@ -5,39 +5,8 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for OData batch request support.
 /// </summary>
-public class ODataClientBatchTests : TestBase, IDisposable
+public class ODataClientBatchTests : MockedODataClientTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-	private readonly ODataClient _client;
-
-	/// <summary>
-	/// Initializes a new instance of the test class.
-	/// </summary>
-	public ODataClientBatchTests()
-	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 0
-		});
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_client.Dispose();
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
-	}
-
 	#region CreateBatch Tests
 
 	/// <summary>
@@ -47,7 +16,7 @@ public class ODataClientBatchTests : TestBase, IDisposable
 	public void CreateBatch_ShouldReturnBatchBuilder()
 	{
 		// Act
-		var batch = _client.CreateBatch();
+		var batch = Client.CreateBatch();
 
 		// Assert
 		batch.Should().NotBeNull();
@@ -65,7 +34,7 @@ public class ODataClientBatchTests : TestBase, IDisposable
 	public void Batch_Get_ShouldReturnBuilderAndAddOperation()
 	{
 		// Arrange
-		var batch = _client.CreateBatch();
+		var batch = Client.CreateBatch();
 
 		// Act
 		var result = batch.Get<Product>(entitySet: "Products", key: 1);
@@ -82,7 +51,7 @@ public class ODataClientBatchTests : TestBase, IDisposable
 	public void Batch_Create_ShouldReturnBuilderAndAddOperation()
 	{
 		// Arrange
-		var batch = _client.CreateBatch();
+		var batch = Client.CreateBatch();
 		var product = new Product { Name = "Test Product" };
 
 		// Act
@@ -100,7 +69,7 @@ public class ODataClientBatchTests : TestBase, IDisposable
 	public void Batch_Update_ShouldReturnBuilderAndAddOperation()
 	{
 		// Arrange
-		var batch = _client.CreateBatch();
+		var batch = Client.CreateBatch();
 
 		// Act
 		var result = batch.Update<Product>("Products", 1, new { Name = "Updated" });
@@ -117,7 +86,7 @@ public class ODataClientBatchTests : TestBase, IDisposable
 	public void Batch_Delete_ShouldReturnBuilderAndAddOperation()
 	{
 		// Arrange
-		var batch = _client.CreateBatch();
+		var batch = Client.CreateBatch();
 
 		// Act
 		var result = batch.Delete("Products", 1);
@@ -134,7 +103,7 @@ public class ODataClientBatchTests : TestBase, IDisposable
 	public void Batch_FluentChaining_ShouldAddAllOperations()
 	{
 		// Arrange & Act
-		var batch = _client.CreateBatch()
+		var batch = Client.CreateBatch()
 			.Get<Product>("Products", 1)
 			.Create("Products", new Product { Name = "New" })
 			.Update<Product>("Products", 2, new { Name = "Updated" })
@@ -156,7 +125,7 @@ public class ODataClientBatchTests : TestBase, IDisposable
 	public void Batch_Changeset_ShouldAddChangesetWithOperations()
 	{
 		// Arrange & Act
-		var batch = _client.CreateBatch()
+		var batch = Client.CreateBatch()
 			.Changeset(cs => cs
 				.Create("Products", new Product { Name = "Test" })
 				.Update<Product>("Products", 1, new { Name = "Updated" })
@@ -177,7 +146,7 @@ public class ODataClientBatchTests : TestBase, IDisposable
 		ODataChangesetBuilder? capturedCs = null;
 
 		// Act
-		_client.CreateBatch()
+		Client.CreateBatch()
 			.Changeset(cs =>
 			{
 				capturedCs = cs;
@@ -202,7 +171,7 @@ public class ODataClientBatchTests : TestBase, IDisposable
 	public void Batch_FluentMixedOperationsAndChangesets_ShouldMaintainOrder()
 	{
 		// Act - Fully fluent chain
-		var batch = _client.CreateBatch()
+		var batch = Client.CreateBatch()
 			.Get<Product>("Products", 1)
 			.Changeset(cs => cs
 				.Create("Products", new Product { Name = "Test" })
@@ -237,16 +206,12 @@ public class ODataClientBatchTests : TestBase, IDisposable
 		};
 		response.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("multipart/mixed; boundary=batch_response");
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(response);
 
 		// Act
-		var result = await _client.CreateBatch()
+		var result = await Client.CreateBatch()
 			.Get<Product>("Products", 1)
 			.Get<Product>("Products", 2)
 			.ExecuteAsync(CancellationToken);
@@ -277,15 +242,10 @@ public class ODataClientBatchTests : TestBase, IDisposable
 		};
 		response.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("multipart/mixed; boundary=batch_response");
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
 		// Act
-		var result = await _client.CreateBatch()
+		var result = await Client.CreateBatch()
 			.Get<Product>("Products", 1)
 			.Create("Products", new Product { Name = "New Product" })
 			.Update<Product>("Products", 2, new { Name = "Updated" })
@@ -319,15 +279,10 @@ public class ODataClientBatchTests : TestBase, IDisposable
 		};
 		response.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("multipart/mixed; boundary=batch_response");
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
 		// Act
-		var result = await _client.CreateBatch()
+		var result = await Client.CreateBatch()
 			.Get<Product>("Products", 1)
 			.Get<Product>("Products", 999)
 			.ExecuteAsync(CancellationToken);
@@ -353,7 +308,7 @@ public class ODataClientBatchTests : TestBase, IDisposable
 		const string etag = "\"abc123\"";
 
 		// Act
-		var batch = _client.CreateBatch()
+		var batch = Client.CreateBatch()
 			.Update<Product>("Products", 1, new { Name = "Updated" }, etag);
 
 		// Assert
@@ -371,7 +326,7 @@ public class ODataClientBatchTests : TestBase, IDisposable
 		const string etag = "\"xyz789\"";
 
 		// Act
-		var batch = _client.CreateBatch()
+		var batch = Client.CreateBatch()
 			.Delete("Products", 1, etag);
 
 		// Assert
@@ -636,15 +591,10 @@ public class ODataClientBatchTests : TestBase, IDisposable
 		};
 		response.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
 		// Act
-		var result = await _client.CreateBatch()
+		var result = await Client.CreateBatch()
 			.Get<Product>("Products", 1)
 			.Create("Products", new Product { Name = "New Product" })
 			.ExecuteAsync(CancellationToken);
@@ -721,15 +671,10 @@ public class ODataClientBatchTests : TestBase, IDisposable
 		};
 		response.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("multipart/mixed; boundary=batch_response");
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
 		// Act - this previously threw "This operation is not supported for a relative URI"
-		var act = async () => await _client.CreateBatch()
+		var act = async () => await Client.CreateBatch()
 			.Create("Tests", new Product { Name = "test" })
 			.ExecuteAsync(CancellationToken);
 
@@ -753,16 +698,12 @@ public class ODataClientBatchTests : TestBase, IDisposable
 		response.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("multipart/mixed; boundary=batch_response");
 
 		HttpRequestMessage? capturedRequest = null;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(response);
 
 		// Act
-		await _client.CreateBatch()
+		await Client.CreateBatch()
 			.Create("Tests", new Product { Name = "test" })
 			.ExecuteAsync(CancellationToken);
 

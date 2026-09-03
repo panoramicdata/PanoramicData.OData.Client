@@ -5,30 +5,8 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for ODataClient retry logic.
 /// </summary>
-public class ODataClientRetryTests : TestBase, IDisposable
+public class ODataClientRetryTests : MockedODataClientTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-
-	/// <summary>
-	/// Initializes a new instance of the test class.
-	/// </summary>
-	public ODataClientRetryTests()
-	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
-	}
-
 	/// <summary>
 	/// Tests that client retries on 500 error.
 	/// </summary>
@@ -37,11 +15,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 	{
 		// Arrange
 		var callCount = 0;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() =>
 			{
 				callCount++;
@@ -62,7 +36,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 		using var client = new ODataClient(new ODataClientOptions
 		{
 			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
+			HttpClient = MockHttpClient,
 			Logger = NullLogger.Instance,
 			RetryCount = 3,
 			RetryDelay = TimeSpan.FromMilliseconds(1)
@@ -84,11 +58,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 	{
 		// Arrange
 		var callCount = 0;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() =>
 			{
 				callCount++;
@@ -101,7 +71,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 		using var client = new ODataClient(new ODataClientOptions
 		{
 			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
+			HttpClient = MockHttpClient,
 			Logger = NullLogger.Instance,
 			RetryCount = 3,
 			RetryDelay = TimeSpan.FromMilliseconds(1)
@@ -123,11 +93,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 	{
 		// Arrange
 		var callCount = 0;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() =>
 			{
 				callCount++;
@@ -145,7 +111,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 		using var client = new ODataClient(new ODataClientOptions
 		{
 			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
+			HttpClient = MockHttpClient,
 			Logger = NullLogger.Instance,
 			RetryCount = 3,
 			RetryDelay = TimeSpan.FromMilliseconds(1)
@@ -167,11 +133,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 	{
 		// Arrange
 		var callCount = 0;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() =>
 			{
 				callCount++;
@@ -184,7 +146,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 		using var client = new ODataClient(new ODataClientOptions
 		{
 			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
+			HttpClient = MockHttpClient,
 			Logger = NullLogger.Instance,
 			RetryCount = 2,
 			RetryDelay = TimeSpan.FromMilliseconds(1)
@@ -207,11 +169,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 	{
 		// Arrange
 		var callCount = 0;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() =>
 			{
 				callCount++;
@@ -233,7 +191,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 		using var client = new ODataClient(new ODataClientOptions
 		{
 			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
+			HttpClient = MockHttpClient,
 			Logger = logger,
 			RetryCount = 3,
 			RetryDelay = TimeSpan.FromMilliseconds(1)
@@ -254,11 +212,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 	public async Task Request_RetriesExhaustedOnServerError_LogsSingleWarning()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() => new HttpResponseMessage(HttpStatusCode.InternalServerError)
 			{
 				Content = new StringContent("{}")
@@ -268,7 +222,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 		using var client = new ODataClient(new ODataClientOptions
 		{
 			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
+			HttpClient = MockHttpClient,
 			Logger = logger,
 			RetryCount = 2,
 			RetryDelay = TimeSpan.FromMilliseconds(1)
@@ -293,18 +247,14 @@ public class ODataClientRetryTests : TestBase, IDisposable
 	public async Task Request_RetriesExhaustedOnException_LogsSingleWarningAndThrows()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ThrowsAsync(new HttpRequestException("Connection failed"));
 
 		var logger = new CapturingLogger();
 		using var client = new ODataClient(new ODataClientOptions
 		{
 			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
+			HttpClient = MockHttpClient,
 			Logger = logger,
 			RetryCount = 2,
 			RetryDelay = TimeSpan.FromMilliseconds(1)
@@ -329,11 +279,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 	{
 		// Arrange
 		var callCount = 0;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() =>
 			{
 				callCount++;
@@ -355,7 +301,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 		using var client = new ODataClient(new ODataClientOptions
 		{
 			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
+			HttpClient = MockHttpClient,
 			Logger = logger,
 			RetryCount = 3,
 			RetryDelay = TimeSpan.FromMilliseconds(1),
@@ -377,11 +323,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 	{
 		// Arrange
 		var callCount = 0;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() =>
 			{
 				callCount++;
@@ -403,7 +345,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 		using var client = new ODataClient(new ODataClientOptions
 		{
 			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
+			HttpClient = MockHttpClient,
 			Logger = logger,
 			RetryCount = 3,
 			RetryDelay = TimeSpan.FromMilliseconds(1),
@@ -440,11 +382,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 	{
 		// Arrange
 		var callTimes = new List<DateTime>();
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() =>
 			{
 				callTimes.Add(DateTime.UtcNow);
@@ -465,7 +403,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 		using var client = new ODataClient(new ODataClientOptions
 		{
 			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
+			HttpClient = MockHttpClient,
 			Logger = NullLogger.Instance,
 			RetryCount = 2,
 			RetryDelay = TimeSpan.FromMilliseconds(100)

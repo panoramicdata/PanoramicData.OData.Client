@@ -3,39 +3,8 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for OData delta query (change tracking) support.
 /// </summary>
-public class ODataClientDeltaTests : IDisposable
+public class ODataClientDeltaTests : MockedODataClientTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-	private readonly ODataClient _client;
-
-	/// <summary>
-	/// Initializes a new instance of the test class.
-	/// </summary>
-	public ODataClientDeltaTests()
-	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 0
-		});
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_client.Dispose();
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
-	}
-
 	#region GetDeltaAsync Tests
 
 	/// <summary>
@@ -45,11 +14,7 @@ public class ODataClientDeltaTests : IDisposable
 	public async Task GetDeltaAsync_ReturnsModifiedEntities()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent("""
@@ -64,7 +29,7 @@ public class ODataClientDeltaTests : IDisposable
 			});
 
 		// Act
-		var result = await _client.GetDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=initial", cancellationToken: CancellationToken.None);
+		var result = await Client.GetDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=initial", cancellationToken: CancellationToken.None);
 
 		// Assert
 		result.Value.Should().HaveCount(2);
@@ -79,11 +44,7 @@ public class ODataClientDeltaTests : IDisposable
 	public async Task GetDeltaAsync_ParsesDeletedEntities_WithRemovedAnnotation()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent("""
@@ -99,7 +60,7 @@ public class ODataClientDeltaTests : IDisposable
 			});
 
 		// Act
-		var result = await _client.GetDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=abc123", cancellationToken: CancellationToken.None);
+		var result = await Client.GetDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=abc123", cancellationToken: CancellationToken.None);
 
 		// Assert
 		result.Value.Should().ContainSingle();
@@ -118,11 +79,7 @@ public class ODataClientDeltaTests : IDisposable
 	public async Task GetDeltaAsync_ParsesDeletedEntities_WithODataRemovedAnnotation()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent("""
@@ -136,7 +93,7 @@ public class ODataClientDeltaTests : IDisposable
 			});
 
 		// Act
-		var result = await _client.GetDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=abc123", cancellationToken: CancellationToken.None);
+		var result = await Client.GetDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=abc123", cancellationToken: CancellationToken.None);
 
 		// Assert
 		result.Value.Should().BeEmpty();
@@ -151,11 +108,7 @@ public class ODataClientDeltaTests : IDisposable
 	public async Task GetDeltaAsync_EmptyResponse_ReturnsEmptyCollections()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent("""
@@ -167,7 +120,7 @@ public class ODataClientDeltaTests : IDisposable
 			});
 
 		// Act
-		var result = await _client.GetDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=abc123", cancellationToken: CancellationToken.None);
+		var result = await Client.GetDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=abc123", cancellationToken: CancellationToken.None);
 
 		// Assert
 		result.Value.Should().BeEmpty();
@@ -182,11 +135,7 @@ public class ODataClientDeltaTests : IDisposable
 	public async Task GetDeltaAsync_WithCount_ReturnsCount()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent("""
@@ -199,7 +148,7 @@ public class ODataClientDeltaTests : IDisposable
 			});
 
 		// Act
-		var result = await _client.GetDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=abc", cancellationToken: CancellationToken.None);
+		var result = await Client.GetDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=abc", cancellationToken: CancellationToken.None);
 
 		// Assert
 		result.Count.Should().Be(42);
@@ -218,11 +167,7 @@ public class ODataClientDeltaTests : IDisposable
 		// Arrange
 		var callCount = 0;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() =>
 			{
 				callCount++;
@@ -251,7 +196,7 @@ public class ODataClientDeltaTests : IDisposable
 			});
 
 		// Act
-		var result = await _client.GetAllDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=initial", cancellationToken: CancellationToken.None);
+		var result = await Client.GetAllDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=initial", cancellationToken: CancellationToken.None);
 
 		// Assert
 		callCount.Should().Be(2);
@@ -268,11 +213,7 @@ public class ODataClientDeltaTests : IDisposable
 		// Arrange
 		var callCount = 0;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() =>
 			{
 				callCount++;
@@ -306,7 +247,7 @@ public class ODataClientDeltaTests : IDisposable
 			});
 
 		// Act
-		var result = await _client.GetAllDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=init", cancellationToken: CancellationToken.None);
+		var result = await Client.GetAllDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=init", cancellationToken: CancellationToken.None);
 
 		// Assert
 		result.Value.Should().ContainSingle();
@@ -325,11 +266,7 @@ public class ODataClientDeltaTests : IDisposable
 		using var cts = new CancellationTokenSource();
 		var callCount = 0;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() =>
 			{
 				callCount++;
@@ -350,7 +287,7 @@ public class ODataClientDeltaTests : IDisposable
 			});
 
 		// Act
-		var act = async () => await _client.GetAllDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=init", cancellationToken: cts.Token);
+		var act = async () => await Client.GetAllDeltaAsync<Product>("https://test.odata.org/Products?$deltatoken=init", cancellationToken: cts.Token);
 
 		// Assert
 		await act.Should().ThrowAsync<OperationCanceledException>();
@@ -369,11 +306,7 @@ public class ODataClientDeltaTests : IDisposable
 		// Arrange
 		var callCount = 0;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync((HttpRequestMessage _, CancellationToken _) =>
 			{
 				callCount++;
@@ -411,12 +344,12 @@ public class ODataClientDeltaTests : IDisposable
 
 		// Act
 		// Step 1: Initial query
-		var query = _client.For<Product>("Products");
-		var initialResponse = await _client.GetAsync(query, CancellationToken.None);
+		var query = Client.For<Product>("Products");
+		var initialResponse = await Client.GetAsync(query, CancellationToken.None);
 		var deltaLink = initialResponse.DeltaLink;
 
 		// Step 2: Get changes using delta link
-		var deltaResponse = await _client.GetDeltaAsync<Product>(deltaLink!, cancellationToken: CancellationToken.None);
+		var deltaResponse = await Client.GetDeltaAsync<Product>(deltaLink!, cancellationToken: CancellationToken.None);
 
 		// Assert
 		initialResponse.Value.Should().ContainSingle();

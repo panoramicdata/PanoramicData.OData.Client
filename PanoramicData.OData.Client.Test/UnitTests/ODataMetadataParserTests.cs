@@ -3,38 +3,14 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for OData metadata parsing through the public API.
 /// </summary>
-public class ODataMetadataParserTests : TestBase, IDisposable
+public class ODataMetadataParserTests : MockedODataClientTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-	private readonly ODataClient _client;
-
 	/// <summary>
-	/// Initializes a new instance of the test class with mocked dependencies.
+	/// Initializes a new instance of the test class.
 	/// </summary>
 	public ODataMetadataParserTests()
+		: base(options => options.MetadataCacheDuration = TimeSpan.Zero) // Disable caching for tests
 	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 0,
-			MetadataCacheDuration = TimeSpan.Zero // Disable caching for tests
-		});
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_client.Dispose();
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
 	}
 
 	#region GetMetadataAsync Tests
@@ -57,7 +33,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			""");
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.Namespace.Should().Be("TestNamespace");
@@ -81,7 +57,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			""");
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EntityTypes.Should().BeEmpty();
@@ -108,7 +84,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EntityTypes.Should().ContainSingle();
@@ -136,7 +112,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		var entityType = metadata.EntityTypes[0];
@@ -172,7 +148,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		var entityType = metadata.EntityTypes[0];
@@ -195,7 +171,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EntityTypes[0].IsAbstract.Should().BeTrue();
@@ -218,7 +194,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EntityTypes[0].IsOpenType.Should().BeTrue();
@@ -241,7 +217,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EntityTypes[0].HasStream.Should().BeTrue();
@@ -261,7 +237,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EntityTypes[0].BaseType.Should().Be("Test.Person");
@@ -290,7 +266,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		var entityType = metadata.EntityTypes[0];
@@ -325,7 +301,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		var navProp = metadata.EntityTypes[0].GetNavigationProperty("Customer");
@@ -352,7 +328,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.ComplexTypes.Should().ContainSingle();
@@ -375,7 +351,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.ComplexTypes[0].IsAbstract.Should().BeTrue();
@@ -401,7 +377,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EnumTypes.Should().ContainSingle();
@@ -428,7 +404,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EnumTypes[0].IsFlags.Should().BeTrue();
@@ -458,7 +434,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EntitySets.Should().ContainSingle();
@@ -482,7 +458,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 		var entitySet = metadata.GetEntitySet("Products");
 
 		// Assert
@@ -509,7 +485,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 		var entityType = metadata.GetEntityType("Product");
 
 		// Assert
@@ -531,7 +507,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.Singletons.Should().ContainSingle();
@@ -554,7 +530,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.FunctionImports.Should().ContainSingle();
@@ -578,7 +554,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.ActionImports.Should().ContainSingle();
@@ -662,12 +638,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 			Content = new StringContent(xml, System.Text.Encoding.UTF8, "application/xml")
 		};
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 	}
 
 	private static string CreateMetadataXml(string schemaContent) => $"""
@@ -716,7 +687,7 @@ public class ODataMetadataParserTests : TestBase, IDisposable
 		SetupMetadataResponse(xml);
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.EntityTypes.Should().ContainSingle(et => et.Name == "Product");
