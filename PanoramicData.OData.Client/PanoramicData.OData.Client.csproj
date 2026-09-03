@@ -19,7 +19,29 @@
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageReleaseNotes>Initial release with OData V4 support, query builder, CRUD operations, pagination, retry logic, and logging.</PackageReleaseNotes>
+    <PackageReleaseNotes>
+      Security fix: credential-bearing HTTP header values are now redacted in diagnostic output.
+
+      Previously caller-supplied header values were written verbatim in two places: one Debug line
+      per header as it was added to a request, and the Trace request and response dumps. Any
+      credential attached to a query was therefore retained for the life of the consumer log store.
+
+      Note the Debug path, which fires a level higher than the Trace dumps, so a consumer running at
+      Debug rather than Trace was still affected.
+
+      This client applies no credential of its own, so redaction matches a general set of header
+      names plus name fragments rather than a scheme this library controls. The authentication
+      scheme and the credential length are retained, so requests remain diagnosable.
+
+      Request rendering that forms part of the wire format, such as the batch payload built by
+      HttpMessageContent, is deliberately unchanged. Redacting there would corrupt the request.
+
+      Consumers should upgrade and then review existing Debug and Trace logs for previously
+      captured credentials.
+
+      Initial release with OData V4 support, query builder, CRUD operations, pagination, retry
+      logic, and logging.
+    </PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink for debugging -->
   <PropertyGroup>
@@ -28,6 +50,9 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="PanoramicData.OData.Client.Test" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="..\README.md" Pack="true" PackagePath="" />
     <None Include="Panoramic Data.png" Pack="true" PackagePath="icon.png" />
