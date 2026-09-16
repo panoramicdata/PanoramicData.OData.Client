@@ -3,39 +3,8 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for legacy compatibility methods.
 /// </summary>
-public class ODataClientLegacyTests : IDisposable
+public class ODataClientLegacyTests : MockedODataClientTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-	private readonly ODataClient _client;
-
-	/// <summary>
-	/// Initializes a new instance of the test class.
-	/// </summary>
-	public ODataClientLegacyTests()
-	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 0
-		});
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_client.Dispose();
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
-	}
-
 	#region ODataClient.Legacy Tests
 
 	/// <summary>
@@ -44,7 +13,7 @@ public class ODataClientLegacyTests : IDisposable
 	[Fact]
 	public void For_WithEntitySetName_CreatesFluentQueryBuilder()
 	{
-		var builder = _client.For("Products");
+		var builder = Client.For("Products");
 
 		var url = builder.BuildUrl();
 		url.Should().Be("Products");
@@ -56,7 +25,7 @@ public class ODataClientLegacyTests : IDisposable
 	[Fact]
 	public void For_WithFilter_BuildsCorrectUrl()
 	{
-		var builder = _client.For("Products")
+		var builder = Client.For("Products")
 			.Filter("Price gt 100")
 			.Top(10);
 
@@ -82,18 +51,14 @@ public class ODataClientLegacyTests : IDisposable
 		}
 		""";
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(responseJson)
 			});
 
 		// Act - This is the fluent pattern!
-		var response = await _client.For("Products")
+		var response = await Client.For("Products")
 			.Top(10)
 			.GetAsync(CancellationToken.None);
 
@@ -119,18 +84,14 @@ public class ODataClientLegacyTests : IDisposable
 		}
 		""";
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(responseJson)
 			});
 
 		// Act
-		var response = await _client.For("Products")
+		var response = await Client.For("Products")
 			.Filter("Price gt 100")
 			.GetAllAsync(CancellationToken.None);
 
@@ -153,18 +114,14 @@ public class ODataClientLegacyTests : IDisposable
 		}
 		""";
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(responseJson)
 			});
 
 		// Act
-		var entry = await _client.For("Products")
+		var entry = await Client.For("Products")
 			.Key(123)
 			.GetEntryAsync(CancellationToken.None);
 
@@ -189,18 +146,14 @@ public class ODataClientLegacyTests : IDisposable
 		}
 		""";
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(responseJson)
 			});
 
 		// Act
-		var entry = await _client.For("Products")
+		var entry = await Client.For("Products")
 			.Filter("Name eq 'First Product'")
 			.GetFirstOrDefaultAsync(CancellationToken.None);
 
@@ -225,11 +178,7 @@ public class ODataClientLegacyTests : IDisposable
 		}
 		""";
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(responseJson)
@@ -237,7 +186,7 @@ public class ODataClientLegacyTests : IDisposable
 
 		// Act
 #pragma warning disable CS0618 // Type or member is obsolete
-		var entries = await _client.FindEntriesAsync("Products", CancellationToken.None);
+		var entries = await Client.FindEntriesAsync("Products", CancellationToken.None);
 #pragma warning restore CS0618
 
 		// Assert
@@ -264,11 +213,7 @@ public class ODataClientLegacyTests : IDisposable
 		}
 		""";
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(responseJson)
@@ -276,7 +221,7 @@ public class ODataClientLegacyTests : IDisposable
 
 		// Act
 #pragma warning disable CS0618 // Type or member is obsolete
-		var entry = await _client.FindEntryAsync("Products(1)", CancellationToken.None);
+		var entry = await Client.FindEntryAsync("Products(1)", CancellationToken.None);
 #pragma warning restore CS0618
 
 		// Assert
@@ -300,11 +245,7 @@ public class ODataClientLegacyTests : IDisposable
 		}
 		""";
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(responseJson)
@@ -312,7 +253,7 @@ public class ODataClientLegacyTests : IDisposable
 
 		// Act
 #pragma warning disable CS0618 // Type or member is obsolete
-		var entry = await _client.FindEntryAsync("Products?$top=1", CancellationToken.None);
+		var entry = await Client.FindEntryAsync("Products?$top=1", CancellationToken.None);
 #pragma warning restore CS0618
 
 		// Assert
@@ -329,11 +270,7 @@ public class ODataClientLegacyTests : IDisposable
 		// Arrange
 		var responseJson = """{ "value": [] }""";
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(responseJson)
@@ -341,7 +278,7 @@ public class ODataClientLegacyTests : IDisposable
 
 		// Act
 #pragma warning disable CS0618 // Type or member is obsolete
-		var entry = await _client.FindEntryAsync("Products?$filter=ID eq 999", CancellationToken.None);
+		var entry = await Client.FindEntryAsync("Products?$filter=ID eq 999", CancellationToken.None);
 #pragma warning restore CS0618
 
 		// Assert
@@ -363,11 +300,7 @@ public class ODataClientLegacyTests : IDisposable
 		}
 		""";
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(responseJson)
@@ -375,7 +308,7 @@ public class ODataClientLegacyTests : IDisposable
 
 		// Act
 #pragma warning disable CS0618 // Type or member is obsolete
-		using var response = await _client.ExecuteRawQueryAsync("Products", CancellationToken.None);
+		using var response = await Client.ExecuteRawQueryAsync("Products", CancellationToken.None);
 #pragma warning restore CS0618
 
 		// Assert
@@ -408,7 +341,7 @@ public class ODataClientLegacyTests : IDisposable
 	[Fact]
 	public void FluentQueryBuilder_BuildsUrlWithAllOptions()
 	{
-		var builder = _client.For("Products")
+		var builder = Client.For("Products")
 			.Filter("Price gt 100")
 			.Select("ID,Name,Price")
 			.Expand("Category")
@@ -435,7 +368,7 @@ public class ODataClientLegacyTests : IDisposable
 	[Fact]
 	public void FluentQueryBuilder_BuildsUrlWithIntKey()
 	{
-		var builder = _client.For("Products").Key(123);
+		var builder = Client.For("Products").Key(123);
 
 		var url = builder.BuildUrl();
 		url.Should().Be("Products(123)");
@@ -447,7 +380,7 @@ public class ODataClientLegacyTests : IDisposable
 	[Fact]
 	public void FluentQueryBuilder_BuildsUrlWithStringKey()
 	{
-		var builder = _client.For("Products").Key("abc-123");
+		var builder = Client.For("Products").Key("abc-123");
 
 		var url = builder.BuildUrl();
 		url.Should().Be("Products('abc-123')");
@@ -460,7 +393,7 @@ public class ODataClientLegacyTests : IDisposable
 	public void FluentQueryBuilder_BuildsUrlWithGuidKey()
 	{
 		var guid = Guid.Parse("12345678-1234-1234-1234-123456789012");
-		var builder = _client.For("Products").Key(guid);
+		var builder = Client.For("Products").Key(guid);
 
 		var url = builder.BuildUrl();
 		url.Should().Be("Products(12345678-1234-1234-1234-123456789012)");
@@ -472,7 +405,7 @@ public class ODataClientLegacyTests : IDisposable
 	[Fact]
 	public void FluentQueryBuilder_OrderByDescending_BuildsCorrectUrl()
 	{
-		var builder = _client.For("Products").OrderByDescending("Price");
+		var builder = Client.For("Products").OrderByDescending("Price");
 
 		var url = builder.BuildUrl();
 		url.Should().Contain("$orderby=Price desc");
@@ -484,7 +417,7 @@ public class ODataClientLegacyTests : IDisposable
 	[Fact]
 	public void FluentQueryBuilder_Search_BuildsCorrectUrl()
 	{
-		var builder = _client.For("Products").Search("widget");
+		var builder = Client.For("Products").Search("widget");
 
 		var url = builder.BuildUrl();
 		url.Should().Contain("$search=");

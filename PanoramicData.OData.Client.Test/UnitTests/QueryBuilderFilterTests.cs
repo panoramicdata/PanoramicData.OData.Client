@@ -140,12 +140,14 @@ public class QueryBuilderFilterTests
 	public void Filter_WithNot_GeneratesCorrectUrl()
 	{
 		// Arrange & Act
+		// A compound predicate, so the negation cannot simply be folded into the
+		// opposite comparison operator - 'not' has to survive into the generated URL.
 		var url = new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
-			.Filter(p => !(p.Price > 100))
+			.Filter(p => !(p.Price > 100 && p.Rating >= 3))
 			.BuildUrl();
 
-		// Assert - URL encoding converts ( to %28 and ) to %29
-		url.Should().Contain("not%20%28Price%20gt%20100%29");
+		// Assert - URL encoding converts ( to %28, ) to %29 and spaces to %20
+		url.Should().Contain("not%20%28Price%20gt%20100%20and%20Rating%20ge%203%29");
 	}
 
 	/// <summary>

@@ -391,9 +391,13 @@ var client = new ODataClient(new ODataClientOptions
     // Optional: Request timeout (default: 5 minutes)
     Timeout = TimeSpan.FromMinutes(5),
     
-    // Optional: Retry configuration for transient failures
+    // Optional: Retry configuration for transient failures (408, 429 and 5xx)
     RetryCount = 3,
     RetryDelay = TimeSpan.FromSeconds(1),
+
+    // Optional: upper bound on a server-supplied Retry-After header, which is honoured in
+    // preference to RetryDelay. TimeSpan.Zero ignores Retry-After entirely. (default: 30 seconds)
+    MaximumRetryAfterDelay = TimeSpan.FromSeconds(30),
     
     // Optional: Provide your own HttpClient
     HttpClient = existingHttpClient,

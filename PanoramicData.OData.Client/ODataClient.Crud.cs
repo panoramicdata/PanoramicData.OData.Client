@@ -189,7 +189,7 @@ public partial class ODataClient
 		T entity,
 		IReadOnlyDictionary<string, string>? headers = null,
 		CancellationToken cancellationToken = default) where T : class
-		=> ReplaceAsync<T, object>(entitySet, key, entity, etag: null, headers, cancellationToken);
+		=> ReplaceAsync<T, object>(entitySet, key, entity, headers: headers, cancellationToken: cancellationToken);
 
 	/// <summary>
 	/// Replaces an entire entity using PUT with optimistic concurrency via ETag.

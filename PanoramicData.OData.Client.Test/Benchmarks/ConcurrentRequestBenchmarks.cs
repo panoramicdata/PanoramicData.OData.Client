@@ -14,7 +14,6 @@ namespace PanoramicData.OData.Client.Test.Benchmarks;
 [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "BenchmarkDotNet manages lifecycle via GlobalSetup/GlobalCleanup")]
 public class ConcurrentRequestBenchmarks
 {
-	private Mock<HttpMessageHandler> _mockHandler = null!;
 	private HttpClient _httpClient = null!;
 	private ODataClient _client = null!;
 	private readonly string _responseJson;
@@ -42,8 +41,8 @@ public class ConcurrentRequestBenchmarks
 	[GlobalSetup]
 	public void Setup()
 	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_mockHandler.Protected()
+		var mockHandler = new Mock<HttpMessageHandler>();
+		mockHandler.Protected()
 			.Setup<Task<HttpResponseMessage>>(
 				"SendAsync",
 				ItExpr.IsAny<HttpRequestMessage>(),
@@ -53,7 +52,7 @@ public class ConcurrentRequestBenchmarks
 				Content = new StringContent(_responseJson, System.Text.Encoding.UTF8, "application/json")
 			});
 
-		_httpClient = new HttpClient(_mockHandler.Object)
+		_httpClient = new HttpClient(mockHandler.Object)
 		{
 			BaseAddress = new Uri("https://test.odata.org/")
 		};

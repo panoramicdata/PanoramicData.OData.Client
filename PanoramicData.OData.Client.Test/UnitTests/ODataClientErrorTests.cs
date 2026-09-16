@@ -5,39 +5,8 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for ODataClient error handling.
 /// </summary>
-public class ODataClientErrorTests : TestBase, IDisposable
+public class ODataClientErrorTests : ODataMetadataTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-	private readonly ODataClient _client;
-
-	/// <summary>
-	/// Initializes a new instance of the test class with mocked dependencies.
-	/// </summary>
-	public ODataClientErrorTests()
-	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 0
-		});
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_client.Dispose();
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
-	}
-
 	#region HTTP Status Code Error Tests
 
 	/// <summary>
@@ -50,7 +19,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.NotFound, """{"error": {"message": "Resource not found"}}""");
 
 		// Act
-		var act = async () => await _client.GetAsync(_client.For<Product>("Products"), CancellationToken);
+		var act = async () => await Client.GetAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		var ex = await act.Should().ThrowAsync<ODataNotFoundException>();
@@ -67,7 +36,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.Unauthorized, """{"error": {"message": "Authentication required"}}""");
 
 		// Act
-		var act = async () => await _client.GetAsync(_client.For<Product>("Products"), CancellationToken);
+		var act = async () => await Client.GetAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		var ex = await act.Should().ThrowAsync<ODataUnauthorizedException>();
@@ -84,7 +53,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.Forbidden, """{"error": {"message": "Access denied"}}""");
 
 		// Act
-		var act = async () => await _client.GetAsync(_client.For<Product>("Products"), CancellationToken);
+		var act = async () => await Client.GetAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		var ex = await act.Should().ThrowAsync<ODataForbiddenException>();
@@ -104,15 +73,10 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		};
 		response.Headers.ETag = new System.Net.Http.Headers.EntityTagHeaderValue("\"new-etag\"");
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupResponse(response);
 
 		// Act
-		var act = async () => await _client.UpdateAsync<Product>(
+		var act = async () => await Client.UpdateAsync<Product>(
 			"Products",
 			1,
 			new { Name = "Updated" },
@@ -136,7 +100,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.InternalServerError, """{"error": {"message": "Server error"}}""");
 
 		// Act
-		var act = async () => await _client.GetAsync(_client.For<Product>("Products"), CancellationToken);
+		var act = async () => await Client.GetAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		var ex = await act.Should().ThrowAsync<ODataClientException>();
@@ -153,7 +117,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.BadGateway, """{"error": {"message": "Bad gateway"}}""");
 
 		// Act
-		var act = async () => await _client.GetAsync(_client.For<Product>("Products"), CancellationToken);
+		var act = async () => await Client.GetAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		var ex = await act.Should().ThrowAsync<ODataClientException>();
@@ -170,7 +134,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.ServiceUnavailable, """{"error": {"message": "Service unavailable"}}""");
 
 		// Act
-		var act = async () => await _client.GetAsync(_client.For<Product>("Products"), CancellationToken);
+		var act = async () => await Client.GetAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		var ex = await act.Should().ThrowAsync<ODataClientException>();
@@ -187,7 +151,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.BadRequest, """{"error": {"message": "Invalid query"}}""");
 
 		// Act
-		var act = async () => await _client.GetAsync(_client.For<Product>("Products"), CancellationToken);
+		var act = async () => await Client.GetAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		var ex = await act.Should().ThrowAsync<ODataClientException>();
@@ -208,7 +172,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.OK, "<html><head><title>Login</title></head><body>Please login</body></html>");
 
 		// Act
-		var act = async () => await _client.GetAsync(_client.For<Product>("Products"), CancellationToken);
+		var act = async () => await Client.GetAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		await act.Should().ThrowAsync<ODataClientException>()
@@ -237,7 +201,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.OK, htmlContent);
 
 		// Act
-		var act = async () => await _client.GetAsync(_client.For<Product>("Products"), CancellationToken);
+		var act = async () => await Client.GetAsync(Client.For<Product>("Products"), CancellationToken);
 
 		// Assert
 		await act.Should().ThrowAsync<ODataClientException>()
@@ -251,34 +215,15 @@ public class ODataClientErrorTests : TestBase, IDisposable
 	public async Task GetMetadataAsync_XmlResponse_DoesNotThrowHtmlError()
 	{
 		// Arrange
-		var xmlContent = """
-			<?xml version="1.0" encoding="utf-8"?>
-			<edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
-				<edmx:DataServices>
-					<Schema Namespace="Test" xmlns="http://docs.oasis-open.org/odata/ns/edm">
-						<EntityType Name="Product">
-							<Key><PropertyRef Name="ID"/></Key>
-							<Property Name="ID" Type="Edm.Int32" Nullable="false"/>
-						</EntityType>
-					</Schema>
-				</edmx:DataServices>
-			</edmx:Edmx>
-			""";
-
-		var response = new HttpResponseMessage(HttpStatusCode.OK)
-		{
-			Content = new StringContent(xmlContent, System.Text.Encoding.UTF8, "application/xml")
-		};
-
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(response);
+		SetupMetadataResponse(CreateMetadataXml("""
+			<EntityType Name="Product">
+				<Key><PropertyRef Name="ID"/></Key>
+				<Property Name="ID" Type="Edm.Int32" Nullable="false"/>
+			</EntityType>
+			"""));
 
 		// Act
-		var metadata = await _client.GetMetadataAsync(CancellationToken);
+		var metadata = await Client.GetMetadataAsync(CancellationToken);
 
 		// Assert
 		metadata.Should().NotBeNull();
@@ -301,7 +246,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		ODataClientException? caughtException = null;
 		try
 		{
-			await _client.GetAsync(_client.For<Product>("Products"), CancellationToken);
+			await Client.GetAsync(Client.For<Product>("Products"), CancellationToken);
 		}
 		catch (ODataClientException ex)
 		{
@@ -327,7 +272,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		ODataClientException? caughtException = null;
 		try
 		{
-			await _client.GetAsync(_client.For<Product>("Products"), CancellationToken);
+			await Client.GetAsync(Client.For<Product>("Products"), CancellationToken);
 		}
 		catch (ODataClientException ex)
 		{
@@ -352,7 +297,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		ODataClientException? caughtException = null;
 		try
 		{
-			await _client.GetAsync(_client.For<Product>("Products").Filter("InvalidField eq 'test'"), CancellationToken);
+			await Client.GetAsync(Client.For<Product>("Products").Filter("InvalidField eq 'test'"), CancellationToken);
 		}
 		catch (ODataClientException ex)
 		{
@@ -378,7 +323,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.BadRequest, """{"error": "Invalid entity"}""");
 
 		// Act
-		var act = async () => await _client.CreateAsync("Products", new Product { Name = "Test" }, cancellationToken: CancellationToken);
+		var act = async () => await Client.CreateAsync("Products", new Product { Name = "Test" }, cancellationToken: CancellationToken);
 
 		// Assert
 		await act.Should().ThrowAsync<ODataClientException>();
@@ -394,7 +339,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.BadRequest, """{"error": "Invalid update"}""");
 
 		// Act
-		var act = async () => await _client.UpdateAsync<Product>("Products", 1, new { Name = "Updated" }, cancellationToken: CancellationToken);
+		var act = async () => await Client.UpdateAsync<Product>("Products", 1, new { Name = "Updated" }, cancellationToken: CancellationToken);
 
 		// Assert
 		await act.Should().ThrowAsync<ODataClientException>();
@@ -410,7 +355,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.NotFound, """{"error": "Entity not found"}""");
 
 		// Act
-		var act = async () => await _client.DeleteAsync("Products", 999, cancellationToken: CancellationToken);
+		var act = async () => await Client.DeleteAsync("Products", 999, cancellationToken: CancellationToken);
 
 		// Assert
 		await act.Should().ThrowAsync<ODataNotFoundException>();
@@ -426,7 +371,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 		SetupMockResponse(HttpStatusCode.BadRequest, """{"error": "Invalid entity"}""");
 
 		// Act
-		var act = async () => await _client.ReplaceAsync("Products", 1, new Product { Name = "Test" }, cancellationToken: CancellationToken);
+		var act = async () => await Client.ReplaceAsync("Products", 1, new Product { Name = "Test" }, cancellationToken: CancellationToken);
 
 		// Assert
 		await act.Should().ThrowAsync<ODataClientException>();
@@ -436,11 +381,7 @@ public class ODataClientErrorTests : TestBase, IDisposable
 
 	#region Helper Methods
 
-	private void SetupMockResponse(HttpStatusCode statusCode, string content) => _mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+	private void SetupMockResponse(HttpStatusCode statusCode, string content) => SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(statusCode)
 			{
 				Content = new StringContent(content, System.Text.Encoding.UTF8, "application/json")

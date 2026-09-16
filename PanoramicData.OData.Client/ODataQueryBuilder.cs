@@ -158,9 +158,9 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <summary>
 	/// Sets the key for a single entity query.
 	/// </summary>
-	public ODataQueryBuilder<T> Key<TKey>(TKey key)
+	public ODataQueryBuilder<T> Key<TKey>(TKey keyValue)
 	{
-		_key = key;
+		_key = keyValue;
 		return this;
 	}
 
@@ -522,11 +522,11 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <summary>
 	/// Adds a raw order by string.
 	/// </summary>
-	public ODataQueryBuilder<T> OrderBy(string orderBy)
+	public ODataQueryBuilder<T> OrderBy(string orderByExpression)
 	{
-		if (!string.IsNullOrWhiteSpace(orderBy))
+		if (!string.IsNullOrWhiteSpace(orderByExpression))
 		{
-			_orderByClauses.Add(orderBy);
+			_orderByClauses.Add(orderByExpression);
 		}
 
 		return this;
@@ -596,7 +596,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <summary>
 	/// Appends a raw, vendor-specific query option to the request URL.
 	/// </summary>
-	/// <param name="queryOptions">
+	/// <param name="rawQueryOptions">
 	/// A raw query string segment to append, e.g. <c>"PropertySet=Minimum,AddressList"</c>.
 	/// The value is appended verbatim - no quoting or URL encoding is applied.
 	/// Multiple calls are combined with <c>&amp;</c>.
@@ -607,11 +607,11 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// Unlike Simple.OData.Client's <c>QueryOptions(IDictionary)</c> overload,
 	/// this method does not wrap values in single quotes.
 	/// </remarks>
-	public ODataQueryBuilder<T> QueryOptions(string queryOptions)
+	public ODataQueryBuilder<T> QueryOptions(string rawQueryOptions)
 	{
-		if (!string.IsNullOrWhiteSpace(queryOptions))
+		if (!string.IsNullOrWhiteSpace(rawQueryOptions))
 		{
-			_rawQueryOptions.Add(queryOptions);
+			_rawQueryOptions.Add(rawQueryOptions);
 		}
 
 		return this;
@@ -630,223 +630,4 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// Gets the custom headers configured for this query.
 	/// </summary>
 	public IReadOnlyDictionary<string, string> CustomHeaders => _customHeaders;
-
-	/// <summary>
-	/// Builds the relative URL for this query.
-	/// </summary>
-	public string BuildUrl()
-	{
-		LoggerMessages.QueryBuilderBuildUrl(_logger, typeof(T).Name, _entitySet);
-
-		var sb = new StringBuilder();
-		sb.Append(_entitySet);
-
-		AppendDerivedTypeToUrl(sb);
-		AppendKeyToUrl(sb);
-		AppendFunctionToUrl(sb);
-		AppendQueryString(sb);
-
-		var url = sb.ToString();
-		LoggerMessages.QueryBuilderFinalUrl(_logger, typeof(T).Name, url);
-
-		return url;
-	}
-
-	private void AppendDerivedTypeToUrl(StringBuilder sb)
-	{
-		if (string.IsNullOrEmpty(_derivedType))
-		{
-			return;
-		}
-
-		sb.Append('/');
-		sb.Append(_derivedType);
-		LoggerMessages.QueryBuilderDerivedType(_logger, _derivedType);
-	}
-
-	private void AppendKeyToUrl(StringBuilder sb)
-	{
-		if (_key is null)
-		{
-			return;
-		}
-
-		sb.Append('(');
-		sb.Append(FormatKey(_key));
-		sb.Append(')');
-		LoggerMessages.QueryBuilderKey(_logger, _key);
-	}
-
-	private void AppendFunctionToUrl(StringBuilder sb)
-	{
-		if (string.IsNullOrEmpty(_function))
-		{
-			return;
-		}
-
-		sb.Append('/');
-		sb.Append(_function);
-		LoggerMessages.QueryBuilderFunction(_logger, _function);
-
-		sb.Append('(');
-		if (_functionParameters is not null)
-		{
-			sb.Append(FormatFunctionParameters(_functionParameters));
-		}
-
-		sb.Append(')');
-	}
-
-	private void AppendQueryString(StringBuilder sb)
-	{
-		var queryParams = BuildQueryParameters();
-
-		if (queryParams.Count > 0)
-		{
-			sb.Append('?');
-			sb.Append(string.Join("&", queryParams));
-		}
-	}
-
-	private List<string> BuildQueryParameters()
-	{
-		var queryParams = new List<string>();
-
-		AppendFilterParameter(queryParams);
-		AppendSearchParameter(queryParams);
-		AppendSelectParameter(queryParams);
-		AppendExpandParameter(queryParams);
-		AppendOrderByParameter(queryParams);
-		AppendSkipParameter(queryParams);
-		AppendTopParameter(queryParams);
-		AppendCountParameter(queryParams);
-		AppendApplyParameter(queryParams);
-		AppendComputeParameter(queryParams);
-		AppendRawQueryOptions(queryParams);
-
-		return queryParams;
-	}
-
-	private void AppendFilterParameter(List<string> queryParams)
-	{
-		if (_filterClauses.Count <= 0)
-		{
-			return;
-		}
-
-		var combinedFilter = string.Join(" and ", _filterClauses.Select(f => $"({f})"));
-		queryParams.Add($"$filter={Uri.EscapeDataString(combinedFilter)}");
-		LoggerMessages.QueryBuilderFilter(_logger, combinedFilter);
-	}
-
-	private void AppendSearchParameter(List<string> queryParams)
-	{
-		if (string.IsNullOrWhiteSpace(_search))
-		{
-			return;
-		}
-
-		queryParams.Add($"$search={Uri.EscapeDataString(_search)}");
-		LoggerMessages.QueryBuilderSearch(_logger, _search);
-	}
-
-	private void AppendSelectParameter(List<string> queryParams)
-	{
-		if (_selectFields.Count <= 0)
-		{
-			return;
-		}
-
-		var selectClause = string.Join(",", _selectFields);
-		queryParams.Add($"$select={selectClause}");
-		LoggerMessages.QueryBuilderSelect(_logger, selectClause);
-	}
-
-	private void AppendExpandParameter(List<string> queryParams)
-	{
-		if (_expandFields.Count <= 0)
-		{
-			return;
-		}
-
-		var expandClause = string.Join(",", _expandFields);
-		queryParams.Add($"$expand={expandClause}");
-		LoggerMessages.QueryBuilderExpand(_logger, expandClause);
-	}
-
-	private void AppendOrderByParameter(List<string> queryParams)
-	{
-		if (_orderByClauses.Count <= 0)
-		{
-			return;
-		}
-
-		var orderByClause = string.Join(",", _orderByClauses);
-		queryParams.Add($"$orderby={orderByClause}");
-		LoggerMessages.QueryBuilderOrderBy(_logger, orderByClause);
-	}
-
-	private void AppendSkipParameter(List<string> queryParams)
-	{
-		if (!_skip.HasValue)
-		{
-			return;
-		}
-
-		queryParams.Add($"$skip={_skip.Value}");
-		LoggerMessages.QueryBuilderSkip(_logger, _skip.Value);
-	}
-
-	private void AppendTopParameter(List<string> queryParams)
-	{
-		if (!_top.HasValue)
-		{
-			return;
-		}
-
-		queryParams.Add($"$top={_top.Value}");
-		LoggerMessages.QueryBuilderTop(_logger, _top.Value);
-	}
-
-	private void AppendCountParameter(List<string> queryParams)
-	{
-		if (!_count)
-		{
-			return;
-		}
-
-		queryParams.Add("$count=true");
-		LoggerMessages.QueryBuilderCount(_logger);
-	}
-
-	private void AppendApplyParameter(List<string> queryParams)
-	{
-		if (string.IsNullOrWhiteSpace(_apply))
-		{
-			return;
-		}
-
-		queryParams.Add($"$apply={Uri.EscapeDataString(_apply)}");
-		LoggerMessages.QueryBuilderApply(_logger, _apply);
-	}
-
-	private void AppendComputeParameter(List<string> queryParams)
-	{
-		if (_computeExpressions.Count <= 0)
-		{
-			return;
-		}
-
-		var computeClause = string.Join(",", _computeExpressions);
-		queryParams.Add($"$compute={Uri.EscapeDataString(computeClause)}");
-		LoggerMessages.QueryBuilderCompute(_logger, computeClause);
-	}
-
-	private void AppendRawQueryOptions(List<string> queryParams)
-	{
-		foreach (var option in _rawQueryOptions)
-		{
-			queryParams.Add(option);
-		}
-	}
 }

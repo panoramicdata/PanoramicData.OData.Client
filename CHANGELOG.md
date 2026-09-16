@@ -5,10 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [vNext]
 
 ### Added
-- Add `EntitySetNameResolver` option to `ODataClientOptions`, an opt-in `Func<Type, string?>` that resolves entity set names for the parameterless `For<T>()` overload. A non-empty result is used verbatim and short-circuits the `[EntitySet]` attribute lookup and `AutoPluralization`; returning `null`, empty, or whitespace falls through to the existing conventions. The explicit `For<T>("EntitySetName")` overload never invokes the resolver. This lets consumers wire attribute-based conventions (e.g. a custom `[CollectionName]`/`[EntitySetName]` attribute) without repeating the entity set name at every call site
+
+- Add `EntitySetNameResolver` option to `ODataClientOptions` for resolving entity set names in parameterless `For<T>()` calls, with fallback to declared attributes and existing pluralization conventions.
+
+
+### Changed
+
+- Rename four builder parameters that duplicated their method name, so that they read
+
+  distinctly in IntelliSense: `Key(key)` to `Key(keyValue)`, `Filter(filter)` to
+
+  `Filter(filterExpression)`, `OrderBy(orderBy)` to `OrderBy(orderByExpression)` and
+
+  `QueryOptions(queryOptions)` to `QueryOptions(rawQueryOptions)`, on
+
+  `ODataQueryBuilder<T>`, `FluentODataQueryBuilder`, `NestedExpandBuilder<T>` and
+
+  `ODataCrossJoinBuilder`. Source-compatible except for callers passing these arguments
+
+  by name
+
+- Share `ODataQueryBuilder<T>`'s operator table and reflection cache across all closed
+
+  generic types instead of rebuilding them per entity type. They were `static` fields of a
+
+  generic type, so each `ODataQueryBuilder<Product>`, `ODataQueryBuilder<Order>` and so on
+
+  had its own copy and could never share a cache hit
+
+- Rename `Run-Benchmarks.ps1`'s `-Profile` switch to `-EnableProfiling`, because `$Profile`
+
+  shadows a PowerShell automatic variable. `-Profile` still works, as an alias
+
+
+
+### Fixed
+
+- Preserve the original stack trace when a request fails after its retries are exhausted
+
+
+
+## [10.0.109] - 2026-08-07
+
+### Added
+- Add `MaximumRetryAfterDelay` option to `ODataClientOptions` (default 30 seconds). A server-supplied `Retry-After` header is now honoured in preference to `RetryDelay`, bounded by this value so that a large or malformed header cannot stall the caller. Set to `TimeSpan.Zero` to ignore `Retry-After` entirely and always use `RetryDelay`
+
+### Fixed
+- Retry HTTP 408 (Request Timeout) and 429 (Too Many Requests) alongside 5xx. Previously any status below 500 was returned to the caller immediately, so a 408 from an intervening proxy or a 429 from a rate limiter was never retried. Both are cases where the server rejected the request without processing it, so retrying is safe even for methods that are not idempotent. Other 4xx statuses remain non-retryable, in particular 409, which is a routine "already exists" outcome for callers that create-or-overwrite
 
 ## [10.0.106] - 2026-07-08
 
