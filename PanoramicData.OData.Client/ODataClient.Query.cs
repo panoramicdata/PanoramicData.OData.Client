@@ -479,31 +479,27 @@ public partial class ODataClient
 	{
 		var type = typeof(T);
 
-		return TryGetDeclaredEntitySetName(type)
-			?? (_options.AutoPluralization ? Pluralize(type.Name) : type.Name);
-	}
-
-	/// <summary>
-	/// Reads the entity set name off an [EntitySet("...")] attribute, as emitted by
-	/// Microsoft.OData.Client generated DTOs. Matched by name rather than by type, so the
-	/// attribute's assembly does not have to be referenced.
-	/// </summary>
-	/// <returns>The declared name, or <see langword="null"/> if the type does not declare one.</returns>
-	private static string? TryGetDeclaredEntitySetName(Type type)
-	{
-		var entitySetAttr = type.GetCustomAttributes(false)
-			.FirstOrDefault(a => a.GetType().Name == "EntitySetAttribute");
-		if (entitySetAttr is null)
+		var resolvedEntitySetName = _options.EntitySetNameResolver?.Invoke(type);
+		if (!string.IsNullOrWhiteSpace(resolvedEntitySetName))
 		{
-			return null;
+			return resolvedEntitySetName;
 		}
 
-		var prop = entitySetAttr.GetType().GetProperty("EntitySet")
-			?? entitySetAttr.GetType().GetProperty("Name");
+		// Respect [EntitySet("...")] attribute from Microsoft.OData.Client generated DTOs
+		var entitySetAttr = type.GetCustomAttributes(false)
+			.FirstOrDefault(a => a.GetType().Name == "EntitySetAttribute");
+		if (entitySetAttr is not null)
+		{
+			var prop = entitySetAttr.GetType().GetProperty("EntitySet")
+				?? entitySetAttr.GetType().GetProperty("Name");
 
-		return prop?.GetValue(entitySetAttr) is string entitySetName && !string.IsNullOrWhiteSpace(entitySetName)
-			? entitySetName
-			: null;
+			if (prop?.GetValue(entitySetAttr) is string entitySetName && !string.IsNullOrWhiteSpace(entitySetName))
+			{
+				return entitySetName;
+			}
+		}
+
+		return _options.AutoPluralization ? Pluralize(type.Name) : type.Name;
 	}
 
 	/// <summary>
