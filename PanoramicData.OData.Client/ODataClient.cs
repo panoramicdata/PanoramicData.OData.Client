@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.Logging.Abstractions;
 using PanoramicData.OData.Client.Converters;
 
@@ -96,7 +97,7 @@ public partial class ODataClient : IDisposable
 			foreach (var header in headers)
 			{
 				request.Headers.TryAddWithoutValidation(header.Key, header.Value);
-				LoggerMessages.AddingHeader(_logger, header.Key, header.Value);
+				LoggerMessages.AddingHeader(_logger, header.Key, HttpExtensions.RedactIfSensitive(header.Key, header.Value));
 			}
 		}
 
@@ -215,48 +216,11 @@ public partial class ODataClient : IDisposable
 	{
 		try
 		{
-			var requestToSend = retryCount == 0 ? request : await CloneRequestAsync(request).ConfigureAwait(false);
-
-			LoggerMessages.SendingRequest(_logger, requestToSend.Method, requestToSend.RequestUri, retryCount + 1);
-
-			// Log full request details at Trace level
-			await LogRequestTraceAsync(requestToSend, cancellationToken).ConfigureAwait(false);
-
-			var response = await _httpClient.SendAsync(requestToSend, cancellationToken).ConfigureAwait(false);
-
-			LoggerMessages.ReceivedResponse(_logger, response.StatusCode, request.RequestUri);
-
-			// Log full response details at Trace level
-			await LogResponseTraceAsync(response, cancellationToken).ConfigureAwait(false);
-
-			if (response.IsSuccessStatusCode || !IsRetryableStatusCode(response.StatusCode, request.Method))
-			{
-				return (true, response);
-			}
-
-			// Individual failed attempts are logged at the configurable RetryAttemptLogLevel
-			// (Debug by default); a single Warning is logged once retries are exhausted, so
-			// transient failures that recover do not flood the logs.
-			if (retryCount < _options.RetryCount)
-			{
-				LogRetryAttemptStatus(request.RequestUri, response.StatusCode, retryCount + 1);
-			}
-			else
-			{
-				LoggerMessages.RetriesExhaustedStatus(_logger, request.RequestUri, response.StatusCode, _options.RetryCount + 1);
-			}
-
-			return (false, response);
+			return await SendAttemptAsync(request, retryCount, cancellationToken).ConfigureAwait(false);
 		}
 		catch (HttpRequestException ex)
 		{
-			if (retryCount >= _options.RetryCount)
-			{
-				LoggerMessages.RetriesExhaustedException(_logger, ex, request.RequestUri, "failed with exception", _options.RetryCount + 1);
-				throw;
-			}
-
-			LogRetryAttemptException(ex, request.RequestUri, "failed with exception", retryCount + 1);
+			RethrowIfRetriesExhausted(ex, request.RequestUri, "failed with exception", retryCount);
 		}
 		catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
 		{
@@ -269,16 +233,70 @@ public partial class ODataClient : IDisposable
 				throw;
 			}
 
-			if (retryCount >= _options.RetryCount)
-			{
-				LoggerMessages.RetriesExhaustedException(_logger, ex, request.RequestUri, "timed out", _options.RetryCount + 1);
-				throw;
-			}
-
-			LogRetryAttemptException(ex, request.RequestUri, "timed out", retryCount + 1);
+			RethrowIfRetriesExhausted(ex, request.RequestUri, "timed out", retryCount);
 		}
 
 		return (false, null);
+	}
+
+	/// <summary>
+	/// Sends one attempt and reports whether its outcome is final.
+	/// </summary>
+	private async Task<(bool ShouldReturn, HttpResponseMessage? Response)> SendAttemptAsync(
+		HttpRequestMessage request,
+		int retryCount,
+		CancellationToken cancellationToken)
+	{
+		var requestToSend = retryCount == 0 ? request : await CloneRequestAsync(request).ConfigureAwait(false);
+
+		LoggerMessages.SendingRequest(_logger, requestToSend.Method, requestToSend.RequestUri, retryCount + 1);
+
+		// Log full request details at Trace level
+		await LogRequestTraceAsync(requestToSend, cancellationToken).ConfigureAwait(false);
+
+		var response = await _httpClient.SendAsync(requestToSend, cancellationToken).ConfigureAwait(false);
+
+		LoggerMessages.ReceivedResponse(_logger, response.StatusCode, request.RequestUri);
+
+		// Log full response details at Trace level
+		await LogResponseTraceAsync(response, cancellationToken).ConfigureAwait(false);
+
+		if (response.IsSuccessStatusCode || !IsRetryableStatusCode(response.StatusCode, request.Method))
+		{
+			return (true, response);
+		}
+
+		// Individual failed attempts are logged at the configurable RetryAttemptLogLevel
+		// (Debug by default); a single Warning is logged once retries are exhausted, so
+		// transient failures that recover do not flood the logs.
+		if (retryCount < _options.RetryCount)
+		{
+			LogRetryAttemptStatus(request.RequestUri, response.StatusCode, retryCount + 1);
+		}
+		else
+		{
+			LoggerMessages.RetriesExhaustedStatus(_logger, request.RequestUri, response.StatusCode, _options.RetryCount + 1);
+		}
+
+		return (false, response);
+	}
+
+	/// <summary>
+	/// Rethrows a failed attempt's exception once no retries remain; otherwise logs the attempt
+	/// and returns so the caller can try again.
+	/// </summary>
+	private void RethrowIfRetriesExhausted(Exception ex, Uri? url, string reason, int retryCount)
+	{
+		if (retryCount >= _options.RetryCount)
+		{
+			LoggerMessages.RetriesExhaustedException(_logger, ex, url, reason, _options.RetryCount + 1);
+
+			// Capture/Throw rather than 'throw ex', so the original stack trace survives being
+			// rethrown from a different frame than the one that caught it.
+			ExceptionDispatchInfo.Capture(ex).Throw();
+		}
+
+		LogRetryAttemptException(ex, url, reason, retryCount + 1);
 	}
 
 	// The per-attempt log level is configurable at runtime (ODataClientOptions.RetryAttemptLogLevel),
@@ -332,14 +350,14 @@ public partial class ODataClient : IDisposable
 		sb.AppendLine("--- Request Headers ---");
 		foreach (var header in request.Headers)
 		{
-			sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {string.Join(", ", header.Value)}");
+			sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {HttpExtensions.RedactIfSensitive(header.Key, header.Value)}");
 		}
 
 		if (request.Content is not null)
 		{
 			foreach (var header in request.Content.Headers)
 			{
-				sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {string.Join(", ", header.Value)}");
+				sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {HttpExtensions.RedactIfSensitive(header.Key, header.Value)}");
 			}
 
 			sb.AppendLine("--- Request Body ---");
@@ -364,12 +382,12 @@ public partial class ODataClient : IDisposable
 		sb.AppendLine("--- Response Headers ---");
 		foreach (var header in response.Headers)
 		{
-			sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {string.Join(", ", header.Value)}");
+			sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {HttpExtensions.RedactIfSensitive(header.Key, header.Value)}");
 		}
 
 		foreach (var header in response.Content.Headers)
 		{
-			sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {string.Join(", ", header.Value)}");
+			sb.AppendLine(CultureInfo.InvariantCulture, $"{header.Key}: {HttpExtensions.RedactIfSensitive(header.Key, header.Value)}");
 		}
 
 		sb.AppendLine("--- Response Body ---");
@@ -480,7 +498,7 @@ public partial class ODataClient : IDisposable
 		int i => i.ToString(CultureInfo.InvariantCulture),
 		long l => l.ToString(CultureInfo.InvariantCulture),
 		Guid g => g.ToString(),
-		string s => $"'{s.Replace("'", "''")}'",
+		string s => ODataLiteral.Quote(s),
 		_ => key?.ToString() ?? throw new ArgumentException("Invalid key value")
 	};
 

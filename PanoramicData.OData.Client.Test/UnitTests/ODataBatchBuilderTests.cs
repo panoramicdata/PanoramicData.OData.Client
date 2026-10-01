@@ -3,39 +3,8 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for ODataBatchBuilder and ODataChangesetBuilder.
 /// </summary>
-public class ODataBatchBuilderTests : TestBase, IDisposable
+public class ODataBatchBuilderTests : MockedODataClientTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-	private readonly ODataClient _client;
-
-	/// <summary>
-	/// Initializes a new instance of the test class with mocked dependencies.
-	/// </summary>
-	public ODataBatchBuilderTests()
-	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 0
-		});
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_client.Dispose();
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
-	}
-
 	#region Get Operation Tests
 
 	/// <summary>
@@ -45,7 +14,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 	public void Get_WithIntKey_AddsOperation()
 	{
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Get<TestProduct, int>("Products", 123);
 
 		// Assert
@@ -64,7 +33,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 	public void Get_WithStringKey_FormatsWithQuotes()
 	{
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Get<TestProduct>("Products", "abc");
 
 		// Assert
@@ -82,7 +51,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 		var guid = Guid.Parse("12345678-1234-1234-1234-123456789012");
 
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Get<TestProduct, Guid>("Products", guid);
 
 		// Assert
@@ -104,7 +73,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 		var product = new TestProduct { Id = 0, Name = "New Product" };
 
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Create("Products", product);
 
 		// Assert
@@ -127,7 +96,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 	public void Update_WithoutETag_AddsOperation()
 	{
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Update<TestProduct>("Products", 1, new { Name = "Updated" });
 
 		// Assert
@@ -145,7 +114,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 	public void Update_WithETag_SetsETag()
 	{
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Update<TestProduct, int>("Products", 1, new { Name = "Updated" }, "\"etag-value\"");
 
 		// Assert
@@ -164,7 +133,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 	public void Delete_WithoutETag_AddsOperation()
 	{
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Delete("Products", 1);
 
 		// Assert
@@ -181,7 +150,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 	public void Delete_WithETag_SetsETag()
 	{
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Delete<int>("Products", 1, "\"etag\"");
 
 		// Assert
@@ -196,7 +165,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 	public void Delete_WithLongKey_FormatsCorrectly()
 	{
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Delete<long>("Products", 9876543210L);
 
 		// Assert
@@ -215,7 +184,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 	public void Changeset_WithOperations_AddsChangeset()
 	{
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Changeset(cs => cs
 				.Create("Products", new TestProduct { Name = "New" })
 				.Update<TestProduct>("Products", 1, new { Name = "Updated" })
@@ -242,7 +211,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 		var product = new TestProduct { Name = "New" };
 
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Changeset(cs => cs.Create("Products", product));
 
 		// Assert
@@ -258,7 +227,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 	public void Changeset_UpdateWithETag_SetsETag()
 	{
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Changeset(cs => cs.Update<TestProduct, int>("Products", 1, new { Name = "Updated" }, "\"etag\""));
 
 		// Assert
@@ -273,7 +242,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 	public void Changeset_DeleteWithETag_SetsETag()
 	{
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Changeset(cs => cs.Delete<int>("Products", 1, "\"etag\""));
 
 		// Assert
@@ -292,7 +261,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 	public void FluentChaining_AllOperationTypes_Works()
 	{
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Get<TestProduct>("Products", 1)
 			.Create("Products", new TestProduct { Name = "New" })
 			.Update<TestProduct>("Products", 2, new { Name = "Updated" })
@@ -314,7 +283,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 	public void GetAllOperations_ReturnsInOrder()
 	{
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Get<TestProduct>("Products", 1)
 			.Get<TestProduct>("Products", 2)
 			.Get<TestProduct>("Products", 3);
@@ -338,16 +307,12 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 	{
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(CreateBatchResponse());
 
 		// Act
-		await _client.CreateBatch()
+		await Client.CreateBatch()
 			.Get<TestProduct>("Products", 1)
 			.ExecuteAsync(CancellationToken);
 
@@ -367,7 +332,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 		SetupBatchMockResponse();
 
 		// Act
-		var response = await _client.CreateBatch()
+		var response = await Client.CreateBatch()
 			.Get<TestProduct>("Products", 1)
 			.ExecuteAsync(CancellationToken);
 
@@ -387,7 +352,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 	public void Key_StringWithSingleQuote_Escaped()
 	{
 		// Act
-		var builder = _client.CreateBatch()
+		var builder = Client.CreateBatch()
 			.Get<TestProduct>("Products", "O'Brien");
 
 		// Assert
@@ -399,12 +364,7 @@ public class ODataBatchBuilderTests : TestBase, IDisposable
 
 	#region Helper Methods
 
-	private void SetupBatchMockResponse() => _mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(CreateBatchResponse());
+	private void SetupBatchMockResponse() => SetupResponse(CreateBatchResponse());
 
 	private static HttpResponseMessage CreateBatchResponse()
 	{

@@ -52,11 +52,11 @@ public class FluentODataQueryBuilder
 	/// Sets the key for a single entity query.
 	/// </summary>
 	/// <typeparam name="TKey">The type of the key.</typeparam>
-	/// <param name="key">The entity key.</param>
+	/// <param name="keyValue">The entity key.</param>
 	/// <returns>This builder for method chaining.</returns>
-	public FluentODataQueryBuilder Key<TKey>(TKey key)
+	public FluentODataQueryBuilder Key<TKey>(TKey keyValue)
 	{
-		_key = key;
+		_key = keyValue;
 		return this;
 	}
 
@@ -158,13 +158,13 @@ public class FluentODataQueryBuilder
 	/// <summary>
 	/// Adds a raw order by string.
 	/// </summary>
-	/// <param name="orderBy">The order by expression.</param>
+	/// <param name="orderByExpression">The order by expression.</param>
 	/// <returns>This builder for method chaining.</returns>
-	public FluentODataQueryBuilder OrderBy(string orderBy)
+	public FluentODataQueryBuilder OrderBy(string orderByExpression)
 	{
-		if (!string.IsNullOrWhiteSpace(orderBy))
+		if (!string.IsNullOrWhiteSpace(orderByExpression))
 		{
-			_orderByClauses.Add(orderBy);
+			_orderByClauses.Add(orderByExpression);
 		}
 
 		return this;
@@ -257,7 +257,7 @@ public class FluentODataQueryBuilder
 	/// <summary>
 	/// Appends a raw, vendor-specific query option to the request URL.
 	/// </summary>
-	/// <param name="queryOptions">
+	/// <param name="rawQueryOptions">
 	/// A raw query string segment to append, e.g. <c>"PropertySet=Minimum,AddressList"</c>.
 	/// The value is appended verbatim - no quoting or URL encoding is applied.
 	/// Multiple calls are combined with <c>&amp;</c>.
@@ -268,11 +268,11 @@ public class FluentODataQueryBuilder
 	/// Unlike Simple.OData.Client's <c>QueryOptions(IDictionary)</c> overload,
 	/// this method does not wrap values in single quotes.
 	/// </remarks>
-	public FluentODataQueryBuilder QueryOptions(string queryOptions)
+	public FluentODataQueryBuilder QueryOptions(string rawQueryOptions)
 	{
-		if (!string.IsNullOrWhiteSpace(queryOptions))
+		if (!string.IsNullOrWhiteSpace(rawQueryOptions))
 		{
-			_rawQueryOptions.Add(queryOptions);
+			_rawQueryOptions.Add(rawQueryOptions);
 		}
 
 		return this;
@@ -571,7 +571,7 @@ public class FluentODataQueryBuilder
 		int i => i.ToString(CultureInfo.InvariantCulture),
 		long l => l.ToString(CultureInfo.InvariantCulture),
 		Guid g => g.ToString(),
-		string s => $"'{s.Replace("'", "''")}'",
+		string s => ODataLiteral.Quote(s),
 		_ => key.ToString() ?? throw new ArgumentException("Invalid key value")
 	};
 
@@ -586,7 +586,7 @@ public class FluentODataQueryBuilder
 			var formattedValue = value switch
 			{
 				null => "null",
-				string s => $"'{s.Replace("'", "''")}'",
+				string s => ODataLiteral.Quote(s),
 				bool b => b.ToString().ToLowerInvariant(),
 				DateTime dt => dt.ToString("O", CultureInfo.InvariantCulture),
 				DateTimeOffset dto => dto.ToString("O", CultureInfo.InvariantCulture),

@@ -125,14 +125,35 @@ public class ODataAsyncOperation<T>
 		TimeSpan? timeout = null,
 		CancellationToken cancellationToken = default)
 	{
-		var startTime = DateTime.UtcNow;
+		LogWaiting(timeout);
 
+		await PollUntilCompletedAsync(timeout, cancellationToken).ConfigureAwait(false);
+
+		if (Status == ODataAsyncOperationStatus.Failed)
+		{
+			throw new ODataAsyncOperationException("Async operation failed", MonitorUrl, ErrorMessage);
+		}
+
+		return Result;
+	}
+
+	private void LogWaiting(TimeSpan? timeout)
+	{
 		if (_logger.IsEnabled(LogLevel.Debug))
 		{
 #pragma warning disable CA1873 // Guarded by IsEnabled check above
 			LoggerMessages.AsyncOperationWaiting(_logger, timeout?.ToString() ?? "indefinite");
 #pragma warning restore CA1873
 		}
+	}
+
+	/// <summary>
+	/// Polls until the operation reports completion, or the timeout elapses.
+	/// </summary>
+	/// <exception cref="TimeoutException">Thrown if the operation doesn't complete within the timeout.</exception>
+	private async Task PollUntilCompletedAsync(TimeSpan? timeout, CancellationToken cancellationToken)
+	{
+		var startTime = DateTime.UtcNow;
 
 		while (!IsCompleted)
 		{
@@ -150,13 +171,6 @@ public class ODataAsyncOperation<T>
 				await Task.Delay(_pollInterval, cancellationToken).ConfigureAwait(false);
 			}
 		}
-
-		if (Status == ODataAsyncOperationStatus.Failed)
-		{
-			throw new ODataAsyncOperationException("Async operation failed", MonitorUrl, ErrorMessage);
-		}
-
-		return Result;
 	}
 
 	/// <summary>

@@ -3,39 +3,8 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for ODataClient pagination handling.
 /// </summary>
-public class ODataClientPaginationTests : IDisposable
+public class ODataClientPaginationTests : MockedODataClientTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-	private readonly ODataClient _client;
-
-	/// <summary>
-	/// Initializes a new instance of the test class.
-	/// </summary>
-	public ODataClientPaginationTests()
-	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 0
-		});
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_client.Dispose();
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
-	}
-
 	/// <summary>
 	/// Tests GetAllAsync follows nextLink to get all pages.
 	/// </summary>
@@ -44,11 +13,7 @@ public class ODataClientPaginationTests : IDisposable
 	{
 		// Arrange
 		var callCount = 0;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() =>
 			{
 				callCount++;
@@ -84,8 +49,8 @@ public class ODataClientPaginationTests : IDisposable
 			});
 
 		// Act
-		var query = _client.For<Product>("Products");
-		var response = await _client.GetAllAsync(query, CancellationToken.None);
+		var query = Client.For<Product>("Products");
+		var response = await Client.GetAllAsync(query, CancellationToken.None);
 
 		// Assert
 		callCount.Should().Be(3);
@@ -103,17 +68,12 @@ public class ODataClientPaginationTests : IDisposable
 	{
 		// Arrange
 		var callCount = 0;
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() =>
 			{
 				callCount++;
-				return callCount switch
-				{
-					1 => new HttpResponseMessage(HttpStatusCode.OK)
+				return callCount == 1
+					? new HttpResponseMessage(HttpStatusCode.OK)
 					{
 						Content = new StringContent("""
 						{
@@ -122,21 +82,20 @@ public class ODataClientPaginationTests : IDisposable
 							"@odata.nextLink": "https://test.odata.org/Products?$skip=1"
 						}
 						""")
-					},
-					_ => new HttpResponseMessage(HttpStatusCode.OK)
+					}
+					: new HttpResponseMessage(HttpStatusCode.OK)
 					{
 						Content = new StringContent("""
 						{
 							"value": [{ "ID": 2, "Name": "Item2" }]
 						}
 						""")
-					}
-				};
+					};
 			});
 
 		// Act
-		var query = _client.For<Product>("Products").Count();
-		var response = await _client.GetAllAsync(query, CancellationToken.None);
+		var query = Client.For<Product>("Products").Count();
+		var response = await Client.GetAllAsync(query, CancellationToken.None);
 
 		// Assert
 		response.Count.Should().Be(50);
@@ -150,19 +109,15 @@ public class ODataClientPaginationTests : IDisposable
 	public async Task GetAllAsync_EmptyResult_ReturnsEmpty()
 	{
 		// Arrange
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent("""{"value": []}""")
 			});
 
 		// Act
-		var query = _client.For<Product>("Products");
-		var response = await _client.GetAllAsync(query, CancellationToken.None);
+		var query = Client.For<Product>("Products");
+		var response = await Client.GetAllAsync(query, CancellationToken.None);
 
 		// Assert
 		response.Value.Should().BeEmpty();
@@ -178,11 +133,7 @@ public class ODataClientPaginationTests : IDisposable
 		using var cts = new CancellationTokenSource();
 		var callCount = 0;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.ReturnsAsync(() =>
 			{
 				callCount++;
@@ -203,8 +154,8 @@ public class ODataClientPaginationTests : IDisposable
 			});
 
 		// Act
-		var query = _client.For<Product>("Products");
-		var act = async () => await _client.GetAllAsync(query, cts.Token);
+		var query = Client.For<Product>("Products");
+		var act = async () => await Client.GetAllAsync(query, cts.Token);
 
 		// Assert
 		await act.Should().ThrowAsync<OperationCanceledException>();

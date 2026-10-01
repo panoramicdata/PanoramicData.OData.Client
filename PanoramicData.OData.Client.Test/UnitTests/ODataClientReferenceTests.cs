@@ -3,39 +3,8 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// <summary>
 /// Unit tests for OData entity reference ($ref) support.
 /// </summary>
-public class ODataClientReferenceTests : IDisposable
+public class ODataClientReferenceTests : MockedODataClientTestBase
 {
-	private readonly Mock<HttpMessageHandler> _mockHandler;
-	private readonly HttpClient _httpClient;
-	private readonly ODataClient _client;
-
-	/// <summary>
-	/// Initializes a new instance of the test class.
-	/// </summary>
-	public ODataClientReferenceTests()
-	{
-		_mockHandler = new Mock<HttpMessageHandler>();
-		_httpClient = new HttpClient(_mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = _httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 0
-		});
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		_client.Dispose();
-		_httpClient.Dispose();
-		GC.SuppressFinalize(this);
-	}
-
 	#region AddReferenceAsync Tests
 
 	/// <summary>
@@ -47,16 +16,12 @@ public class ODataClientReferenceTests : IDisposable
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
 
 		// Act
-		await _client.AddReferenceAsync("People", "scott", "Friends", "People", "john", cancellationToken: CancellationToken.None);
+		await Client.AddReferenceAsync("People", "scott", "Friends", "People", "john", cancellationToken: CancellationToken.None);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -73,11 +38,7 @@ public class ODataClientReferenceTests : IDisposable
 		// Arrange
 		string? capturedBody = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>(async (req, ct) =>
 			{
 				capturedBody = await req.Content!.ReadAsStringAsync(ct);
@@ -85,7 +46,7 @@ public class ODataClientReferenceTests : IDisposable
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
 
 		// Act
-		await _client.AddReferenceAsync("People", "scott", "Friends", "People", "john", cancellationToken: CancellationToken.None);
+		await Client.AddReferenceAsync("People", "scott", "Friends", "People", "john", cancellationToken: CancellationToken.None);
 
 		// Assert
 		capturedBody.Should().NotBeNull();
@@ -102,16 +63,12 @@ public class ODataClientReferenceTests : IDisposable
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
 
 		// Act
-		await _client.AddReferenceAsync("Orders", 1, "Products", "Products", 42, cancellationToken: CancellationToken.None);
+		await Client.AddReferenceAsync("Orders", 1, "Products", "Products", 42, cancellationToken: CancellationToken.None);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -131,16 +88,12 @@ public class ODataClientReferenceTests : IDisposable
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
 
 		// Act
-		await _client.RemoveReferenceAsync("People", "scott", "Friends", "People", "john", cancellationToken: CancellationToken.None);
+		await Client.RemoveReferenceAsync("People", "scott", "Friends", "People", "john", cancellationToken: CancellationToken.None);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -159,16 +112,12 @@ public class ODataClientReferenceTests : IDisposable
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
 
 		// Act
-		await _client.RemoveReferenceAsync("Orders", 1, "Products", "Products", 42, cancellationToken: CancellationToken.None);
+		await Client.RemoveReferenceAsync("Orders", 1, "Products", "Products", 42, cancellationToken: CancellationToken.None);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -188,16 +137,12 @@ public class ODataClientReferenceTests : IDisposable
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
 
 		// Act
-		await _client.SetReferenceAsync("People", "scott", "BestFriend", "People", "john", cancellationToken: CancellationToken.None);
+		await Client.SetReferenceAsync("People", "scott", "BestFriend", "People", "john", cancellationToken: CancellationToken.None);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -214,11 +159,7 @@ public class ODataClientReferenceTests : IDisposable
 		// Arrange
 		string? capturedBody = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>(async (req, ct) =>
 			{
 				capturedBody = await req.Content!.ReadAsStringAsync(ct);
@@ -226,7 +167,7 @@ public class ODataClientReferenceTests : IDisposable
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
 
 		// Act
-		await _client.SetReferenceAsync("People", "scott", "BestFriend", "People", "john", cancellationToken: CancellationToken.None);
+		await Client.SetReferenceAsync("People", "scott", "BestFriend", "People", "john", cancellationToken: CancellationToken.None);
 
 		// Assert
 		capturedBody.Should().NotBeNull();
@@ -247,16 +188,12 @@ public class ODataClientReferenceTests : IDisposable
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
 
 		// Act
-		await _client.DeleteReferenceAsync("People", "scott", "BestFriend", cancellationToken: CancellationToken.None);
+		await Client.DeleteReferenceAsync("People", "scott", "BestFriend", cancellationToken: CancellationToken.None);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();
@@ -273,16 +210,12 @@ public class ODataClientReferenceTests : IDisposable
 		// Arrange
 		HttpRequestMessage? capturedRequest = null;
 
-		_mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
+		SetupSendAsync()
 			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
 			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
 
 		// Act
-		await _client.DeleteReferenceAsync("Orders", 1, "Customer", cancellationToken: CancellationToken.None);
+		await Client.DeleteReferenceAsync("Orders", 1, "Customer", cancellationToken: CancellationToken.None);
 
 		// Assert
 		capturedRequest.Should().NotBeNull();

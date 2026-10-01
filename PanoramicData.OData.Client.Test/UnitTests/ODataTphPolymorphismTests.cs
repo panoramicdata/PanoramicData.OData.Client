@@ -12,36 +12,9 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// into the serialized payload, causing OData servers that use TPH inheritance to
 /// create the wrong subtype (or fail entirely).
 /// </summary>
-public class ODataTphPolymorphismTests : TestBase, IDisposable
+public class ODataTphPolymorphismTests : MockedODataClientTestBase
 {
-    private readonly Mock<HttpMessageHandler> _mockHandler;
-    private readonly HttpClient _httpClient;
-    private readonly ODataClient _client;
     private string? _capturedBody;
-
-    public ODataTphPolymorphismTests()
-    {
-        _mockHandler = new Mock<HttpMessageHandler>();
-        _httpClient = new HttpClient(_mockHandler.Object)
-        {
-            BaseAddress = new Uri("https://test.odata.org/")
-        };
-        _client = new ODataClient(new ODataClientOptions
-        {
-            BaseUrl = "https://test.odata.org/",
-            HttpClient = _httpClient,
-            Logger = NullLogger.Instance,
-            RetryCount = 0
-        });
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        _client.Dispose();
-        _httpClient.Dispose();
-        GC.SuppressFinalize(this);
-    }
 
     // Domain model for TPH inheritance tests
     public class Animal
@@ -60,7 +33,7 @@ public class ODataTphPolymorphismTests : TestBase, IDisposable
         public bool IsIndoor { get; set; }
     }
 
-	private void SetupCaptureAndReturn(HttpStatusCode statusCode, string responseBody) => _mockHandler.Protected()
+	private void SetupCaptureAndReturn(HttpStatusCode statusCode, string responseBody) => MockHandler.Protected()
 			.Setup<Task<HttpResponseMessage>>(
 				"SendAsync",
 				ItExpr.IsAny<HttpRequestMessage>(),
@@ -95,7 +68,7 @@ public class ODataTphPolymorphismTests : TestBase, IDisposable
         var dog = new Dog { Name = "Rex", Breed = "Labrador" };
 
         // Act - CreateAsync<Animal> but passing a Dog (polymorphism - the server must know it's a Dog)
-        await _client.CreateAsync<Animal>("Animals", dog, cancellationToken: CancellationToken);
+        await Client.CreateAsync<Animal>("Animals", dog, cancellationToken: CancellationToken);
 
         // Assert - @odata.type must be present so the server creates a Dog row, not an Animal row
         _capturedBody.Should().NotBeNull();
@@ -116,7 +89,7 @@ public class ODataTphPolymorphismTests : TestBase, IDisposable
         var animal = new Animal { Name = "Generic" };
 
         // Act
-        await _client.CreateAsync<Animal>("Animals", animal, cancellationToken: CancellationToken);
+        await Client.CreateAsync<Animal>("Animals", animal, cancellationToken: CancellationToken);
 
         // Assert - no annotation when there is no polymorphism
         _capturedBody.Should().NotBeNull();
@@ -138,7 +111,7 @@ public class ODataTphPolymorphismTests : TestBase, IDisposable
         var dog = new Dog { Name = "Rex", Breed = "Labrador" };
 
         // Act
-        await _client.CreateAsync<Animal>("Animals", dog, cancellationToken: CancellationToken);
+        await Client.CreateAsync<Animal>("Animals", dog, cancellationToken: CancellationToken);
 
         // Assert - derived-type properties must survive the converter's manual property copy
         _capturedBody.Should().Contain("\"breed\"",
@@ -160,7 +133,7 @@ public class ODataTphPolymorphismTests : TestBase, IDisposable
         var dog = new DogWithNullableName { Breed = "Poodle" };
 
         // Act
-        await _client.CreateAsync<Animal>("Animals", dog, cancellationToken: CancellationToken);
+        await Client.CreateAsync<Animal>("Animals", dog, cancellationToken: CancellationToken);
 
         // Assert - null Name must not appear in payload
         _capturedBody.Should().NotContain("\"name\":null",
@@ -181,7 +154,7 @@ public class ODataTphPolymorphismTests : TestBase, IDisposable
         var dog = new Dog { Name = "Buddy", Breed = "Beagle" };
 
         // Act - should not throw
-        var created = await _client.CreateAsync<Dog>("Animals", dog, cancellationToken: CancellationToken);
+        var created = await Client.CreateAsync<Dog>("Animals", dog, cancellationToken: CancellationToken);
 
         // Assert - entity data must survive deserialization with the annotation present
         created.Id.Should().Be(5);
@@ -200,7 +173,7 @@ public class ODataTphPolymorphismTests : TestBase, IDisposable
         SetupCaptureAndReturn(HttpStatusCode.OK, """{"id": 1, "name": "Rex", "breed": "Labrador"}""");
 
         // Act - anonymous object used for partial update (common pattern)
-        await _client.UpdateAsync<Dog>("Animals", 1, new { Breed = "Golden Retriever" },
+        await Client.UpdateAsync<Dog>("Animals", 1, new { Breed = "Golden Retriever" },
             cancellationToken: CancellationToken);
 
         // Assert - anonymous patch must not inject @odata.type

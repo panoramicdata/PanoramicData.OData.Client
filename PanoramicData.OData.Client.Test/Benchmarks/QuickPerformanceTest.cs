@@ -9,132 +9,123 @@ namespace PanoramicData.OData.Client.Test.Benchmarks;
 public static class QuickPerformanceTest
 {
 	/// <summary>
+	/// A scenario is significant when it costs this many times the simple-query baseline.
+	/// </summary>
+	private const double HotspotThreshold = 10;
+
+	private const decimal MinPrice = 100m;
+
+	private static readonly int[] Ids = [1, 2, 3, 4, 5];
+
+	/// <summary>
+	/// The query shapes measured, in the order they are run. The first is the baseline every
+	/// other result is reported relative to.
+	/// </summary>
+	private static readonly (string Name, Action Operation)[] Scenarios =
+	[
+		("SimpleQuery", static () =>
+			Builder().BuildUrl()),
+
+		("RawFilter", static () =>
+			Builder().Filter("Price gt 100").BuildUrl()),
+
+		("ExpressionFilter", static () =>
+			Builder().Filter(p => p.Price > 100).BuildUrl()),
+
+		("CapturedVariable", static () =>
+			Builder().Filter(p => p.Price > MinPrice).BuildUrl()),
+
+		("ContainsExpression", static () =>
+			Builder().Filter(p => Ids.Contains(p.Id)).BuildUrl()),
+
+		("ComplexExpression", static () =>
+			Builder().Filter(p => p.Price > 100 && p.Rating >= 3 && p.Name != null).BuildUrl()),
+
+		("FunctionWithReflection", static () =>
+			Builder().Function("Search", new { Term = "test", Max = 10 }).BuildUrl()),
+
+		("OrPrecedenceExpr", static () =>
+			Builder().Filter(p => p.Price > 100 && (p.Rating == 4 || p.Rating == 5)).BuildUrl()),
+	];
+
+	/// <summary>
 	/// Runs quick performance tests and prints results.
 	/// </summary>
 	public static void Run(int iterations = 10000)
 	{
 		Console.WriteLine($"Running {iterations} iterations per test...\n");
 
-		// Warmup
+		Warmup();
+
+		var results = Scenarios
+			.Select(scenario => (scenario.Name, MicrosecondsPerOp: Measure(scenario.Operation, iterations)))
+			.ToList();
+
+		PrintResults(results);
+		PrintHotspots(results);
+	}
+
+	private static ODataQueryBuilder<Product> Builder()
+		=> new("Products", NullLogger.Instance);
+
+	private static void Warmup()
+	{
 		for (var i = 0; i < 100; i++)
 		{
-			new ODataQueryBuilder<Product>("Products", NullLogger.Instance).BuildUrl();
+			Builder().BuildUrl();
 		}
+	}
 
-		var results = new List<(string Name, double MicrosecondsPerOp)>();
-
-		// Test 1: Simple query (no expression)
-		var sw = Stopwatch.StartNew();
+	private static double Measure(Action operation, int iterations)
+	{
+		var stopwatch = Stopwatch.StartNew();
 		for (var i = 0; i < iterations; i++)
 		{
-			new ODataQueryBuilder<Product>("Products", NullLogger.Instance).BuildUrl();
+			operation();
 		}
 
-		sw.Stop();
-		results.Add(("SimpleQuery", sw.ElapsedMilliseconds * 1000.0 / iterations));
+		stopwatch.Stop();
 
-		// Test 2: Raw filter (no expression)
-		sw.Restart();
-		for (var i = 0; i < iterations; i++)
-		{
-			new ODataQueryBuilder<Product>("Products", NullLogger.Instance).Filter("Price gt 100").BuildUrl();
-		}
+		return stopwatch.ElapsedMilliseconds * 1000.0 / iterations;
+	}
 
-		sw.Stop();
-		results.Add(("RawFilter", sw.ElapsedMilliseconds * 1000.0 / iterations));
+	private static void PrintResults(List<(string Name, double MicrosecondsPerOp)> results)
+	{
+		var baseline = results[0].MicrosecondsPerOp;
 
-		// Test 3: Expression filter (requires compilation)
-		sw.Restart();
-		for (var i = 0; i < iterations; i++)
-		{
-			new ODataQueryBuilder<Product>("Products", NullLogger.Instance).Filter(p => p.Price > 100).BuildUrl();
-		}
-
-		sw.Stop();
-		results.Add(("ExpressionFilter", sw.ElapsedMilliseconds * 1000.0 / iterations));
-
-		// Test 4: Expression with captured variable
-		var minPrice = 100m;
-		sw.Restart();
-		for (var i = 0; i < iterations; i++)
-		{
-			new ODataQueryBuilder<Product>("Products", NullLogger.Instance).Filter(p => p.Price > minPrice).BuildUrl();
-		}
-
-		sw.Stop();
-		results.Add(("CapturedVariable", sw.ElapsedMilliseconds * 1000.0 / iterations));
-
-		// Test 5: Expression with Contains (IN clause)
-		var ids = new[] { 1, 2, 3, 4, 5 };
-		sw.Restart();
-		for (var i = 0; i < iterations; i++)
-		{
-			new ODataQueryBuilder<Product>("Products", NullLogger.Instance).Filter(p => ids.Contains(p.Id)).BuildUrl();
-		}
-
-		sw.Stop();
-		results.Add(("ContainsExpression", sw.ElapsedMilliseconds * 1000.0 / iterations));
-
-		// Test 6: Complex expression
-		sw.Restart();
-		for (var i = 0; i < iterations; i++)
-		{
-			new ODataQueryBuilder<Product>("Products", NullLogger.Instance).Filter(p => p.Price > 100 && p.Rating >= 3 && p.Name != null).BuildUrl();
-		}
-
-		sw.Stop();
-		results.Add(("ComplexExpression", sw.ElapsedMilliseconds * 1000.0 / iterations));
-
-		// Test 7: Function with reflection
-		sw.Restart();
-		for (var i = 0; i < iterations; i++)
-		{
-			new ODataQueryBuilder<Product>("Products", NullLogger.Instance).Function("Search", new { Term = "test", Max = 10 }).BuildUrl();
-		}
-
-		sw.Stop();
-		results.Add(("FunctionWithReflection", sw.ElapsedMilliseconds * 1000.0 / iterations));
-
-		// Test 8: OR precedence expression
-		sw.Restart();
-		for (var i = 0; i < iterations; i++)
-		{
-			new ODataQueryBuilder<Product>("Products", NullLogger.Instance)
-				.Filter(p => p.Price > 100 && (p.Rating == 4 || p.Rating == 5)).BuildUrl();
-		}
-
-		sw.Stop();
-		results.Add(("OrPrecedenceExpr", sw.ElapsedMilliseconds * 1000.0 / iterations));
-
-		// Print results
 		Console.WriteLine("Performance Results:");
 		Console.WriteLine("".PadRight(60, '-'));
-		Console.WriteLine($"{"Test",-25} {"µs/op",-10} {"Relative",-10}");
+		Console.WriteLine($"{"Test",-25} {"us/op",-10} {"Relative",-10}");
 		Console.WriteLine("".PadRight(60, '-'));
 
-		var baseline = results[0].MicrosecondsPerOp;
 		foreach (var (name, microseconds) in results.OrderBy(r => r.MicrosecondsPerOp))
 		{
-			var relative = microseconds / baseline;
-			Console.WriteLine($"{name,-25} {microseconds,8:F2} {relative,8:F1}x");
+			Console.WriteLine($"{name,-25} {microseconds,8:F2} {microseconds / baseline,8:F1}x");
 		}
 
 		Console.WriteLine("".PadRight(60, '-'));
+	}
+
+	private static void PrintHotspots(List<(string Name, double MicrosecondsPerOp)> results)
+	{
+		var baseline = results[0].MicrosecondsPerOp;
+		var hotspots = results
+			.Where(r => r.MicrosecondsPerOp / baseline > HotspotThreshold)
+			.OrderByDescending(r => r.MicrosecondsPerOp)
+			.ToList();
+
 		Console.WriteLine("\nHotspot Analysis:");
 
-		// Find hotspots (>10x baseline)
-		var hotspots = results.Where(r => r.MicrosecondsPerOp / baseline > 10).ToList();
-		if (hotspots.Count > 0)
+		if (hotspots.Count == 0)
 		{
-			Console.WriteLine("??  These operations are significantly slower than baseline:");
-			foreach (var (name, microseconds) in hotspots.OrderByDescending(r => r.MicrosecondsPerOp))
-			{
-				Console.WriteLine($"   - {name}: {microseconds / baseline:F1}x slower");
-			}
+			Console.WriteLine($"OK: no significant hotspots detected (all < {HotspotThreshold:F0}x baseline)");
+			return;
 		}
-		else
+
+		Console.WriteLine("WARNING: these operations are significantly slower than baseline:");
+		foreach (var (name, microseconds) in hotspots)
 		{
-			Console.WriteLine("? No significant hotspots detected (all < 10x baseline)");
+			Console.WriteLine($"   - {name}: {microseconds / baseline:F1}x slower");
 		}
 	}
 }

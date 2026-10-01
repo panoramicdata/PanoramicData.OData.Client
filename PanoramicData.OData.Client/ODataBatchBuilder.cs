@@ -140,7 +140,7 @@ public class ODataBatchBuilder
 	public ODataBatchBuilder Changeset(Action<ODataChangesetBuilder> configure)
 	{
 		var changeset = new ODataChangeset();
-		var builder = new ODataChangesetBuilder(changeset, _jsonOptions);
+		var builder = new ODataChangesetBuilder(changeset);
 		configure(builder);
 		_items.Add(changeset);
 		return this;
@@ -185,7 +185,7 @@ public class ODataBatchBuilder
 		int i => i.ToString(CultureInfo.InvariantCulture),
 		long l => l.ToString(CultureInfo.InvariantCulture),
 		Guid g => g.ToString(),
-		string s => $"'{s.Replace("'", "''")}'",
+		string s => ODataLiteral.Quote(s),
 		_ => key?.ToString() ?? throw new ArgumentException("Invalid key value")
 	};
 }

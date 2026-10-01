@@ -12,12 +12,12 @@
 .PARAMETER Quick
     Run quick benchmarks (fewer iterations for faster feedback)
 
-.PARAMETER Profile
-    Enable detailed CPU profiling (Windows only, requires admin)
+.PARAMETER EnableProfiling
+    Enable detailed CPU profiling (Windows only, requires admin).
 
 .EXAMPLE
     .\Run-Benchmarks.ps1
-    
+
 .EXAMPLE
     .\Run-Benchmarks.ps1 -Filter "*QueryBuilder*"
 
@@ -28,28 +28,31 @@
 param(
     [string]$Filter = "*",
     [switch]$Quick,
-    [switch]$Profile
+    [Alias('Profile')]
+    [switch]$EnableProfiling
 )
 
 $ErrorActionPreference = 'Stop'
 
+. (Join-Path $PSScriptRoot 'Build/BuildOutput.ps1')
+
 $solutionRoot = $PSScriptRoot
 $testProject = Join-Path $solutionRoot "PanoramicData.OData.Client.Test\PanoramicData.OData.Client.Test.csproj"
 
-Write-Host "========================================" -ForegroundColor Magenta
-Write-Host " PanoramicData.OData.Client Benchmarks" -ForegroundColor Magenta
-Write-Host "========================================" -ForegroundColor Magenta
+Write-BuildMessage "========================================" -ForegroundColor Magenta
+Write-BuildMessage " PanoramicData.OData.Client Benchmarks" -ForegroundColor Magenta
+Write-BuildMessage "========================================" -ForegroundColor Magenta
 
 # Build in Release mode
-Write-Host "`n>> Building in Release mode..." -ForegroundColor Yellow
+Write-BuildMessage "`n>> Building in Release mode..." -ForegroundColor Yellow
 dotnet build $testProject --configuration Release --verbosity minimal
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Build failed!" -ForegroundColor Red
+    Write-BuildMessage "Build failed!" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "`n>> Running benchmarks..." -ForegroundColor Yellow
+Write-BuildMessage "`n>> Running benchmarks..." -ForegroundColor Yellow
 
 # Construct the benchmark command
 $benchmarkArgs = @(
@@ -65,7 +68,7 @@ if ($Quick) {
     $benchmarkArgs += "--job", "short"
 }
 
-if ($Profile) {
+if ($EnableProfiling) {
     $benchmarkArgs += "--profiler", "ETW"
 }
 
@@ -73,13 +76,13 @@ if ($Profile) {
 & dotnet $benchmarkArgs
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "`nBenchmark run failed!" -ForegroundColor Red
+    Write-BuildMessage "`nBenchmark run failed!" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "`n========================================" -ForegroundColor Green
-Write-Host " Benchmarks completed!" -ForegroundColor Green
-Write-Host "========================================" -ForegroundColor Green
-Write-Host "`nResults are in: BenchmarkDotNet.Artifacts\" -ForegroundColor Cyan
+Write-BuildMessage "`n========================================" -ForegroundColor Green
+Write-BuildMessage " Benchmarks completed!" -ForegroundColor Green
+Write-BuildMessage "========================================" -ForegroundColor Green
+Write-BuildMessage "`nResults are in: BenchmarkDotNet.Artifacts\" -ForegroundColor Cyan
 
 exit 0
