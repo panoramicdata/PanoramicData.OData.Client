@@ -8,7 +8,7 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 public class ODataClientRetryTests : MockedODataClientTestBase
 {
 	/// <summary>
-	/// Tests that client retries on 500 error.
+	/// Tests that client retries on a 503 error.
 	/// </summary>
 	[Fact]
 	public async Task Request_ServerError_Retries()
@@ -21,7 +21,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 				callCount++;
 				if (callCount < 3)
 				{
-					return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+					return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 					{
 						Content = new StringContent("{}")
 					};
@@ -137,7 +137,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 			.ReturnsAsync(() =>
 			{
 				callCount++;
-				return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+				return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 				{
 					Content = new StringContent("{}")
 				};
@@ -175,7 +175,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 				callCount++;
 				if (callCount < 2)
 				{
-					return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+					return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 					{
 						Content = new StringContent("{}")
 					};
@@ -213,7 +213,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	{
 		// Arrange
 		SetupSendAsync()
-			.ReturnsAsync(() => new HttpResponseMessage(HttpStatusCode.InternalServerError)
+			.ReturnsAsync(() => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 			{
 				Content = new StringContent("{}")
 			});
@@ -285,7 +285,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 				callCount++;
 				if (callCount < 2)
 				{
-					return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+					return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 					{
 						Content = new StringContent("{}")
 					};
@@ -329,7 +329,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 				callCount++;
 				if (callCount < 2)
 				{
-					return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+					return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 					{
 						Content = new StringContent("{}")
 					};
@@ -388,7 +388,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 				callTimes.Add(DateTime.UtcNow);
 				if (callTimes.Count < 2)
 				{
-					return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+					return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 					{
 						Content = new StringContent("{}")
 					};

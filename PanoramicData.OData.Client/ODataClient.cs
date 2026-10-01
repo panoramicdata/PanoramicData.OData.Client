@@ -142,7 +142,7 @@ public partial class ODataClient : IDisposable
 	/// the request <em>without processing it</em> - a 408 means it was never fully received, a 429
 	/// that it was refused outright - so repeating it cannot duplicate any effect.
 	///
-	/// 5xx is different, and only safe for an idempotent method (issue #43). A 504 in particular
+	/// Of the 5xx statuses only 502, 503 and 504 are retried, and only for an idempotent method (issue #43). A 504 in particular
 	/// means the opposite of a 408: the request reached the server, the server began work, and a
 	/// proxy gave up waiting - so the work may still be running. 502 and 503 can likewise be
 	/// returned after an upstream has accepted a request. Retrying a POST in that state either
@@ -156,7 +156,17 @@ public partial class ODataClient : IDisposable
 	/// </remarks>
 	private static bool IsRetryableStatusCode(HttpStatusCode statusCode, HttpMethod method)
 		=> statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests
-			|| ((int)statusCode >= 500 && IsIdempotent(method));
+			|| (IsTransientServerError(statusCode) && IsIdempotent(method));
+
+	/// <summary>
+	/// Whether a 5xx reports an upstream that may recover (502, 503, 504) rather than the server's own answer.
+	/// </summary>
+	/// <remarks>
+	/// A 500 or 501 is the server saying what happened, and asking again gets the same answer: retrying it
+	/// only keeps the caller waiting, for example behind a loading overlay, before the error it was always going to get.
+	/// </remarks>
+	private static bool IsTransientServerError(HttpStatusCode statusCode)
+		=> statusCode is HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout;
 
 	/// <summary>
 	/// Whether repeating a request with this method is guaranteed to have the same effect as making
