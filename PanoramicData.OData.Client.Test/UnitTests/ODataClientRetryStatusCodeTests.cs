@@ -87,7 +87,6 @@ public class ODataClientRetryStatusCodeTests : TestBase
 	[Theory]
 	[InlineData(HttpStatusCode.RequestTimeout)]        // 408 - the case that prompted this
 	[InlineData(HttpStatusCode.TooManyRequests)]       // 429
-	[InlineData(HttpStatusCode.InternalServerError)]   // 500 - must not regress
 	[InlineData(HttpStatusCode.BadGateway)]            // 502
 	[InlineData(HttpStatusCode.ServiceUnavailable)]    // 503
 	[InlineData(HttpStatusCode.GatewayTimeout)]        // 504
@@ -119,6 +118,8 @@ public class ODataClientRetryStatusCodeTests : TestBase
 	[InlineData(HttpStatusCode.NotFound)]      // 404
 	[InlineData(HttpStatusCode.Conflict)]      // 409 - routine "already exists"; retrying would be wrong
 	[InlineData(HttpStatusCode.Gone)]          // 410
+	[InlineData(HttpStatusCode.InternalServerError)]   // 500 - the server's own answer; asking again gets the same one
+	[InlineData(HttpStatusCode.NotImplemented)]        // 501
 	public async Task GenuineRejection_IsNotRetried(HttpStatusCode rejectionStatus)
 	{
 		var (client, httpClient, attemptCount) = CreateClient([rejectionStatus]);

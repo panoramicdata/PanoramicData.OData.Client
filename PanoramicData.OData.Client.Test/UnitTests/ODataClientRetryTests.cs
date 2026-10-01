@@ -30,7 +30,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 	}
 
 	/// <summary>
-	/// Tests that client retries on 500 error.
+	/// Tests that client retries on a 503 error.
 	/// </summary>
 	[Fact]
 	public async Task Request_ServerError_Retries()
@@ -47,7 +47,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 				callCount++;
 				if (callCount < 3)
 				{
-					return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+					return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 					{
 						Content = new StringContent("{}")
 					};
@@ -175,7 +175,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 			.ReturnsAsync(() =>
 			{
 				callCount++;
-				return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+				return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 				{
 					Content = new StringContent("{}")
 				};
@@ -217,7 +217,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 				callCount++;
 				if (callCount < 2)
 				{
-					return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+					return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 					{
 						Content = new StringContent("{}")
 					};
@@ -259,7 +259,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 				"SendAsync",
 				ItExpr.IsAny<HttpRequestMessage>(),
 				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(() => new HttpResponseMessage(HttpStatusCode.InternalServerError)
+			.ReturnsAsync(() => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 			{
 				Content = new StringContent("{}")
 			});
@@ -339,7 +339,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 				callCount++;
 				if (callCount < 2)
 				{
-					return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+					return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 					{
 						Content = new StringContent("{}")
 					};
@@ -387,7 +387,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 				callCount++;
 				if (callCount < 2)
 				{
-					return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+					return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 					{
 						Content = new StringContent("{}")
 					};
@@ -450,7 +450,7 @@ public class ODataClientRetryTests : TestBase, IDisposable
 				callTimes.Add(DateTime.UtcNow);
 				if (callTimes.Count < 2)
 				{
-					return new HttpResponseMessage(HttpStatusCode.InternalServerError)
+					return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 					{
 						Content = new StringContent("{}")
 					};

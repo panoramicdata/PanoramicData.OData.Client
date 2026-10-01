@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Stop retrying HTTP 500 (Internal Server Error) and 501 (Not Implemented). Of the 5xx statuses only 502, 503 and 504 are now retried, still only for idempotent methods. A 500 is the server's own answer and asking again gets the same one, so retrying it only kept callers waiting before an error they were always going to get: in Magic Suite, behind a page loading overlay that also blocked Merlin (MS-26904). This reverses the earlier choice to retry 500; a deployment whose server returns 500 for transient faults should return 503 for them instead
 ## [10.0.109] - 2026-08-07
 
 ### Added

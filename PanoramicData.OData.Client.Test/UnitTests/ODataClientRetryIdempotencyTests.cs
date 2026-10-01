@@ -136,11 +136,11 @@ public class ODataClientRetryIdempotencyTests : TestBase
 	}
 
 	/// <summary>
-	/// A GET still retries on 5xx exactly as before. This is the regression guard: the fix must not
+	/// A GET still retries on 502, 503 and 504. This is the regression guard: the fix must not
 	/// have narrowed retries for idempotent traffic, which is the overwhelming majority.
 	/// </summary>
 	[Theory]
-	[InlineData(HttpStatusCode.InternalServerError)]
+	[InlineData(HttpStatusCode.ServiceUnavailable)]
 	[InlineData(HttpStatusCode.GatewayTimeout)]
 	public async Task Get_ServerError_IsStillRetried(HttpStatusCode serverError)
 	{
