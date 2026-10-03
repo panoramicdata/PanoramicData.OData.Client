@@ -7,6 +7,7 @@ namespace PanoramicData.OData.Client.Test.IntegrationTests;
 /// Uses the TripPin read-write sample service which provides a unique session per request.
 /// Note: The TripPin service has specific behavior - entities may not persist across calls.
 /// </summary>
+[Trait("Category", "Integration")]
 public class CrudIntegrationTests : TestBase, IAsyncLifetime
 {
 	private ServiceProvider? _serviceProvider;

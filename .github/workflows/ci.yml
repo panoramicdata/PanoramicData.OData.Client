@@ -27,8 +27,9 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release --no-restore
 
+    # Integration tests call the public services.odata.org sample services and are run locally, never in CI.
     - name: Test
-      run: dotnet test --configuration Release --no-build --verbosity normal
+      run: dotnet test --configuration Release --no-build --verbosity normal --filter-not-trait "Category=Integration"
 
     - name: Pack
       run: dotnet pack --configuration Release --no-build --output ./artifacts
@@ -84,6 +85,7 @@ jobs:
         --coverage-settings PanoramicData.OData.Client.Test/coverage.config
         --coverage-output-format cobertura
         --coverage-output coverage.cobertura.xml
+        --filter-not-trait "Category=Integration"
 
     # continue-on-error: a Codacy outage must not turn a passing test run red. The
     # trade-off is that an expired or missing project token fails silently, so

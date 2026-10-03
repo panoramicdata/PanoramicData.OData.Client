@@ -6,6 +6,7 @@ namespace PanoramicData.OData.Client.Test.IntegrationTests;
 /// Integration tests using the TripPin sample service for advanced OData V4 scenarios.
 /// TripPin provides more complex entity relationships and features.
 /// </summary>
+[Trait("Category", "Integration")]
 public class TripPinIntegrationTests : TestBase, IAsyncLifetime
 {
 	private ServiceProvider? _serviceProvider;
