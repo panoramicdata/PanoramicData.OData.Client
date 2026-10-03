@@ -8,9 +8,13 @@ Only the latest released version is supported with security updates.
 
 If you discover a security vulnerability, please report it responsibly.
 
-**Do NOT open a public GitHub issue.**
+**Do not open a public GitHub issue.**
 
-Instead, please email security@panoramicdata.com with:
+Instead, use GitHub's private vulnerability reporting: open this repository's **Security** tab
+and choose **Report a vulnerability**, or go straight to
+https://github.com/panoramicdata/PanoramicData.OData.Client/security/advisories/new
+
+Please include:
 
 - A description of the vulnerability
 - Steps to reproduce the issue
