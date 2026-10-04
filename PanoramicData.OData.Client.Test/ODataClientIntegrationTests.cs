@@ -13,6 +13,7 @@ namespace PanoramicData.OData.Client.Test;
 /// Initializes a new instance of the <see cref="ODataClientIntegrationTests"/> class.
 /// </remarks>
 /// <param name="fixture">The OData client fixture providing a configured client instance.</param>
+[Trait("Category", "Integration")]
 public class ODataClientIntegrationTests(ODataClientFixture fixture) : TestBase, IClassFixture<ODataClientFixture>
 {
 

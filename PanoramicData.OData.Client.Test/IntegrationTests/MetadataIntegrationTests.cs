@@ -9,6 +9,7 @@ namespace PanoramicData.OData.Client.Test.IntegrationTests;
 /// <remarks>
 /// Initializes a new instance of the test class.
 /// </remarks>
+[Trait("Category", "Integration")]
 public class MetadataIntegrationTests(ODataClientFixture fixture) : TestBase, IClassFixture<ODataClientFixture>
 {
 

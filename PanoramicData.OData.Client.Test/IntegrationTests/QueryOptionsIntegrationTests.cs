@@ -6,6 +6,7 @@ namespace PanoramicData.OData.Client.Test.IntegrationTests;
 /// Integration tests for OData V4 query options using the public sample service.
 /// Tests $filter, $select, $expand, $orderby, $top, $skip, $count, $search.
 /// </summary>
+[Trait("Category", "Integration")]
 public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientFixture>
 {
 	private readonly ODataClientFixture _fixture;
