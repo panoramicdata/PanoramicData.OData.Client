@@ -236,7 +236,7 @@ public abstract class ODataOpenType
 	public void SetDynamicProperty<TValue>(string propertyName, TValue value, JsonSerializerOptions? options = null)
 	{
 		var json = JsonSerializer.Serialize(value, options);
-		DynamicProperties[propertyName] = JsonDocument.Parse(json).RootElement.Clone();
+		DynamicProperties[propertyName] = JsonElement.Parse(json);
 	}
 
 	/// <summary>
