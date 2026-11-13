@@ -5,7 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/ee4c431534a0455baf5733c36aa87a45)](https://app.codacy.com/gh/panoramicdata/PanoramicData.OData.Client/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 
-A lightweight, modern OData V4 client library for .NET 10.
+A lightweight, modern OData V4 client library for .NET 11.0.
+
+Supports .NET 11.0.
 
 ## What's New
 

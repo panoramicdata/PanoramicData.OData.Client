@@ -4,7 +4,7 @@ This document provides guidance for GitHub Copilot when working with this reposi
 
 ## Project Overview
 
-PanoramicData.OData.Client is a lightweight, modern OData V4 client library for .NET 10+.
+PanoramicData.OData.Client is a lightweight, modern OData V4 client library for .NET 11.0+.
 
 ## Changelog Management
 
