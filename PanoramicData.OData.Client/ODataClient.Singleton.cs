@@ -20,9 +20,7 @@ public partial class ODataClient
 	{
 		LoggerMessages.GetSingletonAsync(_logger, typeof(T).Name, singletonName);
 
-		var request = CreateRequest(HttpMethod.Get, singletonName, headers);
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, singletonName, cancellationToken).ConfigureAwait(false);
+		var response = await SendRequestAsync(HttpMethod.Get, singletonName, headers, cancellationToken).ConfigureAwait(false);
 
 		return await response.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false);
 	}
@@ -43,9 +41,7 @@ public partial class ODataClient
 		var typeName = typeof(T).Name;
 		LoggerMessages.GetSingletonWithETagAsync(_logger, typeName, singletonName);
 
-		var request = CreateRequest(HttpMethod.Get, singletonName, headers);
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, singletonName, cancellationToken).ConfigureAwait(false);
+		var response = await SendRequestAsync(HttpMethod.Get, singletonName, headers, cancellationToken).ConfigureAwait(false);
 
 		var result = new ODataSingleResponse<T>
 		{

@@ -21,14 +21,10 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken)
 	{
-		var url = $"{entitySet}({FormatKey(key)})/$value";
+		var url = $"{EntityStreamUrl(entitySet, key)}/$value";
 		LoggerMessages.GetStreamAsync(_logger, url);
 
-		var request = CreateRequest(HttpMethod.Get, url, headers);
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
-
-		return await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+		return await GetStreamCoreAsync(url, headers, cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -49,15 +45,10 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken)
 	{
-		var url = $"{entitySet}({FormatKey(key)})/$value";
+		var url = $"{EntityStreamUrl(entitySet, key)}/$value";
 		LoggerMessages.SetStreamAsync(_logger, url, contentType);
 
-		var request = CreateRequest(HttpMethod.Put, url, headers);
-		request.Content = new StreamContent(stream);
-		request.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
-
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		await PutStreamAsync(url, stream, contentType, headers, cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -78,14 +69,10 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken)
 	{
-		var url = $"{entitySet}({FormatKey(key)})/{propertyName}";
+		var url = $"{EntityStreamUrl(entitySet, key)}/{propertyName}";
 		LoggerMessages.GetStreamPropertyAsync(_logger, url);
 
-		var request = CreateRequest(HttpMethod.Get, url, headers);
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
-
-		return await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+		return await GetStreamCoreAsync(url, headers, cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -108,14 +95,36 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken)
 	{
-		var url = $"{entitySet}({FormatKey(key)})/{propertyName}";
+		var url = $"{EntityStreamUrl(entitySet, key)}/{propertyName}";
 		LoggerMessages.SetStreamPropertyAsync(_logger, url, contentType);
 
+		await PutStreamAsync(url, stream, contentType, headers, cancellationToken).ConfigureAwait(false);
+	}
+
+	private static string EntityStreamUrl<TKey>(string entitySet, TKey key)
+		=> $"{entitySet}({ODataLiteral.FormatKey(key)})";
+
+	private async Task<Stream> GetStreamCoreAsync(
+		string url,
+		IReadOnlyDictionary<string, string>? headers,
+		CancellationToken cancellationToken)
+	{
+		var response = await SendRequestAsync(HttpMethod.Get, url, headers, cancellationToken).ConfigureAwait(false);
+
+		return await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+	}
+
+	private async Task PutStreamAsync(
+		string url,
+		Stream stream,
+		string contentType,
+		IReadOnlyDictionary<string, string>? headers,
+		CancellationToken cancellationToken)
+	{
 		var request = CreateRequest(HttpMethod.Put, url, headers);
 		request.Content = new StreamContent(stream);
 		request.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
 
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		await SendAndEnsureSuccessAsync(request, url, cancellationToken).ConfigureAwait(false);
 	}
 }

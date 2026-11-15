@@ -180,7 +180,7 @@ public partial class ODataQueryBuilder<T> where T : class
 				"NavigateTo requires a key to be set. Call Key() before NavigateTo().");
 		}
 
-		var path = $"{_entitySet}({ODataExpressionTranslator.FormatKey(_key)})/{navigationProperty}";
+		var path = $"{_entitySet}({ODataLiteral.FormatKey(_key)})/{navigationProperty}";
 		LoggerMessages.QueryBuilderNavigateTo(_logger, typeof(T).Name, path);
 
 		return _client is null
@@ -215,7 +215,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		}
 
 		var propName = GetMemberName(navigationProperty);
-		var path = $"{_entitySet}({ODataExpressionTranslator.FormatKey(_key)})/{propName}";
+		var path = $"{_entitySet}({ODataLiteral.FormatKey(_key)})/{propName}";
 		LoggerMessages.QueryBuilderNavigateTo(_logger, typeof(T).Name, path);
 
 		return _client is null

@@ -9,6 +9,18 @@ internal static class ODataLiteral
 	private const string EscapedSingleQuote = "''";
 
 	/// <summary>
+	/// Renders a key value for use inside the parentheses of a resource URL.
+	/// </summary>
+	internal static string FormatKey(object? key) => key switch
+	{
+		int i => i.ToString(CultureInfo.InvariantCulture),
+		long l => l.ToString(CultureInfo.InvariantCulture),
+		Guid g => g.ToString(),
+		string s => Quote(s),
+		_ => key?.ToString() ?? throw new ArgumentException("Invalid key value")
+	};
+
+	/// <summary>
 	/// Renders a string as an OData string literal: wrapped in single quotes, with any
 	/// embedded single quote doubled.
 	/// </summary>

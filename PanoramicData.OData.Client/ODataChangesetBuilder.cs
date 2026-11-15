@@ -47,7 +47,7 @@ public class ODataChangesetBuilder
 		var operation = new ODataBatchOperation
 		{
 			OperationType = ODataBatchOperationType.Update,
-			Url = $"{entitySet}({FormatKey(key)})",
+			Url = $"{entitySet}({ODataLiteral.FormatKey(key)})",
 			Body = patchValues,
 			ResultType = typeof(T),
 			ETag = etag
@@ -81,7 +81,7 @@ public class ODataChangesetBuilder
 		var operation = new ODataBatchOperation
 		{
 			OperationType = ODataBatchOperationType.Delete,
-			Url = $"{entitySet}({FormatKey(key)})",
+			Url = $"{entitySet}({ODataLiteral.FormatKey(key)})",
 			ETag = etag
 		};
 		_changeset.Operations.Add(operation);
@@ -97,13 +97,4 @@ public class ODataChangesetBuilder
 	/// <returns>This builder for method chaining.</returns>
 	public ODataChangesetBuilder Delete(string entitySet, object key, [Optional] string? etag)
 		=> Delete<object>(entitySet, key, etag);
-
-	private static string FormatKey<TKey>(TKey key) => key switch
-	{
-		int i => i.ToString(CultureInfo.InvariantCulture),
-		long l => l.ToString(CultureInfo.InvariantCulture),
-		Guid g => g.ToString(),
-		string s => ODataLiteral.Quote(s),
-		_ => key?.ToString() ?? throw new ArgumentException("Invalid key value")
-	};
 }
