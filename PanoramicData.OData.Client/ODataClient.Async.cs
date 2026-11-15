@@ -129,6 +129,8 @@ public partial class ODataClient
 		[Optional] TimeSpan? pollInterval,
 		[Optional] CancellationToken cancellationToken)
 	{
+		ThrowIfReadOnlyRefuses(batch);
+
 		var batchBoundary = $"batch_{Guid.NewGuid():N}";
 
 		LoggerMessages.ExecuteBatchAsyncWithPreferAsync(_logger, batch.Items.Count);
@@ -143,6 +145,7 @@ public partial class ODataClient
 		// Add Respond-Async preference
 		request.Headers.TryAddWithoutValidation("Prefer", "respond-async");
 
+		MarkReadOnlyVerified(request);
 		_options.ConfigureRequest?.Invoke(request);
 
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
