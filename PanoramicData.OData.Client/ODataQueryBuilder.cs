@@ -562,7 +562,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <summary>
 	/// Sets a function to call on the entity set.
 	/// </summary>
-	public ODataQueryBuilder<T> Function(string functionName, [Optional] object? parameters)
+	public ODataQueryBuilder<T> Function(string functionName, [Optional, DefaultParameterValue(null)] object? parameters)
 	{
 		_function = functionName;
 		_functionParameters = parameters;
