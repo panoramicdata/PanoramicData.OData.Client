@@ -226,7 +226,7 @@ public partial class ODataClient
 	/// </summary>
 	public async Task<TResult?> CallActionAsync<TResult>(
 		string actionUrl,
-		[Optional] object? parameters,
+		[Optional, DefaultParameterValue(null)] object? parameters,
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken)
 	{

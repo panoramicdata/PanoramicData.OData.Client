@@ -18,7 +18,7 @@ public partial class ODataClient
 	/// <returns>An async operation handle that can be used to monitor and retrieve the result.</returns>
 	public async Task<ODataAsyncOperationResult<TResult>> CallActionAsyncWithPreferAsync<TResult>(
 		string actionUrl,
-		[Optional] object? parameters,
+		[Optional, DefaultParameterValue(null)] object? parameters,
 		[Optional] TimeSpan? pollInterval,
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken)
@@ -95,7 +95,7 @@ public partial class ODataClient
 	/// <returns>The action result.</returns>
 	public async Task<TResult?> CallActionAndWaitAsync<TResult>(
 		string actionUrl,
-		[Optional] object? parameters,
+		[Optional, DefaultParameterValue(null)] object? parameters,
 		[Optional] TimeSpan? timeout,
 		[Optional] TimeSpan? pollInterval,
 		[Optional] IReadOnlyDictionary<string, string>? headers,
