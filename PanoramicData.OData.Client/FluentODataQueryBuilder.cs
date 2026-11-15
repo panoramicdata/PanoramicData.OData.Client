@@ -236,7 +236,7 @@ public class FluentODataQueryBuilder
 	/// <param name="functionName">The function name.</param>
 	/// <param name="parameters">Optional function parameters.</param>
 	/// <returns>This builder for method chaining.</returns>
-	public FluentODataQueryBuilder Function(string functionName, [Optional] object? parameters)
+	public FluentODataQueryBuilder Function(string functionName, [Optional, DefaultParameterValue(null)] object? parameters)
 	{
 		_function = functionName;
 		_functionParameters = parameters;
