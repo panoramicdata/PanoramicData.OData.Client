@@ -14,7 +14,7 @@ internal sealed class HttpMessageContent : HttpContent
 	/// </summary>
 	/// <param name="request">The HTTP request message to wrap.</param>
 	/// <param name="baseUri">The base URI used to resolve relative request URIs and supply the Host header.</param>
-	public HttpMessageContent(HttpRequestMessage request, Uri? baseUri = null)
+	public HttpMessageContent(HttpRequestMessage request, [Optional] Uri? baseUri)
 	{
 		_request = request ?? throw new ArgumentNullException(nameof(request));
 		_baseUri = baseUri;

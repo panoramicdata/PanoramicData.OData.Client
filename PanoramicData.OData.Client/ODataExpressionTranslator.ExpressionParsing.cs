@@ -5,9 +5,9 @@ namespace PanoramicData.OData.Client;
 /// <summary>
 /// Expression parsing functionality for ODataQueryBuilder.
 /// </summary>
-public partial class ODataQueryBuilder<T> where T : class
+internal static partial class ODataExpressionTranslator
 {
-	private static string ExpressionToODataFilter(Expression expression) =>
+	internal static string ExpressionToODataFilter(Expression expression) =>
 		ExpressionToODataFilter(expression, parentOperator: null, expectedType: null);
 
 	private static string ExpressionToODataFilter(Expression expression, ExpressionType? parentOperator, Type? expectedType) => expression switch
@@ -262,7 +262,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		return $"{propertyPath} in ({string.Join(",", formattedValues)})";
 	}
 
-	private static string GetMemberPath(MemberExpression member) => MemberPathResolver.GetFlatPath(member);
+	internal static string GetMemberPath(MemberExpression member) => MemberPathResolver.GetFlatPath(member);
 
 	private static object? GetValue(Expression expression) => expression switch
 	{
@@ -361,7 +361,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		return $"{utc:yyyy-MM-ddTHH:mm:ssZ}";
 	}
 
-	private static string FormatKey(object key) => key switch
+	internal static string FormatKey(object key) => key switch
 	{
 		int i => i.ToString(CultureInfo.InvariantCulture),
 		long l => l.ToString(CultureInfo.InvariantCulture),
@@ -370,7 +370,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		_ => key.ToString() ?? throw new ArgumentException("Invalid key value")
 	};
 
-	private static string FormatFunctionParameters(object parameters)
+	internal static string FormatFunctionParameters(object parameters)
 	{
 		var type = parameters.GetType();
 

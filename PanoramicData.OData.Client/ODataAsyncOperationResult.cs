@@ -30,8 +30,8 @@ public class ODataAsyncOperationResult<T>
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>The result.</returns>
 	public async Task<T?> GetResultAsync(
-		TimeSpan? timeout = null,
-		CancellationToken cancellationToken = default)
+		[Optional] TimeSpan? timeout,
+		[Optional] CancellationToken cancellationToken)
 	{
 		if (!IsAsync)
 		{

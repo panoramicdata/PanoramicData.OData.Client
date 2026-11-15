@@ -1,14 +1,14 @@
 namespace PanoramicData.OData.Client;
 
 /// <summary>
-/// ODataClient - Legacy helper methods for JSON conversion.
+/// Legacy helper methods for JSON conversion.
 /// </summary>
-public partial class ODataClient
+internal static class ODataLegacyJson
 {
 	/// <summary>
 	/// Converts a JsonElement to a dictionary (for legacy fluent API support).
 	/// </summary>
-	private static Dictionary<string, object?> LegacyJsonElementToDictionary(JsonElement element)
+	internal static Dictionary<string, object?> LegacyJsonElementToDictionary(JsonElement element)
 	{
 		var dict = new Dictionary<string, object?>();
 

@@ -62,7 +62,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>An ODataResponse containing the results.</returns>
 	/// <exception cref="InvalidOperationException">Thrown if this query builder was not created from an ODataClient.</exception>
-	public Task<ODataResponse<T>> GetAsync(CancellationToken cancellationToken = default)
+	public Task<ODataResponse<T>> GetAsync([Optional] CancellationToken cancellationToken)
 	{
 		EnsureClientAvailable();
 		return _client!.GetAsync(this, cancellationToken);
@@ -74,7 +74,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>An ODataResponse containing all results.</returns>
 	/// <exception cref="InvalidOperationException">Thrown if this query builder was not created from an ODataClient.</exception>
-	public Task<ODataResponse<T>> GetAllAsync(CancellationToken cancellationToken = default)
+	public Task<ODataResponse<T>> GetAllAsync([Optional] CancellationToken cancellationToken)
 	{
 		EnsureClientAvailable();
 		return _client!.GetAllAsync(this, cancellationToken);
@@ -88,7 +88,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>All matching entities.</returns>
 	/// <exception cref="InvalidOperationException">Thrown if this query builder was not created from an ODataClient.</exception>
-	public async Task<IEnumerable<T>> FindEntriesAsync(CancellationToken cancellationToken = default)
+	public async Task<IEnumerable<T>> FindEntriesAsync([Optional] CancellationToken cancellationToken)
 	{
 		var response = await GetAllAsync(cancellationToken).ConfigureAwait(false);
 		return response.Value;
@@ -100,7 +100,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>The first matching entity, or null.</returns>
 	/// <exception cref="InvalidOperationException">Thrown if this query builder was not created from an ODataClient.</exception>
-	public Task<T?> GetFirstOrDefaultAsync(CancellationToken cancellationToken = default)
+	public Task<T?> GetFirstOrDefaultAsync([Optional] CancellationToken cancellationToken)
 	{
 		EnsureClientAvailable();
 		return _client!.GetFirstOrDefaultAsync(this, cancellationToken);
@@ -112,7 +112,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>The single matching entity.</returns>
 	/// <exception cref="InvalidOperationException">Thrown if this query builder was not created from an ODataClient, or if zero or more than one entity matches.</exception>
-	public Task<T> GetSingleAsync(CancellationToken cancellationToken = default)
+	public Task<T> GetSingleAsync([Optional] CancellationToken cancellationToken)
 	{
 		EnsureClientAvailable();
 		return _client!.GetSingleAsync(this, cancellationToken);
@@ -124,7 +124,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>The single matching entity, or null.</returns>
 	/// <exception cref="InvalidOperationException">Thrown if this query builder was not created from an ODataClient, or if more than one entity matches.</exception>
-	public Task<T?> GetSingleOrDefaultAsync(CancellationToken cancellationToken = default)
+	public Task<T?> GetSingleOrDefaultAsync([Optional] CancellationToken cancellationToken)
 	{
 		EnsureClientAvailable();
 		return _client!.GetSingleOrDefaultAsync(this, cancellationToken);
@@ -136,7 +136,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>The count of matching entities.</returns>
 	/// <exception cref="InvalidOperationException">Thrown if this query builder was not created from an ODataClient.</exception>
-	public Task<long> GetCountAsync(CancellationToken cancellationToken = default)
+	public Task<long> GetCountAsync([Optional] CancellationToken cancellationToken)
 	{
 		EnsureClientAvailable();
 		return _client!.GetCountAsync(this, cancellationToken);
@@ -180,7 +180,7 @@ public partial class ODataQueryBuilder<T> where T : class
 				"NavigateTo requires a key to be set. Call Key() before NavigateTo().");
 		}
 
-		var path = $"{_entitySet}({FormatKey(_key)})/{navigationProperty}";
+		var path = $"{_entitySet}({ODataExpressionTranslator.FormatKey(_key)})/{navigationProperty}";
 		LoggerMessages.QueryBuilderNavigateTo(_logger, typeof(T).Name, path);
 
 		return _client is null
@@ -215,7 +215,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		}
 
 		var propName = GetMemberName(navigationProperty);
-		var path = $"{_entitySet}({FormatKey(_key)})/{propName}";
+		var path = $"{_entitySet}({ODataExpressionTranslator.FormatKey(_key)})/{propName}";
 		LoggerMessages.QueryBuilderNavigateTo(_logger, typeof(T).Name, path);
 
 		return _client is null
@@ -232,7 +232,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <typeparam name="TDerived">The derived type to filter to.</typeparam>
 	/// <param name="fullTypeName">The full namespace-qualified type name. If null, uses the type name without namespace.</param>
 	/// <returns>A new query builder for the derived type.</returns>
-	public ODataQueryBuilder<TDerived> OfType<TDerived>(string? fullTypeName = null) where TDerived : class, T
+	public ODataQueryBuilder<TDerived> OfType<TDerived>([Optional] string? fullTypeName) where TDerived : class, T
 	{
 		var typeName = fullTypeName ?? typeof(TDerived).Name;
 
@@ -278,7 +278,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// </summary>
 	public ODataQueryBuilder<T> Filter(Expression<Func<T, bool>> predicate)
 	{
-		var filterString = ExpressionToODataFilter(predicate.Body);
+		var filterString = ODataExpressionTranslator.ExpressionToODataFilter(predicate.Body);
 		if (!string.IsNullOrWhiteSpace(filterString))
 		{
 			_filterClauses.Add(filterString);
@@ -503,7 +503,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <summary>
 	/// Adds an order by clause.
 	/// </summary>
-	public ODataQueryBuilder<T> OrderBy(Expression<Func<T, object?>> selector, bool descending = false)
+	public ODataQueryBuilder<T> OrderBy(Expression<Func<T, object?>> selector, [Optional] bool descending)
 	{
 		var memberName = GetMemberName(selector);
 		_orderByClauses.Add(descending ? $"{memberName} desc" : memberName);
@@ -553,7 +553,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <summary>
 	/// Requests the count of matching entities.
 	/// </summary>
-	public ODataQueryBuilder<T> Count(bool includeCount = true)
+	public ODataQueryBuilder<T> Count([Optional, DefaultParameterValue(true)] bool includeCount)
 	{
 		_count = includeCount;
 		return this;
@@ -562,7 +562,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <summary>
 	/// Sets a function to call on the entity set.
 	/// </summary>
-	public ODataQueryBuilder<T> Function(string functionName, object? parameters = null)
+	public ODataQueryBuilder<T> Function(string functionName, [Optional] object? parameters)
 	{
 		_function = functionName;
 		_functionParameters = parameters;

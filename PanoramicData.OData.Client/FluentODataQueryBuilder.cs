@@ -212,7 +212,7 @@ public class FluentODataQueryBuilder
 	/// </summary>
 	/// <param name="includeCount">Whether to include the count.</param>
 	/// <returns>This builder for method chaining.</returns>
-	public FluentODataQueryBuilder Count(bool includeCount = true)
+	public FluentODataQueryBuilder Count([Optional, DefaultParameterValue(true)] bool includeCount)
 	{
 		_count = includeCount;
 		return this;
@@ -236,7 +236,7 @@ public class FluentODataQueryBuilder
 	/// <param name="functionName">The function name.</param>
 	/// <param name="parameters">Optional function parameters.</param>
 	/// <returns>This builder for method chaining.</returns>
-	public FluentODataQueryBuilder Function(string functionName, object? parameters = null)
+	public FluentODataQueryBuilder Function(string functionName, [Optional] object? parameters)
 	{
 		_function = functionName;
 		_functionParameters = parameters;
@@ -294,7 +294,7 @@ public class FluentODataQueryBuilder
 	/// var response = await client.GetAsync(query, cancellationToken);
 	/// </code>
 	/// </remarks>
-	public Task<ODataResponse<Dictionary<string, object?>>> GetAsync(CancellationToken cancellationToken = default)
+	public Task<ODataResponse<Dictionary<string, object?>>> GetAsync([Optional] CancellationToken cancellationToken)
 		=> _client.GetFluentAsync(this, cancellationToken);
 
 	/// <summary>
@@ -315,7 +315,7 @@ public class FluentODataQueryBuilder
 	/// </code>
 	/// </example>
 	/// </remarks>
-	public Task<JsonDocument> GetJsonAsync(CancellationToken cancellationToken = default)
+	public Task<JsonDocument> GetJsonAsync([Optional] CancellationToken cancellationToken)
 		=> _client.GetFluentJsonAsync(this, cancellationToken);
 
 	/// <summary>
@@ -330,7 +330,7 @@ public class FluentODataQueryBuilder
 	/// var response = await client.GetAllAsync(query, cancellationToken);
 	/// </code>
 	/// </remarks>
-	public Task<ODataResponse<Dictionary<string, object?>>> GetAllAsync(CancellationToken cancellationToken = default)
+	public Task<ODataResponse<Dictionary<string, object?>>> GetAllAsync([Optional] CancellationToken cancellationToken)
 		=> _client.GetAllFluentAsync(this, cancellationToken);
 
 	/// <summary>
@@ -339,7 +339,7 @@ public class FluentODataQueryBuilder
 	/// </summary>
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>A collection of dictionaries representing the matching entities.</returns>
-	public async Task<IEnumerable<IDictionary<string, object?>>> FindEntriesAsync(CancellationToken cancellationToken = default)
+	public async Task<IEnumerable<IDictionary<string, object?>>> FindEntriesAsync([Optional] CancellationToken cancellationToken)
 	{
 		var response = await GetAllAsync(cancellationToken).ConfigureAwait(false);
 		return response.Value.Cast<IDictionary<string, object?>>();
@@ -357,7 +357,7 @@ public class FluentODataQueryBuilder
 	/// var product = await client.GetByKeyAsync&lt;Product, int&gt;(123, cancellationToken: ct);
 	/// </code>
 	/// </remarks>
-	public Task<Dictionary<string, object?>?> GetEntryAsync(CancellationToken cancellationToken = default)
+	public Task<Dictionary<string, object?>?> GetEntryAsync([Optional] CancellationToken cancellationToken)
 		=> _client.GetEntryFluentAsync(BuildUrl(), CustomHeaders, cancellationToken);
 
 	/// <summary>
@@ -372,7 +372,7 @@ public class FluentODataQueryBuilder
 	/// var product = await client.GetFirstOrDefaultAsync(query, cancellationToken);
 	/// </code>
 	/// </remarks>
-	public async Task<Dictionary<string, object?>?> GetFirstOrDefaultAsync(CancellationToken cancellationToken = default)
+	public async Task<Dictionary<string, object?>?> GetFirstOrDefaultAsync([Optional] CancellationToken cancellationToken)
 	{
 		Top(1);
 		var response = await GetAsync(cancellationToken).ConfigureAwait(false);
@@ -390,7 +390,7 @@ public class FluentODataQueryBuilder
 	/// await client.DeleteAsync("Products", 123, cancellationToken);
 	/// </code>
 	/// </remarks>
-	public Task DeleteAsync(CancellationToken cancellationToken = default)
+	public Task DeleteAsync([Optional] CancellationToken cancellationToken)
 		=> _client.DeleteByUrlAsync(BuildUrl(), CustomHeaders, cancellationToken);
 
 	/// <summary>
@@ -408,7 +408,7 @@ public class FluentODataQueryBuilder
 	/// </code>
 	/// </example>
 	/// </remarks>
-	public Task DeleteEntryAsync(CancellationToken cancellationToken = default)
+	public Task DeleteEntryAsync([Optional] CancellationToken cancellationToken)
 		=> DeleteAsync(cancellationToken);
 
 	#endregion

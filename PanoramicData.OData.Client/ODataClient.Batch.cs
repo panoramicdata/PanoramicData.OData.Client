@@ -23,7 +23,7 @@ public partial class ODataClient
 	/// <returns>The batch response containing all operation results.</returns>
 	internal async Task<ODataBatchResponse> ExecuteBatchAsync(
 		ODataBatchBuilder batch,
-		CancellationToken cancellationToken = default)
+		[Optional] CancellationToken cancellationToken)
 	{
 		var batchBoundary = $"batch_{Guid.NewGuid():N}";
 

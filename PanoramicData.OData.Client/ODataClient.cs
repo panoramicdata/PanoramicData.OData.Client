@@ -82,7 +82,7 @@ public partial class ODataClient : IDisposable
 	private HttpRequestMessage CreateRequest(
 		HttpMethod method,
 		string url,
-		IReadOnlyDictionary<string, string>? headers = null)
+		[Optional] IReadOnlyDictionary<string, string>? headers)
 	{
 		var request = new HttpRequestMessage(method, url);
 

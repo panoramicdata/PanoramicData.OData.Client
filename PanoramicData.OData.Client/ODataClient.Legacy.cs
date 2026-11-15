@@ -143,7 +143,7 @@ public partial class ODataClient
 			result.Value = [];
 			foreach (var item in valueElement.EnumerateArray())
 			{
-				result.Value.Add(LegacyJsonElementToDictionary(item));
+				result.Value.Add(ODataLegacyJson.LegacyJsonElementToDictionary(item));
 			}
 		}
 
@@ -189,7 +189,7 @@ public partial class ODataClient
 			{
 				foreach (var item in valueElement.EnumerateArray())
 				{
-					allResults.Value.Add(LegacyJsonElementToDictionary(item));
+					allResults.Value.Add(ODataLegacyJson.LegacyJsonElementToDictionary(item));
 				}
 			}
 
@@ -234,7 +234,7 @@ public partial class ODataClient
 		// Single entity response
 		if (doc.RootElement.ValueKind == JsonValueKind.Object)
 		{
-			return LegacyJsonElementToDictionary(doc.RootElement);
+			return ODataLegacyJson.LegacyJsonElementToDictionary(doc.RootElement);
 		}
 
 		return null;

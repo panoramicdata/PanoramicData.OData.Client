@@ -42,7 +42,7 @@ public class ODataChangesetBuilder
 	/// <param name="patchValues">The values to update.</param>
 	/// <param name="etag">Optional ETag for concurrency control.</param>
 	/// <returns>This builder for method chaining.</returns>
-	public ODataChangesetBuilder Update<T, TKey>(string entitySet, TKey key, object patchValues, string? etag = null) where T : class
+	public ODataChangesetBuilder Update<T, TKey>(string entitySet, TKey key, object patchValues, [Optional] string? etag) where T : class
 	{
 		var operation = new ODataBatchOperation
 		{
@@ -65,7 +65,7 @@ public class ODataChangesetBuilder
 	/// <param name="patchValues">The values to update.</param>
 	/// <param name="etag">Optional ETag for concurrency control.</param>
 	/// <returns>This builder for method chaining.</returns>
-	public ODataChangesetBuilder Update<T>(string entitySet, object key, object patchValues, string? etag = null) where T : class
+	public ODataChangesetBuilder Update<T>(string entitySet, object key, object patchValues, [Optional] string? etag) where T : class
 		=> Update<T, object>(entitySet, key, patchValues, etag);
 
 	/// <summary>
@@ -76,7 +76,7 @@ public class ODataChangesetBuilder
 	/// <param name="key">The entity key.</param>
 	/// <param name="etag">Optional ETag for concurrency control.</param>
 	/// <returns>This builder for method chaining.</returns>
-	public ODataChangesetBuilder Delete<TKey>(string entitySet, TKey key, string? etag = null)
+	public ODataChangesetBuilder Delete<TKey>(string entitySet, TKey key, [Optional] string? etag)
 	{
 		var operation = new ODataBatchOperation
 		{
@@ -95,7 +95,7 @@ public class ODataChangesetBuilder
 	/// <param name="key">The entity key.</param>
 	/// <param name="etag">Optional ETag for concurrency control.</param>
 	/// <returns>This builder for method chaining.</returns>
-	public ODataChangesetBuilder Delete(string entitySet, object key, string? etag = null)
+	public ODataChangesetBuilder Delete(string entitySet, object key, [Optional] string? etag)
 		=> Delete<object>(entitySet, key, etag);
 
 	private static string FormatKey<TKey>(TKey key) => key switch

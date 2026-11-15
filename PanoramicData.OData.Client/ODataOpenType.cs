@@ -20,7 +20,7 @@ public abstract class ODataOpenType
 	/// <param name="propertyName">The property name.</param>
 	/// <param name="options">Optional JSON serializer options.</param>
 	/// <returns>The property value, or default if not found.</returns>
-	public TValue? GetDynamicProperty<TValue>(string propertyName, JsonSerializerOptions? options = null)
+	public TValue? GetDynamicProperty<TValue>(string propertyName, [Optional] JsonSerializerOptions? options)
 	{
 		if (!DynamicProperties.TryGetValue(propertyName, out var element))
 		{
@@ -233,7 +233,7 @@ public abstract class ODataOpenType
 	/// <param name="propertyName">The property name.</param>
 	/// <param name="value">The value to set.</param>
 	/// <param name="options">Optional JSON serializer options.</param>
-	public void SetDynamicProperty<TValue>(string propertyName, TValue value, JsonSerializerOptions? options = null)
+	public void SetDynamicProperty<TValue>(string propertyName, TValue value, [Optional] JsonSerializerOptions? options)
 	{
 		var json = JsonSerializer.Serialize(value, options);
 		DynamicProperties[propertyName] = JsonElement.Parse(json);

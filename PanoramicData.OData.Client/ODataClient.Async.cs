@@ -18,10 +18,10 @@ public partial class ODataClient
 	/// <returns>An async operation handle that can be used to monitor and retrieve the result.</returns>
 	public async Task<ODataAsyncOperationResult<TResult>> CallActionAsyncWithPreferAsync<TResult>(
 		string actionUrl,
-		object? parameters = null,
-		TimeSpan? pollInterval = null,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional] object? parameters,
+		[Optional] TimeSpan? pollInterval,
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 	{
 		LoggerMessages.CallActionAsyncWithPreferAsync(_logger, typeof(TResult).Name, actionUrl);
 
@@ -95,11 +95,11 @@ public partial class ODataClient
 	/// <returns>The action result.</returns>
 	public async Task<TResult?> CallActionAndWaitAsync<TResult>(
 		string actionUrl,
-		object? parameters = null,
-		TimeSpan? timeout = null,
-		TimeSpan? pollInterval = null,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional] object? parameters,
+		[Optional] TimeSpan? timeout,
+		[Optional] TimeSpan? pollInterval,
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 	{
 		var result = await CallActionAsyncWithPreferAsync<TResult>(
 			actionUrl,
@@ -126,8 +126,8 @@ public partial class ODataClient
 	/// <returns>An async operation result containing either the batch response or an async handle.</returns>
 	public async Task<ODataAsyncOperationResult<ODataBatchResponse>> ExecuteBatchAsyncWithPreferAsync(
 		ODataBatchBuilder batch,
-		TimeSpan? pollInterval = null,
-		CancellationToken cancellationToken = default)
+		[Optional] TimeSpan? pollInterval,
+		[Optional] CancellationToken cancellationToken)
 	{
 		var batchBoundary = $"batch_{Guid.NewGuid():N}";
 

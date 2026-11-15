@@ -31,7 +31,7 @@ public partial class ODataClient
 	/// <returns>The cross-join response containing result rows.</returns>
 	public async Task<ODataCrossJoinResponse> GetCrossJoinAsync(
 		ODataCrossJoinBuilder crossJoin,
-		CancellationToken cancellationToken = default)
+		[Optional] CancellationToken cancellationToken)
 	{
 		var url = crossJoin.BuildUrl();
 		LoggerMessages.GetCrossJoinAsync(_logger, url);
@@ -56,7 +56,7 @@ public partial class ODataClient
 	/// <returns>The cross-join response containing all result rows.</returns>
 	public async Task<ODataCrossJoinResponse> GetAllCrossJoinAsync(
 		ODataCrossJoinBuilder crossJoin,
-		CancellationToken cancellationToken = default)
+		[Optional] CancellationToken cancellationToken)
 	{
 		var allResults = new ODataCrossJoinResponse();
 		var url = crossJoin.BuildUrl();

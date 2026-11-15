@@ -53,7 +53,7 @@ public partial class ODataQueryBuilder<T> where T : class
 
 		if (expression is MemberExpression member)
 		{
-			return GetMemberPath(member);
+			return ODataExpressionTranslator.GetMemberPath(member);
 		}
 
 		return string.Empty;

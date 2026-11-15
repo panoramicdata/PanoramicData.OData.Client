@@ -75,7 +75,7 @@ public class ODataBatchBuilder
 	/// <param name="patchValues">The values to update.</param>
 	/// <param name="etag">Optional ETag for concurrency control.</param>
 	/// <returns>This builder for method chaining.</returns>
-	public ODataBatchBuilder Update<T, TKey>(string entitySet, TKey key, object patchValues, string? etag = null) where T : class
+	public ODataBatchBuilder Update<T, TKey>(string entitySet, TKey key, object patchValues, [Optional] string? etag) where T : class
 	{
 		var operation = new ODataBatchOperation
 		{
@@ -98,7 +98,7 @@ public class ODataBatchBuilder
 	/// <param name="patchValues">The values to update.</param>
 	/// <param name="etag">Optional ETag for concurrency control.</param>
 	/// <returns>This builder for method chaining.</returns>
-	public ODataBatchBuilder Update<T>(string entitySet, object key, object patchValues, string? etag = null) where T : class
+	public ODataBatchBuilder Update<T>(string entitySet, object key, object patchValues, [Optional] string? etag) where T : class
 		=> Update<T, object>(entitySet, key, patchValues, etag);
 
 	/// <summary>
@@ -109,7 +109,7 @@ public class ODataBatchBuilder
 	/// <param name="key">The entity key.</param>
 	/// <param name="etag">Optional ETag for concurrency control.</param>
 	/// <returns>This builder for method chaining.</returns>
-	public ODataBatchBuilder Delete<TKey>(string entitySet, TKey key, string? etag = null)
+	public ODataBatchBuilder Delete<TKey>(string entitySet, TKey key, [Optional] string? etag)
 	{
 		var operation = new ODataBatchOperation
 		{
@@ -128,7 +128,7 @@ public class ODataBatchBuilder
 	/// <param name="key">The entity key.</param>
 	/// <param name="etag">Optional ETag for concurrency control.</param>
 	/// <returns>This builder for method chaining.</returns>
-	public ODataBatchBuilder Delete(string entitySet, object key, string? etag = null)
+	public ODataBatchBuilder Delete(string entitySet, object key, [Optional] string? etag)
 		=> Delete<object>(entitySet, key, etag);
 
 	/// <summary>
@@ -177,7 +177,7 @@ public class ODataBatchBuilder
 	/// </summary>
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>The batch response containing all operation results.</returns>
-	public Task<ODataBatchResponse> ExecuteAsync(CancellationToken cancellationToken = default)
+	public Task<ODataBatchResponse> ExecuteAsync([Optional] CancellationToken cancellationToken)
 		=> _client.ExecuteBatchAsync(this, cancellationToken);
 
 	private static string FormatKey<TKey>(TKey key) => key switch
