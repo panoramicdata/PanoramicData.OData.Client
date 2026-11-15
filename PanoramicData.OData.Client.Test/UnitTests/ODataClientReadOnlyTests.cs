@@ -13,14 +13,7 @@ public class ODataClientReadOnlyTests : MockedODataClientTestBase
 	public ODataClientReadOnlyTests()
 		: base(options => options.IsReadOnly = true)
 	{
-		SetupResponse(_ =>
-		{
-			_requestsSent++;
-			return new HttpResponseMessage(HttpStatusCode.OK)
-			{
-				Content = new StringContent(ProductsJson, Encoding.UTF8, "application/json")
-			};
-		});
+		SetupCountedResponse(ProductsJson, "application/json");
 	}
 
 	/// <summary>IsReadOnly is off unless a caller sets it.</summary>
@@ -57,14 +50,7 @@ public class ODataClientReadOnlyTests : MockedODataClientTestBase
 	[Fact]
 	public async Task Batch_OfGetsOnly_IsSent()
 	{
-		SetupResponse(_ =>
-		{
-			_requestsSent++;
-			return new HttpResponseMessage(HttpStatusCode.OK)
-			{
-				Content = new StringContent(string.Empty, Encoding.UTF8, "multipart/mixed; boundary=b")
-			};
-		});
+		SetupCountedResponse(string.Empty, "multipart/mixed; boundary=b");
 
 		var batch = Client.CreateBatch().Get<Product>("Products", 1);
 
@@ -106,13 +92,27 @@ public class ODataClientReadOnlyTests : MockedODataClientTestBase
 		_requestsSent.Should().Be(1);
 	}
 
-	private static Task RunWriteAsync(ODataClient client, string write) => write switch
+	private void SetupCountedResponse(string content, string mediaType)
+		=> SetupResponse(_ =>
+		{
+			_requestsSent++;
+			return new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new StringContent(content, Encoding.UTF8, mediaType)
+			};
+		});
+
+	private static async Task RunWriteAsync(ODataClient client, string write)
 	{
-		"create" => client.CreateAsync("Products", new Product { Name = "Widget" }, cancellationToken: CancellationToken),
-		"patch" => client.UpdateAsync<Product>("Products", 1, new { Name = "Gadget" }, cancellationToken: CancellationToken),
-		"delete" => client.DeleteAsync("Products", 1, cancellationToken: CancellationToken),
-		"action" => client.CallActionAsync<object>("Products/Discount", cancellationToken: CancellationToken),
-		"addReference" => client.AddReferenceAsync("Products", 1, "Category", "Categories", 2, cancellationToken: CancellationToken),
-		_ => client.SetStreamAsync("Products", 1, new MemoryStream([1]), cancellationToken: CancellationToken)
-	};
+		using var stream = new MemoryStream([1]);
+		await (write switch
+		{
+			"create" => client.CreateAsync("Products", new Product { Name = "Widget" }, cancellationToken: CancellationToken),
+			"patch" => client.UpdateAsync<Product>("Products", 1, new { Name = "Gadget" }, cancellationToken: CancellationToken),
+			"delete" => client.DeleteAsync("Products", 1, cancellationToken: CancellationToken),
+			"action" => client.CallActionAsync<object>("Products/Discount", cancellationToken: CancellationToken),
+			"addReference" => client.AddReferenceAsync("Products", 1, "Category", "Categories", 2, cancellationToken: CancellationToken),
+			_ => client.SetStreamAsync("Products", 1, stream, cancellationToken: CancellationToken)
+		});
+	}
 }
