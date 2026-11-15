@@ -361,15 +361,6 @@ internal static partial class ODataExpressionTranslator
 		return $"{utc:yyyy-MM-ddTHH:mm:ssZ}";
 	}
 
-	internal static string FormatKey(object key) => key switch
-	{
-		int i => i.ToString(CultureInfo.InvariantCulture),
-		long l => l.ToString(CultureInfo.InvariantCulture),
-		Guid g => g.ToString(),
-		string s => ODataLiteral.Quote(s),
-		_ => key.ToString() ?? throw new ArgumentException("Invalid key value")
-	};
-
 	internal static string FormatFunctionParameters(object parameters)
 	{
 		var type = parameters.GetType();

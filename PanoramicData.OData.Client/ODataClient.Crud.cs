@@ -28,8 +28,7 @@ public partial class ODataClient
 			LoggerMessages.CreateAsyncRequestBody(_logger, typeName, requestBody);
 		}
 
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		var response = await SendAndEnsureSuccessAsync(request, url, cancellationToken).ConfigureAwait(false);
 
 		return await response.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
 			?? throw new ODataClientException("Failed to deserialize created entity");
@@ -98,7 +97,7 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken) where T : class
 	{
-		var url = $"{entitySet}({FormatKey(key)})";
+		var url = $"{entitySet}({ODataLiteral.FormatKey(key)})";
 		var typeName = typeof(T).Name;
 		LoggerMessages.UpdateAsync(_logger, typeName, url, etag ?? "(none)");
 
@@ -156,7 +155,7 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken)
 	{
-		var url = $"{entitySet}({FormatKey(key)})";
+		var url = $"{entitySet}({ODataLiteral.FormatKey(key)})";
 		LoggerMessages.DeleteAsync(_logger, entitySet, key, url, etag ?? "(none)");
 
 		var request = CreateRequest(HttpMethod.Delete, url, headers);
@@ -233,7 +232,7 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken) where T : class
 	{
-		var url = $"{entitySet}({FormatKey(key)})";
+		var url = $"{entitySet}({ODataLiteral.FormatKey(key)})";
 		var typeName = typeof(T).Name;
 		LoggerMessages.ReplaceAsync(_logger, typeName, url, etag ?? "(none)");
 
@@ -282,8 +281,6 @@ public partial class ODataClient
 	{
 		LoggerMessages.DeleteByUrlAsync(_logger, url);
 
-		var request = CreateRequest(HttpMethod.Delete, url, headers);
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		await SendRequestAsync(HttpMethod.Delete, url, headers, cancellationToken).ConfigureAwait(false);
 	}
 }

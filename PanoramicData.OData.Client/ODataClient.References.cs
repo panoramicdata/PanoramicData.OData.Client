@@ -26,19 +26,12 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken)
 	{
-		var url = $"{entitySet}({FormatKey(key)})/{navigationProperty}/$ref";
-		var targetUrl = $"{targetEntitySet}({FormatKey(targetKey)})";
+		var url = NavigationReferenceUrl(entitySet, key, navigationProperty);
+		var targetUrl = EntityReferenceUrl(targetEntitySet, targetKey);
 
 		LoggerMessages.AddReferenceAsync(_logger, url, targetUrl);
 
-		var request = CreateRequest(HttpMethod.Post, url, headers);
-
-		// Use @odata.id property name
-		var refBody = $"{{\"@odata.id\": \"{targetUrl}\"}}";
-		request.Content = new StringContent(refBody, Encoding.UTF8, "application/json");
-
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		await SendReferenceBodyAsync(HttpMethod.Post, url, targetUrl, headers, cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -61,16 +54,13 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken)
 	{
-		var targetUrl = $"{targetEntitySet}({FormatKey(targetKey)})";
+		var targetUrl = EntityReferenceUrl(targetEntitySet, targetKey);
 		var encodedTargetUrl = Uri.EscapeDataString(targetUrl);
-		var url = $"{entitySet}({FormatKey(key)})/{navigationProperty}/$ref?$id={encodedTargetUrl}";
+		var url = $"{entitySet}({ODataLiteral.FormatKey(key)})/{navigationProperty}/$ref?$id={encodedTargetUrl}";
 
 		LoggerMessages.RemoveReferenceAsync(_logger, url);
 
-		var request = CreateRequest(HttpMethod.Delete, url, headers);
-
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		await SendRequestAsync(HttpMethod.Delete, url, headers, cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -94,17 +84,12 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken)
 	{
-		var url = $"{entitySet}({FormatKey(key)})/{navigationProperty}/$ref";
-		var targetUrl = $"{targetEntitySet}({FormatKey(targetKey)})";
+		var url = NavigationReferenceUrl(entitySet, key, navigationProperty);
+		var targetUrl = EntityReferenceUrl(targetEntitySet, targetKey);
 
 		LoggerMessages.SetReferenceAsync(_logger, url, targetUrl);
 
-		var request = CreateRequest(HttpMethod.Put, url, headers);
-		var refBody = $"{{\"@odata.id\": \"{targetUrl}\"}}";
-		request.Content = new StringContent(refBody, Encoding.UTF8, "application/json");
-
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		await SendReferenceBodyAsync(HttpMethod.Put, url, targetUrl, headers, cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -123,13 +108,29 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken)
 	{
-		var url = $"{entitySet}({FormatKey(key)})/{navigationProperty}/$ref";
+		var url = NavigationReferenceUrl(entitySet, key, navigationProperty);
 
 		LoggerMessages.DeleteReferenceAsync(_logger, url);
 
-		var request = CreateRequest(HttpMethod.Delete, url, headers);
+		await SendRequestAsync(HttpMethod.Delete, url, headers, cancellationToken).ConfigureAwait(false);
+	}
 
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+	private static string NavigationReferenceUrl(string entitySet, object key, string navigationProperty)
+		=> $"{EntityReferenceUrl(entitySet, key)}/{navigationProperty}/$ref";
+
+	private static string EntityReferenceUrl(string entitySet, object key)
+		=> $"{entitySet}({ODataLiteral.FormatKey(key)})";
+
+	private async Task SendReferenceBodyAsync(
+		HttpMethod method,
+		string url,
+		string targetUrl,
+		IReadOnlyDictionary<string, string>? headers,
+		CancellationToken cancellationToken)
+	{
+		var request = CreateRequest(method, url, headers);
+		request.Content = new StringContent($"{{\"@odata.id\": \"{targetUrl}\"}}", Encoding.UTF8, "application/json");
+
+		await SendAndEnsureSuccessAsync(request, url, cancellationToken).ConfigureAwait(false);
 	}
 }

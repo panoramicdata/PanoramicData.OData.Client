@@ -92,8 +92,7 @@ public partial class ODataClient
 		CancellationToken cancellationToken)
 	{
 		var request = CreateRequest(HttpMethod.Get, query);
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, query, cancellationToken).ConfigureAwait(false);
+		var response = await SendAndEnsureSuccessAsync(request, query, cancellationToken).ConfigureAwait(false);
 
 		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 		var jsonDocument = JsonDocument.Parse(content);
@@ -112,55 +111,17 @@ public partial class ODataClient
 		CancellationToken cancellationToken)
 	{
 		var url = query.BuildUrl();
-		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
-
-		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+		var content = await SendForContentAsync(HttpMethod.Get, url, query.CustomHeaders, cancellationToken).ConfigureAwait(false);
 		return JsonDocument.Parse(content);
 	}
 
 	/// <summary>
 	/// Executes a query built by a FluentODataQueryBuilder and returns results as dictionaries.
 	/// </summary>
-	internal async Task<ODataResponse<Dictionary<string, object?>>> GetFluentAsync(
+	internal Task<ODataResponse<Dictionary<string, object?>>> GetFluentAsync(
 		FluentODataQueryBuilder query,
 		CancellationToken cancellationToken)
-	{
-		var url = query.BuildUrl();
-		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
-
-		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-		using var doc = JsonDocument.Parse(content);
-		var result = new ODataResponse<Dictionary<string, object?>>();
-
-		// Parse value array
-		if (doc.RootElement.TryGetProperty("value", out var valueElement))
-		{
-			result.Value = [];
-			foreach (var item in valueElement.EnumerateArray())
-			{
-				result.Value.Add(ODataLegacyJson.LegacyJsonElementToDictionary(item));
-			}
-		}
-
-		// Parse count
-		if (doc.RootElement.TryGetProperty("@odata.count", out var countElement))
-		{
-			result.Count = countElement.GetInt64();
-		}
-
-		// Parse nextLink
-		if (doc.RootElement.TryGetProperty("@odata.nextLink", out var nextLinkElement))
-		{
-			result.NextLink = nextLinkElement.GetString();
-		}
-
-		return result;
-	}
+		=> GetFluentPageAsync(query.BuildUrl(), query.CustomHeaders, cancellationToken);
 
 	/// <summary>
 	/// Executes a query built by a FluentODataQueryBuilder and returns all pages as dictionaries.
@@ -176,37 +137,42 @@ public partial class ODataClient
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
-			var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
-			var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-			await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
-
-			var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-			using var doc = JsonDocument.Parse(content);
-
-			// Parse value array
-			if (doc.RootElement.TryGetProperty("value", out var valueElement))
-			{
-				foreach (var item in valueElement.EnumerateArray())
-				{
-					allResults.Value.Add(ODataLegacyJson.LegacyJsonElementToDictionary(item));
-				}
-			}
-
-			// Parse count (only from first page)
-			if (!allResults.Count.HasValue && doc.RootElement.TryGetProperty("@odata.count", out var countElement))
-			{
-				allResults.Count = countElement.GetInt64();
-			}
-
-			// Parse nextLink
-			url = doc.RootElement.TryGetProperty("@odata.nextLink", out var nextLinkElement)
-				? nextLinkElement.GetString()
-				: null;
+			var page = await GetFluentPageAsync(url, query.CustomHeaders, cancellationToken).ConfigureAwait(false);
+			allResults.Value.AddRange(page.Value);
+			allResults.Count ??= page.Count;
+			url = page.NextLink;
 		}
 		while (!string.IsNullOrEmpty(url));
 
 		return allResults;
+	}
+
+	private async Task<ODataResponse<Dictionary<string, object?>>> GetFluentPageAsync(
+		string url,
+		IReadOnlyDictionary<string, string>? headers,
+		CancellationToken cancellationToken)
+	{
+		var content = await SendForContentAsync(HttpMethod.Get, url, headers, cancellationToken).ConfigureAwait(false);
+
+		using var doc = JsonDocument.Parse(content);
+		var result = new ODataResponse<Dictionary<string, object?>>();
+
+		if (doc.RootElement.TryGetProperty("value", out var valueElement))
+		{
+			result.Value = [.. valueElement.EnumerateArray().Select(ODataLegacyJson.LegacyJsonElementToDictionary)];
+		}
+
+		if (doc.RootElement.TryGetProperty("@odata.count", out var countElement))
+		{
+			result.Count = countElement.GetInt64();
+		}
+
+		if (doc.RootElement.TryGetProperty("@odata.nextLink", out var nextLinkElement))
+		{
+			result.NextLink = nextLinkElement.GetString();
+		}
+
+		return result;
 	}
 
 	/// <summary>
