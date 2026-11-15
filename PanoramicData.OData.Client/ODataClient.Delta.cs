@@ -21,11 +21,7 @@ public partial class ODataClient
 		var typeName = typeof(T).Name;
 		LoggerMessages.GetDeltaAsync(_logger, typeName, deltaLink);
 
-		var request = CreateRequest(HttpMethod.Get, deltaLink, headers);
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, deltaLink, cancellationToken).ConfigureAwait(false);
-
-		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+		var content = await SendForContentAsync(HttpMethod.Get, deltaLink, headers, cancellationToken).ConfigureAwait(false);
 
 		LoggerMessages.GetDeltaAsyncResponseReceived(_logger, typeName, content.Length);
 

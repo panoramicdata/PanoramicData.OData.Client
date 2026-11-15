@@ -37,8 +37,7 @@ public partial class ODataClient
 		var refBody = $"{{\"@odata.id\": \"{targetUrl}\"}}";
 		request.Content = new StringContent(refBody, Encoding.UTF8, "application/json");
 
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		var response = await SendAndEnsureSuccessAsync(request, url, cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -67,10 +66,7 @@ public partial class ODataClient
 
 		LoggerMessages.RemoveReferenceAsync(_logger, url);
 
-		var request = CreateRequest(HttpMethod.Delete, url, headers);
-
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		var response = await SendRequestAsync(HttpMethod.Delete, url, headers, cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -103,8 +99,7 @@ public partial class ODataClient
 		var refBody = $"{{\"@odata.id\": \"{targetUrl}\"}}";
 		request.Content = new StringContent(refBody, Encoding.UTF8, "application/json");
 
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		var response = await SendAndEnsureSuccessAsync(request, url, cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -127,9 +122,6 @@ public partial class ODataClient
 
 		LoggerMessages.DeleteReferenceAsync(_logger, url);
 
-		var request = CreateRequest(HttpMethod.Delete, url, headers);
-
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		var response = await SendRequestAsync(HttpMethod.Delete, url, headers, cancellationToken).ConfigureAwait(false);
 	}
 }

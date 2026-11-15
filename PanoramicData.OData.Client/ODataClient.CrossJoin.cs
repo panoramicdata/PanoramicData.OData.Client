@@ -36,12 +36,7 @@ public partial class ODataClient
 		var url = crossJoin.BuildUrl();
 		LoggerMessages.GetCrossJoinAsync(_logger, url);
 
-		var request = CreateRequest(HttpMethod.Get, url, crossJoin.CustomHeaders);
-
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
-
-		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+		var content = await SendForContentAsync(HttpMethod.Get, url, crossJoin.CustomHeaders, cancellationToken).ConfigureAwait(false);
 
 		LoggerMessages.GetCrossJoinAsyncResponse(_logger, content.Length);
 
@@ -71,11 +66,7 @@ public partial class ODataClient
 			pageCount++;
 			LoggerMessages.GetAllCrossJoinAsyncFetchingPage(_logger, pageCount, url);
 
-			var request = CreateRequest(HttpMethod.Get, url, crossJoin.CustomHeaders);
-			var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-			await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
-
-			var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+			var content = await SendForContentAsync(HttpMethod.Get, url, crossJoin.CustomHeaders, cancellationToken).ConfigureAwait(false);
 			var pageResult = ParseCrossJoinResponse(content);
 
 			allResults.Value.AddRange(pageResult.Value);

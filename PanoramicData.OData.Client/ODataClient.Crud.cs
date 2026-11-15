@@ -28,8 +28,7 @@ public partial class ODataClient
 			LoggerMessages.CreateAsyncRequestBody(_logger, typeName, requestBody);
 		}
 
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		var response = await SendAndEnsureSuccessAsync(request, url, cancellationToken).ConfigureAwait(false);
 
 		return await response.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
 			?? throw new ODataClientException("Failed to deserialize created entity");
@@ -282,8 +281,6 @@ public partial class ODataClient
 	{
 		LoggerMessages.DeleteByUrlAsync(_logger, url);
 
-		var request = CreateRequest(HttpMethod.Delete, url, headers);
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		var response = await SendRequestAsync(HttpMethod.Delete, url, headers, cancellationToken).ConfigureAwait(false);
 	}
 }

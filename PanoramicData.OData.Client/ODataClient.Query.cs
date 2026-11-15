@@ -74,30 +74,11 @@ public partial class ODataClient
 	/// <summary>
 	/// Gets a single entity by key.
 	/// </summary>
-	public async Task<T?> GetByKeyAsync<T, TKey>(
+	public Task<T?> GetByKeyAsync<T, TKey>(
 		TKey key,
 		[Optional] ODataQueryBuilder<T>? query,
 		[Optional] CancellationToken cancellationToken) where T : class
-	{
-		query ??= For<T>();
-		query.Key(key);
-
-		var url = query.BuildUrl();
-		LoggerMessages.GetByKeyAsync(_logger, typeof(T).Name, key!, url);
-
-		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
-
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-
-		if (_options.IgnoreResourceNotFoundException && response.StatusCode == HttpStatusCode.NotFound)
-		{
-			return null;
-		}
-
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
-
-		return await response.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false);
-	}
+		=> GetByKeyCoreAsync(key, query, _options.IgnoreResourceNotFoundException, cancellationToken);
 
 	/// <summary>
 	/// Gets a single entity by key, returning <c>null</c> if the resource is not found (HTTP 404).
@@ -108,10 +89,17 @@ public partial class ODataClient
 	/// <param name="query">Optional query builder for additional options like $select, $expand.</param>
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>The entity, or <c>null</c> if not found.</returns>
-	public async Task<T?> GetByKeyOrDefaultAsync<T, TKey>(
+	public Task<T?> GetByKeyOrDefaultAsync<T, TKey>(
 		TKey key,
 		[Optional] ODataQueryBuilder<T>? query,
 		[Optional] CancellationToken cancellationToken) where T : class
+		=> GetByKeyCoreAsync(key, query, returnNullWhenNotFound: true, cancellationToken);
+
+	private async Task<T?> GetByKeyCoreAsync<T, TKey>(
+		TKey key,
+		ODataQueryBuilder<T>? query,
+		bool returnNullWhenNotFound,
+		CancellationToken cancellationToken) where T : class
 	{
 		query ??= For<T>();
 		query.Key(key);
@@ -123,7 +111,7 @@ public partial class ODataClient
 
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
 
-		if (response.StatusCode == HttpStatusCode.NotFound)
+		if (returnNullWhenNotFound && response.StatusCode == HttpStatusCode.NotFound)
 		{
 			return null;
 		}
@@ -190,12 +178,7 @@ public partial class ODataClient
 		var url = query.BuildUrl();
 		LoggerMessages.CallFunctionAsync(_logger, typeof(T).Name, typeof(TResult).Name, url);
 
-		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
-
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
-
-		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+		var content = await SendForContentAsync(HttpMethod.Get, url, query.CustomHeaders, cancellationToken).ConfigureAwait(false);
 		LoggerMessages.CallFunctionAsyncResponseLength(_logger, content.Length);
 
 		// Try to parse as OData response first
@@ -240,8 +223,7 @@ public partial class ODataClient
 			request.Content = JsonContent.Create(parameters, options: _actionJsonOptions);
 		}
 
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, actionUrl, cancellationToken).ConfigureAwait(false);
+		var response = await SendAndEnsureSuccessAsync(request, actionUrl, cancellationToken).ConfigureAwait(false);
 
 		if (response.StatusCode == HttpStatusCode.NoContent)
 		{
@@ -260,11 +242,7 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken)
 	{
-		var request = CreateRequest(HttpMethod.Get, url, headers);
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
-
-		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+		var content = await SendForContentAsync(HttpMethod.Get, url, headers, cancellationToken).ConfigureAwait(false);
 		return JsonDocument.Parse(content);
 	}
 
@@ -273,10 +251,7 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken) where T : class
 	{
-		var request = CreateRequest(HttpMethod.Get, url, headers);
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
-
+		var response = await SendRequestAsync(HttpMethod.Get, url, headers, cancellationToken).ConfigureAwait(false);
 		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 		var typeName = typeof(T).Name;
 
@@ -359,12 +334,7 @@ public partial class ODataClient
 
 		LoggerMessages.GetCountAsync(_logger, typeName, url);
 
-		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
-
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
-
-		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+		var content = await SendForContentAsync(HttpMethod.Get, url, query.CustomHeaders, cancellationToken).ConfigureAwait(false);
 
 		if (long.TryParse(content.Trim(), out var count))
 		{

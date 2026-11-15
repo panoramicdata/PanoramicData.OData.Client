@@ -24,9 +24,7 @@ public partial class ODataClient
 		var url = $"{entitySet}({FormatKey(key)})/$value";
 		LoggerMessages.GetStreamAsync(_logger, url);
 
-		var request = CreateRequest(HttpMethod.Get, url, headers);
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		var response = await SendRequestAsync(HttpMethod.Get, url, headers, cancellationToken).ConfigureAwait(false);
 
 		return await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
 	}
@@ -56,8 +54,7 @@ public partial class ODataClient
 		request.Content = new StreamContent(stream);
 		request.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
 
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		var response = await SendAndEnsureSuccessAsync(request, url, cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -81,9 +78,7 @@ public partial class ODataClient
 		var url = $"{entitySet}({FormatKey(key)})/{propertyName}";
 		LoggerMessages.GetStreamPropertyAsync(_logger, url);
 
-		var request = CreateRequest(HttpMethod.Get, url, headers);
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		var response = await SendRequestAsync(HttpMethod.Get, url, headers, cancellationToken).ConfigureAwait(false);
 
 		return await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
 	}
@@ -115,7 +110,6 @@ public partial class ODataClient
 		request.Content = new StreamContent(stream);
 		request.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
 
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, cancellationToken).ConfigureAwait(false);
+		var response = await SendAndEnsureSuccessAsync(request, url, cancellationToken).ConfigureAwait(false);
 	}
 }
