@@ -47,7 +47,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		}
 
 		sb.Append('(');
-		sb.Append(ODataExpressionTranslator.FormatKey(_key));
+		sb.Append(ODataLiteral.FormatKey(_key));
 		sb.Append(')');
 		LoggerMessages.QueryBuilderKey(_logger, _key);
 	}

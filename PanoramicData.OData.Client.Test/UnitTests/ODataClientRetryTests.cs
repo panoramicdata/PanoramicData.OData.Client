@@ -10,6 +10,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	private const string EmptyPage = """{"value":[]}""";
 
 	private int _callCount;
+	private readonly List<DateTime> _callTimes = [];
 
 	/// <summary>
 	/// Tests that client retries on a 503 error.
@@ -151,6 +152,21 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 		logger.Entries.Should().NotContain(entry => entry.EventId.Id == 18 || entry.EventId.Id == 19);
 	}
 
+	/// <summary>
+	/// Tests that client respects retry delay.
+	/// </summary>
+	[Fact]
+	public async Task Request_RetryDelay_IsRespected()
+	{
+		SetupFailuresThenSuccess(1, () => Respond(HttpStatusCode.ServiceUnavailable, "{}"));
+		using var client = CreateRetryClient(2, retryDelay: TimeSpan.FromMilliseconds(100));
+
+		await client.GetAsync(client.For<Product>("Products"), CancellationToken);
+
+		_callTimes.Should().HaveCount(2);
+		(_callTimes[1] - _callTimes[0]).TotalMilliseconds.Should().BeGreaterThanOrEqualTo(90);
+	}
+
 	private static HttpResponseMessage Respond(HttpStatusCode status, string body)
 		=> new(status) { Content = new StringContent(body) };
 
@@ -164,15 +180,16 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 		=> SetupSendAsync().ReturnsAsync(() =>
 		{
 			_callCount++;
+			_callTimes.Add(DateTime.UtcNow);
 			return _callCount <= failures ? failure() : Respond(HttpStatusCode.OK, EmptyPage);
 		});
 
-	private ODataClient CreateRetryClient(int retryCount, ILogger? logger = null, LogLevel? attemptLogLevel = null)
+	private ODataClient CreateRetryClient(int retryCount, ILogger? logger = null, LogLevel? attemptLogLevel = null, TimeSpan? retryDelay = null)
 		=> CreateClient(options =>
 		{
 			options.Logger = logger ?? NullLogger.Instance;
 			options.RetryCount = retryCount;
-			options.RetryDelay = TimeSpan.FromMilliseconds(1);
+			options.RetryDelay = retryDelay ?? TimeSpan.FromMilliseconds(1);
 			options.RetryAttemptLogLevel = attemptLogLevel ?? options.RetryAttemptLogLevel;
 		});
 

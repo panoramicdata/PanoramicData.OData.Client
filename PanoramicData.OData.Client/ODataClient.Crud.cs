@@ -97,7 +97,7 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken) where T : class
 	{
-		var url = $"{entitySet}({FormatKey(key)})";
+		var url = $"{entitySet}({ODataLiteral.FormatKey(key)})";
 		var typeName = typeof(T).Name;
 		LoggerMessages.UpdateAsync(_logger, typeName, url, etag ?? "(none)");
 
@@ -155,7 +155,7 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken)
 	{
-		var url = $"{entitySet}({FormatKey(key)})";
+		var url = $"{entitySet}({ODataLiteral.FormatKey(key)})";
 		LoggerMessages.DeleteAsync(_logger, entitySet, key, url, etag ?? "(none)");
 
 		var request = CreateRequest(HttpMethod.Delete, url, headers);
@@ -232,7 +232,7 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken) where T : class
 	{
-		var url = $"{entitySet}({FormatKey(key)})";
+		var url = $"{entitySet}({ODataLiteral.FormatKey(key)})";
 		var typeName = typeof(T).Name;
 		LoggerMessages.ReplaceAsync(_logger, typeName, url, etag ?? "(none)");
 
@@ -281,6 +281,6 @@ public partial class ODataClient
 	{
 		LoggerMessages.DeleteByUrlAsync(_logger, url);
 
-		var response = await SendRequestAsync(HttpMethod.Delete, url, headers, cancellationToken).ConfigureAwait(false);
+		await SendRequestAsync(HttpMethod.Delete, url, headers, cancellationToken).ConfigureAwait(false);
 	}
 }

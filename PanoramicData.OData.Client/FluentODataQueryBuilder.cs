@@ -75,7 +75,7 @@ public class FluentODataQueryBuilder
 				"NavigateTo requires a key to be set. Call Key() before NavigateTo().");
 		}
 
-		var path = $"{_entitySet}({FormatKey(_key)})/{navigationProperty}";
+		var path = $"{_entitySet}({ODataLiteral.FormatKey(_key)})/{navigationProperty}";
 		return new FluentODataQueryBuilder(_client, path, _logger);
 	}
 
@@ -439,7 +439,7 @@ public class FluentODataQueryBuilder
 		}
 
 		sb.Append('(');
-		sb.Append(FormatKey(_key));
+		sb.Append(ODataLiteral.FormatKey(_key));
 		sb.Append(')');
 	}
 
@@ -565,15 +565,6 @@ public class FluentODataQueryBuilder
 			}
 		}
 	}
-
-	private static string FormatKey(object key) => key switch
-	{
-		int i => i.ToString(CultureInfo.InvariantCulture),
-		long l => l.ToString(CultureInfo.InvariantCulture),
-		Guid g => g.ToString(),
-		string s => ODataLiteral.Quote(s),
-		_ => key.ToString() ?? throw new ArgumentException("Invalid key value")
-	};
 
 	private static string FormatFunctionParameters(object parameters)
 	{
