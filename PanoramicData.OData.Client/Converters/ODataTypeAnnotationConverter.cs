@@ -90,13 +90,18 @@ public class ODataTypeAnnotationConverter : JsonConverterFactory
             };
         }
 
-        public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            ArgumentNullException.ThrowIfNull(options);
+
             // Deserializing: skip the @odata.type annotation and use default behavior
-            JsonSerializer.Deserialize<T>(ref reader, _optionsWithoutThisConverter);
+            return JsonSerializer.Deserialize<T>(ref reader, _optionsWithoutThisConverter);
+        }
 
         public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
         {
             ArgumentNullException.ThrowIfNull(value);
+            ArgumentNullException.ThrowIfNull(options);
 
             writer.WriteStartObject();
 

@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 using System.Diagnostics;
 
 namespace PanoramicData.OData.Client.Test.Benchmarks;
@@ -51,7 +53,7 @@ public static class QuickPerformanceTest
 	/// <summary>
 	/// Runs quick performance tests and prints results.
 	/// </summary>
-	public static void Run(int iterations = 10000)
+	public static void Run([Optional, DefaultParameterValue(10000)] int iterations)
 	{
 		Console.WriteLine($"Running {iterations} iterations per test...\n");
 
