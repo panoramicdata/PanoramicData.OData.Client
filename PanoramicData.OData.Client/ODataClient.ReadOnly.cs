@@ -5,13 +5,13 @@ namespace PanoramicData.OData.Client;
 /// </summary>
 public partial class ODataClient
 {
-	private static readonly HttpRequestOptionsKey<bool> _readOnlyVerifiedKey = new("PanoramicData.OData.Client.ReadOnlyVerified");
+	private static readonly HttpRequestOptionsKey<bool> ReadOnlyVerifiedKey = new("PanoramicData.OData.Client.ReadOnlyVerified");
 
 	private void ThrowIfReadOnlyRefuses(HttpRequestMessage request)
 	{
 		if (!_options.IsReadOnly
 			|| IsReadMethod(request.Method)
-			|| (request.Options.TryGetValue(_readOnlyVerifiedKey, out var verified) && verified))
+			|| (request.Options.TryGetValue(ReadOnlyVerifiedKey, out var verified) && verified))
 		{
 			return;
 		}
@@ -29,7 +29,7 @@ public partial class ODataClient
 	}
 
 	private static void MarkReadOnlyVerified(HttpRequestMessage request)
-		=> request.Options.Set(_readOnlyVerifiedKey, true);
+		=> request.Options.Set(ReadOnlyVerifiedKey, true);
 
 	private static bool IsReadMethod(HttpMethod method)
 		=> method == HttpMethod.Get || method == HttpMethod.Head || method == HttpMethod.Options;
