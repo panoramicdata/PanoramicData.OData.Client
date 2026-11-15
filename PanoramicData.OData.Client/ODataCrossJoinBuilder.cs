@@ -125,7 +125,7 @@ public class ODataCrossJoinBuilder
 	/// </summary>
 	/// <param name="includeCount">Whether to include count.</param>
 	/// <returns>This builder.</returns>
-	public ODataCrossJoinBuilder Count(bool includeCount = true)
+	public ODataCrossJoinBuilder Count([Optional, DefaultParameterValue(true)] bool includeCount)
 	{
 		_count = includeCount;
 		return this;

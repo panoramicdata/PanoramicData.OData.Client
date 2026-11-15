@@ -15,8 +15,8 @@ public partial class ODataClient
 	/// <returns>The singleton entity.</returns>
 	public async Task<T?> GetSingletonAsync<T>(
 		string singletonName,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		LoggerMessages.GetSingletonAsync(_logger, typeof(T).Name, singletonName);
 
@@ -37,8 +37,8 @@ public partial class ODataClient
 	/// <returns>A response containing the singleton entity and its ETag.</returns>
 	public async Task<ODataSingleResponse<T>> GetSingletonWithETagAsync<T>(
 		string singletonName,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		var typeName = typeof(T).Name;
 		LoggerMessages.GetSingletonWithETagAsync(_logger, typeName, singletonName);
@@ -73,8 +73,8 @@ public partial class ODataClient
 	public Task<T> UpdateSingletonAsync<T>(
 		string singletonName,
 		object patchValues,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken) where T : class
 		=> UpdateSingletonAsync<T>(singletonName, patchValues, etag: null, headers, cancellationToken);
 
 	/// <summary>
@@ -92,8 +92,8 @@ public partial class ODataClient
 		string singletonName,
 		object patchValues,
 		string? etag,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		var typeName = typeof(T).Name;
 		LoggerMessages.UpdateSingletonAsync(_logger, typeName, singletonName, etag ?? "(none)");

@@ -15,8 +15,8 @@ public partial class ODataClient
 	/// <returns>A delta response containing added/modified entities and deleted entity IDs.</returns>
 	public async Task<ODataDeltaResponse<T>> GetDeltaAsync<T>(
 		string deltaLink,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		var typeName = typeof(T).Name;
 		LoggerMessages.GetDeltaAsync(_logger, typeName, deltaLink);
@@ -42,8 +42,8 @@ public partial class ODataClient
 	/// <returns>A delta response containing all added/modified entities and deleted entity IDs.</returns>
 	public async Task<ODataDeltaResponse<T>> GetAllDeltaAsync<T>(
 		string deltaLink,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		var allResults = new ODataDeltaResponse<T>();
 		var url = deltaLink;

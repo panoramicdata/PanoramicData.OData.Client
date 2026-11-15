@@ -23,8 +23,8 @@ public partial class ODataClient
 		string navigationProperty,
 		string targetEntitySet,
 		object targetKey,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 	{
 		var url = $"{entitySet}({FormatKey(key)})/{navigationProperty}/$ref";
 		var targetUrl = $"{targetEntitySet}({FormatKey(targetKey)})";
@@ -58,8 +58,8 @@ public partial class ODataClient
 		string navigationProperty,
 		string targetEntitySet,
 		object targetKey,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 	{
 		var targetUrl = $"{targetEntitySet}({FormatKey(targetKey)})";
 		var encodedTargetUrl = Uri.EscapeDataString(targetUrl);
@@ -91,8 +91,8 @@ public partial class ODataClient
 		string navigationProperty,
 		string targetEntitySet,
 		object targetKey,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 	{
 		var url = $"{entitySet}({FormatKey(key)})/{navigationProperty}/$ref";
 		var targetUrl = $"{targetEntitySet}({FormatKey(targetKey)})";
@@ -120,8 +120,8 @@ public partial class ODataClient
 		string entitySet,
 		object key,
 		string navigationProperty,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 	{
 		var url = $"{entitySet}({FormatKey(key)})/{navigationProperty}/$ref";
 

@@ -18,8 +18,8 @@ public partial class ODataClient
 	public async Task<Stream> GetStreamAsync<TKey>(
 		string entitySet,
 		TKey key,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 	{
 		var url = $"{entitySet}({FormatKey(key)})/$value";
 		LoggerMessages.GetStreamAsync(_logger, url);
@@ -45,9 +45,9 @@ public partial class ODataClient
 		string entitySet,
 		TKey key,
 		Stream stream,
-		string contentType = "application/octet-stream",
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional, DefaultParameterValue("application/octet-stream")] string contentType,
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 	{
 		var url = $"{entitySet}({FormatKey(key)})/$value";
 		LoggerMessages.SetStreamAsync(_logger, url, contentType);
@@ -75,8 +75,8 @@ public partial class ODataClient
 		string entitySet,
 		TKey key,
 		string propertyName,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 	{
 		var url = $"{entitySet}({FormatKey(key)})/{propertyName}";
 		LoggerMessages.GetStreamPropertyAsync(_logger, url);
@@ -104,9 +104,9 @@ public partial class ODataClient
 		TKey key,
 		string propertyName,
 		Stream stream,
-		string contentType = "application/octet-stream",
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional, DefaultParameterValue("application/octet-stream")] string contentType,
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 	{
 		var url = $"{entitySet}({FormatKey(key)})/{propertyName}";
 		LoggerMessages.SetStreamPropertyAsync(_logger, url, contentType);

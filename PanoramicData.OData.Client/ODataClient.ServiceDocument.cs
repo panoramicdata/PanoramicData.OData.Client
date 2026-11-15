@@ -13,8 +13,8 @@ public partial class ODataClient
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>The service document.</returns>
 	public async Task<ODataServiceDocument> GetServiceDocumentAsync(
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 	{
 		LoggerMessages.GetServiceDocumentAsyncFetching(_logger);
 

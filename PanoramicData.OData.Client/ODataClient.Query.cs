@@ -64,7 +64,7 @@ public partial class ODataClient
 	/// </summary>
 	public async Task<ODataResponse<T>> GetAsync<T>(
 		ODataQueryBuilder<T> query,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		var url = query.BuildUrl();
 		LoggerMessages.GetAsync(_logger, typeof(T).Name, url);
@@ -76,8 +76,8 @@ public partial class ODataClient
 	/// </summary>
 	public async Task<T?> GetByKeyAsync<T, TKey>(
 		TKey key,
-		ODataQueryBuilder<T>? query = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] ODataQueryBuilder<T>? query,
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		query ??= For<T>();
 		query.Key(key);
@@ -110,8 +110,8 @@ public partial class ODataClient
 	/// <returns>The entity, or <c>null</c> if not found.</returns>
 	public async Task<T?> GetByKeyOrDefaultAsync<T, TKey>(
 		TKey key,
-		ODataQueryBuilder<T>? query = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] ODataQueryBuilder<T>? query,
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		query ??= For<T>();
 		query.Key(key);
@@ -144,8 +144,8 @@ public partial class ODataClient
 	/// <returns>A response containing the entity and its ETag.</returns>
 	public async Task<ODataSingleResponse<T>> GetByKeyWithETagAsync<T, TKey>(
 		TKey key,
-		ODataQueryBuilder<T>? query = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] ODataQueryBuilder<T>? query,
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		query ??= For<T>();
 		query.Key(key);
@@ -185,7 +185,7 @@ public partial class ODataClient
 	/// </summary>
 	public async Task<TResult?> CallFunctionAsync<T, TResult>(
 		ODataQueryBuilder<T> query,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		var url = query.BuildUrl();
 		LoggerMessages.CallFunctionAsync(_logger, typeof(T).Name, typeof(TResult).Name, url);
@@ -226,9 +226,9 @@ public partial class ODataClient
 	/// </summary>
 	public async Task<TResult?> CallActionAsync<TResult>(
 		string actionUrl,
-		object? parameters = null,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional] object? parameters,
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 	{
 		LoggerMessages.CallActionAsync(_logger, typeof(TResult).Name, actionUrl);
 
@@ -257,8 +257,8 @@ public partial class ODataClient
 	/// </summary>
 	public async Task<JsonDocument> GetRawAsync(
 		string url,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 	{
 		var request = CreateRequest(HttpMethod.Get, url, headers);
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
@@ -270,8 +270,8 @@ public partial class ODataClient
 
 	private async Task<ODataResponse<T>> GetAsync<T>(
 		string url,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		var request = CreateRequest(HttpMethod.Get, url, headers);
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
@@ -340,8 +340,8 @@ public partial class ODataClient
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>The count of matching entities.</returns>
 	public Task<long> GetCountAsync<T>(
-		ODataQueryBuilder<T>? query = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] ODataQueryBuilder<T>? query,
+		[Optional] CancellationToken cancellationToken) where T : class
 		=> GetCountCoreAsync(query, cancellationToken);
 
 	private async Task<long> GetCountCoreAsync<T>(
@@ -384,7 +384,7 @@ public partial class ODataClient
 	/// <returns>The first matching entity, or null.</returns>
 	public async Task<T?> GetFirstOrDefaultAsync<T>(
 		ODataQueryBuilder<T> query,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		// When a key is set, the endpoint returns a single JSON object (not a {"value":[...]} collection).
 		// Use the single-entity deserialization path to match the response shape.
@@ -419,7 +419,7 @@ public partial class ODataClient
 	/// <exception cref="InvalidOperationException">Thrown if zero or more than one entity matches.</exception>
 	public async Task<T> GetSingleAsync<T>(
 		ODataQueryBuilder<T> query,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		// When a key is set, the endpoint returns a single JSON object directly
 		if (query.HasKey)
@@ -455,7 +455,7 @@ public partial class ODataClient
 	/// <exception cref="InvalidOperationException">Thrown if more than one entity matches.</exception>
 	public async Task<T?> GetSingleOrDefaultAsync<T>(
 		ODataQueryBuilder<T> query,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		// Fetch up to 2 to detect multiple matches
 		query.Top(2);

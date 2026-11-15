@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Moq.Language.Flow;
 
 namespace PanoramicData.OData.Client.Test;
@@ -110,7 +111,7 @@ public abstract class MockedODataClientTestBase : TestBase, IDisposable
 	/// <summary>
 	/// Answers every request with <paramref name="content"/> under <paramref name="statusCode"/>.
 	/// </summary>
-	protected void SetupResponse(HttpStatusCode statusCode, string content, string mediaType = "application/json")
+	protected void SetupResponse(HttpStatusCode statusCode, string content, [Optional, DefaultParameterValue("application/json")] string mediaType)
 		=> SetupSendAsync().ReturnsAsync(() => new HttpResponseMessage(statusCode)
 		{
 			Content = new StringContent(content, Encoding.UTF8, mediaType)

@@ -17,7 +17,7 @@ public class ODataAsyncOperation<T>
 		string monitorUrl,
 		JsonSerializerOptions jsonOptions,
 		ILogger logger,
-		TimeSpan? pollInterval = null)
+		[Optional] TimeSpan? pollInterval)
 	{
 		_httpClient = httpClient;
 		MonitorUrl = monitorUrl;
@@ -122,8 +122,8 @@ public class ODataAsyncOperation<T>
 	/// <exception cref="TimeoutException">Thrown if the operation doesn't complete within the timeout.</exception>
 	/// <exception cref="ODataAsyncOperationException">Thrown if the operation fails.</exception>
 	public async Task<T?> WaitForCompletionAsync(
-		TimeSpan? timeout = null,
-		CancellationToken cancellationToken = default)
+		[Optional] TimeSpan? timeout,
+		[Optional] CancellationToken cancellationToken)
 	{
 		LogWaiting(timeout);
 

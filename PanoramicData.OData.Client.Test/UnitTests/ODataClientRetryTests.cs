@@ -366,7 +366,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	{
 		public List<(LogLevel Level, EventId EventId, string Message)> Entries { get; } = [];
 
-		public IDisposable? BeginScope<TState>(TState _) where TState : notnull => null;
+		public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
 		public bool IsEnabled(LogLevel logLevel) => logLevel != LogLevel.None;
 

@@ -17,7 +17,7 @@ public class ODataCrossJoinResult
 	/// <param name="entitySetName">The entity set name.</param>
 	/// <param name="options">Optional JSON serializer options.</param>
 	/// <returns>The entity, or default if not found.</returns>
-	public T? GetEntity<T>(string entitySetName, JsonSerializerOptions? options = null)
+	public T? GetEntity<T>(string entitySetName, [Optional] JsonSerializerOptions? options)
 	{
 		if (!Entities.TryGetValue(entitySetName, out var element))
 		{

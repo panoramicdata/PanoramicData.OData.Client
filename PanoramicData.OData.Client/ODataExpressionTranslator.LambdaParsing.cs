@@ -4,7 +4,7 @@ namespace PanoramicData.OData.Client;
 /// Lambda expression parsing functionality for ODataQueryBuilder.
 /// Handles Any/All collection operations and lambda body parsing.
 /// </summary>
-public partial class ODataQueryBuilder<T> where T : class
+internal static partial class ODataExpressionTranslator
 {
 	private static string? TryParseAnyAll(MethodCallExpression methodCall, string methodName)
 	{

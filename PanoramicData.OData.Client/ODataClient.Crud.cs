@@ -11,8 +11,8 @@ public partial class ODataClient
 	public async Task<T> CreateAsync<T>(
 		string entitySet,
 		T entity,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		var url = entitySet;
 		var typeName = typeof(T).Name;
@@ -42,8 +42,8 @@ public partial class ODataClient
 		string entitySet,
 		object key,
 		object patchValues,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken) where T : class
 		=> UpdateAsync<T, object>(entitySet, key, patchValues, etag: null, headers, cancellationToken);
 
 	/// <summary>
@@ -62,8 +62,8 @@ public partial class ODataClient
 		object key,
 		object patchValues,
 		string? etag,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken) where T : class
 		=> UpdateAsync<T, object>(entitySet, key, patchValues, etag, headers, cancellationToken);
 
 	/// <summary>
@@ -73,8 +73,8 @@ public partial class ODataClient
 		string entitySet,
 		TKey key,
 		object patchValues,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken) where T : class
 		=> UpdateAsync<T, TKey>(entitySet, key, patchValues, etag: null, headers, cancellationToken);
 
 	/// <summary>
@@ -95,8 +95,8 @@ public partial class ODataClient
 		TKey key,
 		object patchValues,
 		string? etag,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		var url = $"{entitySet}({FormatKey(key)})";
 		var typeName = typeof(T).Name;
@@ -136,8 +136,8 @@ public partial class ODataClient
 	public Task DeleteAsync(
 		string entitySet,
 		object key,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 		=> DeleteAsync(entitySet, key, etag: null, headers, cancellationToken);
 
 	/// <summary>
@@ -153,8 +153,8 @@ public partial class ODataClient
 		string entitySet,
 		object key,
 		string? etag,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 	{
 		var url = $"{entitySet}({FormatKey(key)})";
 		LoggerMessages.DeleteAsync(_logger, entitySet, key, url, etag ?? "(none)");
@@ -187,8 +187,8 @@ public partial class ODataClient
 		string entitySet,
 		object key,
 		T entity,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken) where T : class
 		=> ReplaceAsync<T, object>(entitySet, key, entity, headers: headers, cancellationToken: cancellationToken);
 
 	/// <summary>
@@ -208,8 +208,8 @@ public partial class ODataClient
 		object key,
 		T entity,
 		string? etag,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken) where T : class
 		=> ReplaceAsync<T, object>(entitySet, key, entity, etag, headers, cancellationToken);
 
 	/// <summary>
@@ -229,9 +229,9 @@ public partial class ODataClient
 		string entitySet,
 		TKey key,
 		T entity,
-		string? etag = null,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default) where T : class
+		[Optional] string? etag,
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		var url = $"{entitySet}({FormatKey(key)})";
 		var typeName = typeof(T).Name;
@@ -277,8 +277,8 @@ public partial class ODataClient
 	/// </remarks>
 	internal async Task DeleteByUrlAsync(
 		string url,
-		IReadOnlyDictionary<string, string>? headers = null,
-		CancellationToken cancellationToken = default)
+		[Optional] IReadOnlyDictionary<string, string>? headers,
+		[Optional] CancellationToken cancellationToken)
 	{
 		LoggerMessages.DeleteByUrlAsync(_logger, url);
 
