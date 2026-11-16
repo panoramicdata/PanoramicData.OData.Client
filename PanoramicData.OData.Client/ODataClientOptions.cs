@@ -117,4 +117,15 @@ public class ODataClientOptions
 	/// Defaults to <c>false</c>.
 	/// </remarks>
 	public bool IgnoreResourceNotFoundException { get; set; }
+
+	/// <summary>
+	/// Gets or sets a value indicating whether the client refuses to change data on the server.
+	/// </summary>
+	/// <remarks>
+	/// When <c>true</c>, any request other than GET, HEAD or OPTIONS throws an <see cref="InvalidOperationException"/>
+	/// before it is sent. That covers create, update, delete, reference and stream writes and action calls.
+	/// A batch is sent only if every operation in it is a GET. The option is read on each request, so changing it
+	/// takes effect on an existing client. Defaults to <c>false</c>.
+	/// </remarks>
+	public bool IsReadOnly { get; set; }
 }
