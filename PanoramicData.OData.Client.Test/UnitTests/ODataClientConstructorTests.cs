@@ -1,98 +1,39 @@
 namespace PanoramicData.OData.Client.Test.UnitTests;
 
 /// <summary>
-/// Unit tests for ODataClient constructor and initialization.
+/// Unit tests for ODataClient construction and option handling.
 /// </summary>
-public class ODataClientConstructorTests : TestBase
+public class ODataClientConstructorTests : MockedODataClientTestBase
 {
+	private const string NorthwindBaseUrl = "https://services.odata.org/V4/Northwind/Northwind.svc";
+
 	/// <summary>
-	/// Tests that constructor throws when options is null.
+	/// Tests that null options are rejected.
 	/// </summary>
 	[Fact]
 	public void Constructor_NullOptions_ThrowsArgumentNullException()
 	{
-		// Act
 		var act = () => new ODataClient(null!);
 
-		// Assert
 		act.Should().Throw<ArgumentNullException>()
 			.WithParameterName("options");
 	}
 
 	/// <summary>
-	/// Tests that constructor uses provided HttpClient.
+	/// Tests that a provided HttpClient is the one used to send requests.
 	/// </summary>
 	[Fact]
-	public void Constructor_WithHttpClient_UsesProvidedClient()
+	public async Task Constructor_WithHttpClient_UsesProvidedClient()
 	{
-		// Arrange
-		var mockHandler = new Mock<HttpMessageHandler>();
-		mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
-			{
-				Content = new StringContent("""{"value":[]}""", System.Text.Encoding.UTF8, "application/json")
-			});
-
-		using var httpClient = new HttpClient(mockHandler.Object)
+		SetupCapturingResponse(new HttpResponseMessage(HttpStatusCode.OK)
 		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-
-		// Act
-		using var client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = httpClient
+			Content = new StringContent("""{"value":[]}""", System.Text.Encoding.UTF8, "application/json")
 		});
 
-		// Assert - verify the provided HttpClient is used
-		client.Should().NotBeNull();
-	}
+		await Client.GetAsync(Client.For<TestEntity>("TestEntities"), CancellationToken);
 
-	/// <summary>
-	/// Tests that constructor trims trailing slash from BaseUrl.
-	/// </summary>
-	[Fact]
-	public async Task Constructor_BaseUrlWithTrailingSlash_Normalized()
-	{
-		// Arrange
-		var mockHandler = new Mock<HttpMessageHandler>();
-		Uri? capturedUri = null;
-
-		mockHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.Callback<HttpRequestMessage, CancellationToken>((request, _) => capturedUri = request.RequestUri)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
-			{
-				Content = new StringContent("""{"value":[]}""", System.Text.Encoding.UTF8, "application/json")
-			});
-
-		using var httpClient = new HttpClient(mockHandler.Object)
-		{
-			BaseAddress = new Uri("https://test.odata.org/")
-		};
-
-		using var client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = httpClient,
-			RetryCount = 0
-		});
-
-		// Act
-		var query = client.For<TestEntity>("TestEntities");
-		await client.GetAsync(query, CancellationToken);
-
-		// Assert
-		capturedUri.Should().NotBeNull();
-		capturedUri!.ToString().Should().Contain("TestEntities");
+		CapturedRequest.Should().NotBeNull();
+		CapturedRequest!.RequestUri!.ToString().Should().Contain("TestEntities");
 	}
 
 	/// <summary>
@@ -114,7 +55,7 @@ public class ODataClientConstructorTests : TestBase
 
 		foreach (var configure in configurations)
 		{
-			var options = new ODataClientOptions { BaseUrl = "https://test.odata.org/" };
+			var options = new ODataClientOptions { BaseUrl = MockBaseUrl };
 			configure(options);
 
 			using var client = new ODataClient(options);
@@ -123,53 +64,25 @@ public class ODataClientConstructorTests : TestBase
 		}
 	}
 
+	/// <summary>
+	/// Tests that a provided HttpClient gets its BaseAddress from options only when it has none.
+	/// Regression test for passing an HttpClient without BaseAddress causing "Invalid request URI".
+	/// </summary>
+	[Fact]
+	public void Constructor_HttpClientBaseAddress_SetOnlyWhenMissing()
+	{
+		using var withoutAddress = new HttpClient();
+		using var withAddress = new HttpClient { BaseAddress = new Uri(NorthwindBaseUrl + "/") };
+
+		using var first = new ODataClient(new ODataClientOptions { BaseUrl = NorthwindBaseUrl, HttpClient = withoutAddress });
+		using var second = new ODataClient(new ODataClientOptions { BaseUrl = NorthwindBaseUrl, HttpClient = withAddress });
+
+		withoutAddress.BaseAddress!.ToString().Should().Be(NorthwindBaseUrl + "/");
+		withAddress.BaseAddress!.ToString().Should().Be(NorthwindBaseUrl + "/");
+	}
+
 	private sealed class TestEntity
 	{
 		public int Id { get; set; }
-	}
-
-	/// <summary>
-	/// Tests that a provided HttpClient without a BaseAddress gets its BaseAddress set from options.
-	/// Regression test for issue where passing HttpClient without BaseAddress caused "Invalid request URI".
-	/// </summary>
-	[Fact]
-	public void Constructor_HttpClientWithoutBaseAddress_SetsBaseAddressFromOptions()
-	{
-		// Arrange
-		using var httpClient = new HttpClient(); // no BaseAddress set
-
-		// Act
-		using var client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://services.odata.org/V4/Northwind/Northwind.svc",
-			HttpClient = httpClient
-		});
-
-		// Assert - BaseAddress should have been set automatically
-		httpClient.BaseAddress.Should().NotBeNull();
-		httpClient.BaseAddress!.ToString().Should().Be("https://services.odata.org/V4/Northwind/Northwind.svc/");
-	}
-
-	/// <summary>
-	/// Tests that a provided HttpClient with an existing BaseAddress is not overwritten.
-	/// </summary>
-	[Fact]
-	public void Constructor_HttpClientWithBaseAddress_PreservesExistingBaseAddress()
-	{
-		// Arrange
-		using var httpClient = new HttpClient
-		{
-			BaseAddress = new Uri("https://services.odata.org/V4/Northwind/Northwind.svc/")
-		};
-
-		// Act
-		using var client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://services.odata.org/V4/Northwind/Northwind.svc",
-			HttpClient = httpClient
-		});
-
-		// Assert - existing BaseAddress must not be changed
-		httpClient.BaseAddress!.ToString().Should().Be("https://services.odata.org/V4/Northwind/Northwind.svc/");
 	}
 }

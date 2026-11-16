@@ -106,13 +106,7 @@ public class ODataClientQueryTests : MockedODataClientTestBase
 	public async Task NavigateTo_NonGenericExpr_As_GetAsync_SendsCorrectRequest()
 	{
 		// Arrange
-		string? capturedUrl = null;
-		SetupSendAsync()
-			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUrl = req.RequestUri?.PathAndQuery)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
-			{
-				Content = new StringContent("""{"value":[]}""", System.Text.Encoding.UTF8, "application/json")
-			});
+		SetupCapturingResponse(JsonResponse("""{"value":[]}"""));
 
 		// Act
 		await Client.For<Person>("People")
@@ -122,7 +116,7 @@ public class ODataClientQueryTests : MockedODataClientTestBase
 			.GetAsync(CancellationToken);
 
 		// Assert
-		capturedUrl.Should().Be("/People('russellwhyte')/Friends");
+		CapturedRequest!.RequestUri!.PathAndQuery.Should().Be("/People('russellwhyte')/Friends");
 	}
 
 	/// <summary>
@@ -132,15 +126,7 @@ public class ODataClientQueryTests : MockedODataClientTestBase
 	public async Task NavigateTo_NonGenericExpr_As_FindEntriesAsync_ReturnsTypedResults()
 	{
 		// Arrange
-		string? capturedUrl = null;
-		SetupSendAsync()
-			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUrl = req.RequestUri?.PathAndQuery)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
-			{
-				Content = new StringContent(
-					"""{"value":[{"UserName":"scottketchum"},{"UserName":"russellwhyte"}]}""",
-					System.Text.Encoding.UTF8, "application/json")
-			});
+		SetupCapturingResponse(JsonResponse("""{"value":[{"UserName":"scottketchum"},{"UserName":"russellwhyte"}]}"""));
 
 		// Act
 		var results = (await Client.For<Person>("People")
@@ -151,7 +137,7 @@ public class ODataClientQueryTests : MockedODataClientTestBase
 			.ToList();
 
 		// Assert
-		capturedUrl.Should().Be("/People('russellwhyte')/Friends");
+		CapturedRequest!.RequestUri!.PathAndQuery.Should().Be("/People('russellwhyte')/Friends");
 		results.Should().HaveCount(2);
 	}
 
@@ -162,15 +148,7 @@ public class ODataClientQueryTests : MockedODataClientTestBase
 	public async Task NavigateTo_NonGenericExpr_FindEntriesAsync_ReturnsResults()
 	{
 		// Arrange
-		string? capturedUrl = null;
-		SetupSendAsync()
-			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUrl = req.RequestUri?.PathAndQuery)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
-			{
-				Content = new StringContent(
-					"""{"value":[{"UserName":"scottketchum"}]}""",
-					System.Text.Encoding.UTF8, "application/json")
-			});
+		SetupCapturingResponse(JsonResponse("""{"value":[{"UserName":"scottketchum"}]}"""));
 
 		// Act
 		var results = (await Client.For<Person>("People")
@@ -179,10 +157,13 @@ public class ODataClientQueryTests : MockedODataClientTestBase
 			.FindEntriesAsync(CancellationToken)).ToList();
 
 		// Assert
-		capturedUrl.Should().Be("/People('russellwhyte')/Friends");
+		CapturedRequest!.RequestUri!.PathAndQuery.Should().Be("/People('russellwhyte')/Friends");
 		results.Should().HaveCount(1);
 		results[0].Should().ContainKey("UserName");
 	}
 
 	#endregion
+
+	private static HttpResponseMessage JsonResponse(string json)
+		=> new(HttpStatusCode.OK) { Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json") };
 }
