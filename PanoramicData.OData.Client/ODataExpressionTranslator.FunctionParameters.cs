@@ -31,24 +31,20 @@ internal static partial class ODataExpressionTranslator
 	{
 		null => "null",
 		string s => ODataLiteral.Quote(s),
-		bool b => b.ToString().ToLowerInvariant(),
-		int i => i.ToString(CultureInfo.InvariantCulture),
-		long l => l.ToString(CultureInfo.InvariantCulture),
-		double d => d.ToString(CultureInfo.InvariantCulture),
-		decimal dec => dec.ToString(CultureInfo.InvariantCulture),
-		DateTime dt => FormatDateTime(dt),
-		DateTimeOffset dto => $"{dto.UtcDateTime:yyyy-MM-ddTHH:mm:ssZ}",
-		Guid g => g.ToString(),
 		Enum e => $"'{e}'",
-		Array arr => FormatArrayParameter(arr),
-		System.Collections.IEnumerable enumerable => FormatEnumerableParameter(enumerable),
-		_ => value?.ToString() ?? "null"
+		System.Collections.IEnumerable enumerable => FormatSequence(enumerable),
+		_ => FormatScalar(value)
 	};
 
 	private static string FormatArrayElementValue(object? value) => value switch
 	{
 		null => "null",
 		string s => s,
+		_ => FormatScalar(value)
+	};
+
+	private static string FormatScalar(object value) => value switch
+	{
 		bool b => b.ToString().ToLowerInvariant(),
 		int i => i.ToString(CultureInfo.InvariantCulture),
 		long l => l.ToString(CultureInfo.InvariantCulture),
@@ -57,29 +53,9 @@ internal static partial class ODataExpressionTranslator
 		DateTime dt => FormatDateTime(dt),
 		DateTimeOffset dto => $"{dto.UtcDateTime:yyyy-MM-ddTHH:mm:ssZ}",
 		Guid g => g.ToString(),
-		Enum e => e.ToString(),
-		_ => value?.ToString() ?? "null"
+		_ => value.ToString() ?? "null"
 	};
 
-	private static string FormatArrayParameter(Array arr)
-	{
-		var elements = new List<string>();
-		foreach (var item in arr)
-		{
-			elements.Add(FormatArrayElementValue(item));
-		}
-
-		return $"[{string.Join(",", elements)}]";
-	}
-
-	private static string FormatEnumerableParameter(System.Collections.IEnumerable enumerable)
-	{
-		var elements = new List<string>();
-		foreach (var item in enumerable)
-		{
-			elements.Add(FormatArrayElementValue(item));
-		}
-
-		return $"[{string.Join(",", elements)}]";
-	}
+	private static string FormatSequence(System.Collections.IEnumerable items)
+		=> $"[{string.Join(",", items.Cast<object?>().Select(FormatArrayElementValue))}]";
 }

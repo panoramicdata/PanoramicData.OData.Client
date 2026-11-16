@@ -48,9 +48,9 @@ public partial class ODataClient
 			Value = await response.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
 		};
 
-		if (response.Headers.ETag is not null)
+		result.ETag = response.Headers.ETag?.ToString();
+		if (result.ETag is not null)
 		{
-			result.ETag = response.Headers.ETag.ToString();
 			LoggerMessages.GetSingletonWithETagResult(_logger, typeName, result.ETag);
 		}
 
@@ -102,21 +102,6 @@ public partial class ODataClient
 			request.Headers.TryAddWithoutValidation("If-Match", etag);
 		}
 
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, singletonName, etag, cancellationToken).ConfigureAwait(false);
-
-		// Handle 204 No Content response by fetching the updated entity
-		if (response.StatusCode == HttpStatusCode.NoContent)
-		{
-			LoggerMessages.UpdateSingletonAsyncNoContentRefetch(_logger, typeName);
-			var getRequest = CreateRequest(HttpMethod.Get, singletonName, headers);
-			var getResponse = await SendWithRetryAsync(getRequest, cancellationToken).ConfigureAwait(false);
-			await EnsureSuccessAsync(getResponse, singletonName, cancellationToken).ConfigureAwait(false);
-			return await getResponse.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
-				?? throw new ODataClientException("Failed to deserialize updated singleton after refetch");
-		}
-
-		return await response.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
-			?? throw new ODataClientException("Failed to deserialize updated singleton");
+		return await SendEntityWriteAsync<T>(request, singletonName, etag, headers, "updated singleton", () => LoggerMessages.UpdateSingletonAsyncNoContentRefetch(_logger, typeName), cancellationToken).ConfigureAwait(false);
 	}
 }

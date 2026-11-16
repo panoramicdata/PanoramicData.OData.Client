@@ -67,57 +67,16 @@ public partial class FluentODataQueryBuilder
 	{
 		var queryParams = new List<string>();
 
-		AddFilterParameter(queryParams);
-		AddSearchParameter(queryParams);
-		AddSelectParameter(queryParams);
-		AddExpandParameter(queryParams);
-		AddOrderByParameter(queryParams);
+		ODataQueryString.AddFilter(queryParams, _filterClauses);
+		ODataQueryString.AddEscaped(queryParams, "$search", _search);
+		ODataQueryString.AddJoined(queryParams, "$select", _selectFields);
+		ODataQueryString.AddJoined(queryParams, "$expand", _expandFields);
+		ODataQueryString.AddJoined(queryParams, "$orderby", _orderByClauses);
 		AddPagingParameters(queryParams);
-		AddApplyParameter(queryParams);
+		ODataQueryString.AddEscaped(queryParams, "$apply", _apply);
 		AddRawQueryOptions(queryParams);
 
 		return queryParams;
-	}
-
-	private void AddFilterParameter(List<string> queryParams)
-	{
-		if (_filterClauses.Count > 0)
-		{
-			var combinedFilter = string.Join(" and ", _filterClauses.Select(f => $"({f})"));
-			queryParams.Add($"$filter={Uri.EscapeDataString(combinedFilter)}");
-		}
-	}
-
-	private void AddSearchParameter(List<string> queryParams)
-	{
-		if (!string.IsNullOrWhiteSpace(_search))
-		{
-			queryParams.Add($"$search={Uri.EscapeDataString(_search)}");
-		}
-	}
-
-	private void AddSelectParameter(List<string> queryParams)
-	{
-		if (_selectFields.Count > 0)
-		{
-			queryParams.Add($"$select={string.Join(",", _selectFields)}");
-		}
-	}
-
-	private void AddExpandParameter(List<string> queryParams)
-	{
-		if (_expandFields.Count > 0)
-		{
-			queryParams.Add($"$expand={string.Join(",", _expandFields)}");
-		}
-	}
-
-	private void AddOrderByParameter(List<string> queryParams)
-	{
-		if (_orderByClauses.Count > 0)
-		{
-			queryParams.Add($"$orderby={string.Join(",", _orderByClauses)}");
-		}
 	}
 
 	private void AddPagingParameters(List<string> queryParams)
@@ -135,14 +94,6 @@ public partial class FluentODataQueryBuilder
 		if (_count)
 		{
 			queryParams.Add("$count=true");
-		}
-	}
-
-	private void AddApplyParameter(List<string> queryParams)
-	{
-		if (!string.IsNullOrWhiteSpace(_apply))
-		{
-			queryParams.Add($"$apply={Uri.EscapeDataString(_apply)}");
 		}
 	}
 

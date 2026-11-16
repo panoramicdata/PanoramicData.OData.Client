@@ -267,24 +267,19 @@ public partial class ODataClient
 			LoggerMessages.GetAsyncParsedItems(_logger, typeName, result.Value.Count);
 		}
 
-		// Parse count
-		if (doc.RootElement.TryGetProperty("@odata.count", out var countElement))
+		var paging = ODataPagingAnnotations.Read(doc.RootElement);
+		result.Count = paging.Count;
+		result.NextLink = paging.NextLink;
+		result.DeltaLink = paging.DeltaLink;
+
+		if (result.Count.HasValue)
 		{
-			result.Count = countElement.GetInt64();
 			LoggerMessages.GetAsyncODataCount(_logger, typeName, result.Count.Value);
 		}
 
-		// Parse nextLink
-		if (doc.RootElement.TryGetProperty("@odata.nextLink", out var nextLinkElement))
+		if (result.NextLink is not null)
 		{
-			result.NextLink = nextLinkElement.GetString();
 			LoggerMessages.GetAsyncNextLink(_logger, typeName, result.NextLink);
-		}
-
-		// Parse deltaLink
-		if (doc.RootElement.TryGetProperty("@odata.deltaLink", out var deltaLinkElement))
-		{
-			result.DeltaLink = deltaLinkElement.GetString();
 		}
 
 		// Extract ETag from response headers
