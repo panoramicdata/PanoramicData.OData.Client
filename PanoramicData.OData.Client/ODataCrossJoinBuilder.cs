@@ -173,46 +173,13 @@ public class ODataCrossJoinBuilder
 	{
 		var queryParams = new List<string>();
 
-		AppendFilterParameter(queryParams);
-		AppendSelectParameter(queryParams);
-		AppendExpandParameter(queryParams);
-		AppendOrderByParameter(queryParams);
+		ODataQueryString.AddFilter(queryParams, _filterClauses);
+		ODataQueryString.AddJoined(queryParams, "$select", _selectFields);
+		ODataQueryString.AddJoined(queryParams, "$expand", _expandFields);
+		ODataQueryString.AddJoined(queryParams, "$orderby", _orderByClauses);
 		AppendPaginationParameters(queryParams);
 
 		return queryParams;
-	}
-
-	private void AppendFilterParameter(List<string> queryParams)
-	{
-		if (_filterClauses.Count > 0)
-		{
-			var combinedFilter = string.Join(" and ", _filterClauses.Select(f => $"({f})"));
-			queryParams.Add($"$filter={Uri.EscapeDataString(combinedFilter)}");
-		}
-	}
-
-	private void AppendSelectParameter(List<string> queryParams)
-	{
-		if (_selectFields.Count > 0)
-		{
-			queryParams.Add($"$select={string.Join(",", _selectFields)}");
-		}
-	}
-
-	private void AppendExpandParameter(List<string> queryParams)
-	{
-		if (_expandFields.Count > 0)
-		{
-			queryParams.Add($"$expand={string.Join(",", _expandFields)}");
-		}
-	}
-
-	private void AppendOrderByParameter(List<string> queryParams)
-	{
-		if (_orderByClauses.Count > 0)
-		{
-			queryParams.Add($"$orderby={string.Join(",", _orderByClauses)}");
-		}
 	}
 
 	private void AppendPaginationParameters(List<string> queryParams)
