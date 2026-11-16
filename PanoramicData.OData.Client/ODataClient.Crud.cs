@@ -111,22 +111,7 @@ public partial class ODataClient
 			LoggerMessages.UpdateAsyncIfMatch(_logger, typeName, etag);
 		}
 
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, etag, cancellationToken).ConfigureAwait(false);
-
-		// Handle 204 No Content response by fetching the updated entity
-		if (response.StatusCode == HttpStatusCode.NoContent)
-		{
-			LoggerMessages.UpdateAsyncNoContentRefetch(_logger, typeName);
-			var getRequest = CreateRequest(HttpMethod.Get, url, headers);
-			var getResponse = await SendWithRetryAsync(getRequest, cancellationToken).ConfigureAwait(false);
-			await EnsureSuccessAsync(getResponse, url, cancellationToken).ConfigureAwait(false);
-			return await getResponse.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
-				?? throw new ODataClientException("Failed to deserialize updated entity after refetch");
-		}
-
-		return await response.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
-			?? throw new ODataClientException("Failed to deserialize updated entity");
+		return await SendEntityWriteAsync<T>(request, url, etag, headers, "updated", () => LoggerMessages.UpdateAsyncNoContentRefetch(_logger, typeName), cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -246,22 +231,7 @@ public partial class ODataClient
 			LoggerMessages.ReplaceAsyncIfMatch(_logger, typeName, etag);
 		}
 
-		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-		await EnsureSuccessAsync(response, url, etag, cancellationToken).ConfigureAwait(false);
-
-		// Handle 204 No Content response by fetching the updated entity
-		if (response.StatusCode == HttpStatusCode.NoContent)
-		{
-			LoggerMessages.ReplaceAsyncNoContentRefetch(_logger, typeName);
-			var getRequest = CreateRequest(HttpMethod.Get, url, headers);
-			var getResponse = await SendWithRetryAsync(getRequest, cancellationToken).ConfigureAwait(false);
-			await EnsureSuccessAsync(getResponse, url, cancellationToken).ConfigureAwait(false);
-			return await getResponse.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
-				?? throw new ODataClientException("Failed to deserialize replaced entity after refetch");
-		}
-
-		return await response.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
-			?? throw new ODataClientException("Failed to deserialize replaced entity");
+		return await SendEntityWriteAsync<T>(request, url, etag, headers, "replaced", () => LoggerMessages.ReplaceAsyncNoContentRefetch(_logger, typeName), cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -282,5 +252,29 @@ public partial class ODataClient
 		LoggerMessages.DeleteByUrlAsync(_logger, url);
 
 		await SendRequestAsync(HttpMethod.Delete, url, headers, cancellationToken).ConfigureAwait(false);
+	}
+	private async Task<T> SendEntityWriteAsync<T>(
+		HttpRequestMessage request,
+		string url,
+		string? etag,
+		IReadOnlyDictionary<string, string>? headers,
+		string verb,
+		Action logRefetch,
+		CancellationToken cancellationToken) where T : class
+	{
+		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+		await EnsureSuccessAsync(response, url, etag, cancellationToken).ConfigureAwait(false);
+
+		// A 204 carries no entity, so fetch the current state.
+		var failure = $"Failed to deserialize {verb} entity";
+		if (response.StatusCode == HttpStatusCode.NoContent)
+		{
+			logRefetch();
+			response = await SendRequestAsync(HttpMethod.Get, url, headers, cancellationToken).ConfigureAwait(false);
+			failure += " after refetch";
+		}
+
+		return await response.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+			?? throw new ODataClientException(failure);
 	}
 }
