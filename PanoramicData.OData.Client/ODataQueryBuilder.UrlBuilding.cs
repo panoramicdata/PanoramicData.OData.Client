@@ -19,7 +19,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		AppendDerivedTypeToUrl(sb);
 		AppendKeyToUrl(sb);
 		AppendFunctionToUrl(sb);
-		AppendQueryString(sb);
+		ODataQueryString.AppendQueryString(sb, BuildQueryParameters());
 
 		var url = sb.ToString();
 		LoggerMessages.QueryBuilderFinalUrl(_logger, typeof(T).Name, url);
@@ -41,45 +41,18 @@ public partial class ODataQueryBuilder<T> where T : class
 
 	private void AppendKeyToUrl(StringBuilder sb)
 	{
-		if (_key is null)
+		if (ODataQueryString.AppendKey(sb, _key))
 		{
-			return;
+			LoggerMessages.QueryBuilderKey(_logger, _key!);
 		}
-
-		sb.Append('(');
-		sb.Append(ODataLiteral.FormatKey(_key));
-		sb.Append(')');
-		LoggerMessages.QueryBuilderKey(_logger, _key);
 	}
 
 	private void AppendFunctionToUrl(StringBuilder sb)
 	{
-		if (string.IsNullOrEmpty(_function))
+		var parameters = _functionParameters is null ? null : ODataExpressionTranslator.FormatFunctionParameters(_functionParameters);
+		if (ODataQueryString.AppendFunction(sb, _function, parameters))
 		{
-			return;
-		}
-
-		sb.Append('/');
-		sb.Append(_function);
-		LoggerMessages.QueryBuilderFunction(_logger, _function);
-
-		sb.Append('(');
-		if (_functionParameters is not null)
-		{
-			sb.Append(ODataExpressionTranslator.FormatFunctionParameters(_functionParameters));
-		}
-
-		sb.Append(')');
-	}
-
-	private void AppendQueryString(StringBuilder sb)
-	{
-		var queryParams = BuildQueryParameters();
-
-		if (queryParams.Count > 0)
-		{
-			sb.Append('?');
-			sb.Append(string.Join("&", queryParams));
+			LoggerMessages.QueryBuilderFunction(_logger, _function!);
 		}
 	}
 
@@ -144,35 +117,26 @@ public partial class ODataQueryBuilder<T> where T : class
 
 	private void AppendSkipParameter(List<string> queryParams)
 	{
-		if (!_skip.HasValue)
+		if (ODataQueryString.AddNumber(queryParams, "$skip", _skip) is { } skip)
 		{
-			return;
+			LoggerMessages.QueryBuilderSkip(_logger, skip);
 		}
-
-		queryParams.Add($"$skip={_skip.Value}");
-		LoggerMessages.QueryBuilderSkip(_logger, _skip.Value);
 	}
 
 	private void AppendTopParameter(List<string> queryParams)
 	{
-		if (!_top.HasValue)
+		if (ODataQueryString.AddNumber(queryParams, "$top", _top) is { } top)
 		{
-			return;
+			LoggerMessages.QueryBuilderTop(_logger, top);
 		}
-
-		queryParams.Add($"$top={_top.Value}");
-		LoggerMessages.QueryBuilderTop(_logger, _top.Value);
 	}
 
 	private void AppendCountParameter(List<string> queryParams)
 	{
-		if (!_count)
+		if (ODataQueryString.AddCount(queryParams, _count))
 		{
-			return;
+			LoggerMessages.QueryBuilderCount(_logger);
 		}
-
-		queryParams.Add("$count=true");
-		LoggerMessages.QueryBuilderCount(_logger);
 	}
 
 	private void AppendApplyParameter(List<string> queryParams)
@@ -196,10 +160,5 @@ public partial class ODataQueryBuilder<T> where T : class
 	}
 
 	private void AppendRawQueryOptions(List<string> queryParams)
-	{
-		foreach (var option in _rawQueryOptions)
-		{
-			queryParams.Add(option);
-		}
-	}
+		=> queryParams.AddRange(_rawQueryOptions);
 }

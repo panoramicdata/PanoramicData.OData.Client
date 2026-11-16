@@ -144,30 +144,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	private static List<string> GetSelectFieldNames<TEntity>(Expression<Func<TEntity, object?>> selector)
 	{
 		var results = new List<string>();
-
-		var body = selector.Body;
-
-		// Handle Convert expressions
-		if (body is UnaryExpression unary && unary.NodeType == ExpressionType.Convert)
-		{
-			body = unary.Operand;
-		}
-
-		if (body is NewExpression newExpr)
-		{
-			foreach (var arg in newExpr.Arguments)
-			{
-				var memberName = MemberPathResolver.GetLeafMemberNameOrEmpty(arg);
-				if (!string.IsNullOrEmpty(memberName) && !results.Contains(memberName))
-				{
-					results.Add(memberName);
-				}
-			}
-		}
-		else if (body is MemberExpression member)
-		{
-			results.Add(member.Member.Name);
-		}
+		MemberPathResolver.AddSelectedNames(selector.Body, results);
 
 		return results;
 	}
