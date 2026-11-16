@@ -206,7 +206,7 @@ public class TripPinIntegrationTests : TripPinTestBase
 	#endregion
 
 	private Task<ODataResponse<T>> GetPageAsync<T>(string entitySet, Func<ODataQueryBuilder<T>, ODataQueryBuilder<T>> shape) where T : class
-		=> Client.GetAsync(shape(Client.For<T>(entitySet)), TestContext.Current.CancellationToken);
+		=> GetPageAsync(Client, entitySet, shape);
 
 	private Task<Person?> GetRussellWhyteAsync(string expand)
 		=> Client.GetByKeyAsync<Person, string>(

@@ -23,10 +23,8 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	public async Task For_GetAsync_ReturnsResults()
 	{
 		// Arrange & Act
-		var response = await fixture.Client
-			.For("Products")
-			.Top(5)
-			.GetAsync(CancellationToken);
+		var response = await GetProductsAsync(query => query
+			.Top(5));
 
 		// Assert
 		response.Should().NotBeNull();
@@ -41,11 +39,9 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	public async Task For_WithFilter_GetAsync_ReturnsFilteredResults()
 	{
 		// Arrange & Act
-		var response = await fixture.Client
-			.For("Products")
+		var response = await GetProductsAsync(query => query
 			.Filter("Rating gt 3")
-			.Top(5)
-			.GetAsync(CancellationToken);
+			.Top(5));
 
 		// Assert
 		response.Should().NotBeNull();
@@ -64,11 +60,9 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	public async Task For_WithSelect_GetAsync_ReturnsSelectedFields()
 	{
 		// Arrange & Act
-		var response = await fixture.Client
-			.For("Products")
+		var response = await GetProductsAsync(query => query
 			.Select("ID,Name,Price")
-			.Top(3)
-			.GetAsync(CancellationToken);
+			.Top(3));
 
 		// Assert
 		response.Should().NotBeNull();
@@ -87,11 +81,9 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	public async Task For_WithOrderBy_GetAsync_ReturnsOrderedResults()
 	{
 		// Arrange & Act
-		var response = await fixture.Client
-			.For("Products")
+		var response = await GetProductsAsync(query => query
 			.OrderBy("Name")
-			.Top(5)
-			.GetAsync(CancellationToken);
+			.Top(5));
 
 		// Assert
 		response.Should().NotBeNull();
@@ -110,12 +102,10 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	public async Task For_WithOrderByDescending_GetAsync_ReturnsOrderedResults()
 	{
 		// Arrange & Act
-		var response = await fixture.Client
-			.For("Products")
+		var response = await GetProductsAsync(query => query
 			.Filter("Price ne null")
 			.OrderByDescending("Price")
-			.Top(5)
-			.GetAsync(CancellationToken);
+			.Top(5));
 
 		// Assert
 		response.Should().NotBeNull();
@@ -134,19 +124,15 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	public async Task For_WithSkipAndTop_GetAsync_ReturnsPaginatedResults()
 	{
 		// Arrange & Act
-		var page1 = await fixture.Client
-			.For("Products")
+		var page1 = await GetProductsAsync(query => query
 			.OrderBy("ID")
 			.Skip(0)
-			.Top(2)
-			.GetAsync(CancellationToken);
+			.Top(2));
 
-		var page2 = await fixture.Client
-			.For("Products")
+		var page2 = await GetProductsAsync(query => query
 			.OrderBy("ID")
 			.Skip(2)
-			.Top(2)
-			.GetAsync(CancellationToken);
+			.Top(2));
 
 		// Assert
 		page1.Value.Should().NotBeEmpty();
@@ -163,11 +149,9 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	public async Task For_WithCount_GetAsync_ReturnsCount()
 	{
 		// Arrange & Act
-		var response = await fixture.Client
-			.For("Products")
+		var response = await GetProductsAsync(query => query
 			.Count()
-			.Top(1)
-			.GetAsync(CancellationToken);
+			.Top(1));
 
 		// Assert
 		response.Should().NotBeNull();
@@ -353,15 +337,13 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	public async Task For_ComplexQuery_ReturnsCorrectResults()
 	{
 		// Arrange & Act
-		var response = await fixture.Client
-			.For("Products")
+		var response = await GetProductsAsync(query => query
 			.Filter("Rating ge 3")
 			.Select("ID,Name,Rating,Price")
 			.OrderBy("Rating desc")
 			.Skip(0)
 			.Top(5)
-			.Count()
-			.GetAsync(CancellationToken);
+			.Count());
 
 		// Assert
 		response.Should().NotBeNull();
@@ -375,4 +357,7 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	}
 
 	#endregion
+
+	private Task<ODataResponse<Dictionary<string, object?>>> GetProductsAsync(Func<FluentODataQueryBuilder, FluentODataQueryBuilder> shape)
+		=> shape(fixture.Client.For("Products")).GetAsync(CancellationToken);
 }
