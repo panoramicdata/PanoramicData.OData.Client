@@ -14,12 +14,9 @@ public class ODataClientStreamTests : MockedODataClientTestBase
 	public async Task GetStreamAsync_SendsGetToValueUrl()
 	{
 		// Arrange
-		HttpRequestMessage? capturedRequest = null;
 		var content = new byte[] { 0x89, 0x50, 0x4E, 0x47 }; // PNG header
 
-		SetupSendAsync()
-			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+		SetupCapturingResponse(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new ByteArrayContent(content)
 			});
@@ -29,9 +26,9 @@ public class ODataClientStreamTests : MockedODataClientTestBase
 
 		// Assert
 		stream.Should().NotBeNull();
-		capturedRequest.Should().NotBeNull();
-		capturedRequest!.Method.Should().Be(HttpMethod.Get);
-		capturedRequest.RequestUri!.PathAndQuery.Should().Be("/Photos(1)/$value");
+		CapturedRequest.Should().NotBeNull();
+		CapturedRequest!.Method.Should().Be(HttpMethod.Get);
+		CapturedRequest.RequestUri!.PathAndQuery.Should().Be("/Photos(1)/$value");
 	}
 
 	/// <summary>
@@ -66,11 +63,8 @@ public class ODataClientStreamTests : MockedODataClientTestBase
 	public async Task GetStreamAsync_WithStringKey_FormatsCorrectly()
 	{
 		// Arrange
-		HttpRequestMessage? capturedRequest = null;
 
-		SetupSendAsync()
-			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+		SetupCapturingResponse(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new ByteArrayContent([])
 			});
@@ -79,8 +73,8 @@ public class ODataClientStreamTests : MockedODataClientTestBase
 		await Client.GetStreamAsync("Documents", "report.pdf", cancellationToken: CancellationToken.None);
 
 		// Assert
-		capturedRequest.Should().NotBeNull();
-		capturedRequest!.RequestUri!.PathAndQuery.Should().Be("/Documents('report.pdf')/$value");
+		CapturedRequest.Should().NotBeNull();
+		CapturedRequest!.RequestUri!.PathAndQuery.Should().Be("/Documents('report.pdf')/$value");
 	}
 
 	#endregion
@@ -94,22 +88,19 @@ public class ODataClientStreamTests : MockedODataClientTestBase
 	public async Task SetStreamAsync_SendsPutWithContent()
 	{
 		// Arrange
-		HttpRequestMessage? capturedRequest = null;
 		var content = new byte[] { 1, 2, 3, 4, 5 };
 
-		SetupSendAsync()
-			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
+		SetupCapturingResponse(new HttpResponseMessage(HttpStatusCode.NoContent));
 
 		// Act
 		using var stream = new MemoryStream(content);
 		await Client.SetStreamAsync("Photos", 1, stream, cancellationToken: CancellationToken.None);
 
 		// Assert
-		capturedRequest.Should().NotBeNull();
-		capturedRequest!.Method.Should().Be(HttpMethod.Put);
-		capturedRequest.RequestUri!.PathAndQuery.Should().Be("/Photos(1)/$value");
-		capturedRequest.Content.Should().NotBeNull();
+		CapturedRequest.Should().NotBeNull();
+		CapturedRequest!.Method.Should().Be(HttpMethod.Put);
+		CapturedRequest.RequestUri!.PathAndQuery.Should().Be("/Photos(1)/$value");
+		CapturedRequest.Content.Should().NotBeNull();
 	}
 
 	/// <summary>
@@ -119,19 +110,16 @@ public class ODataClientStreamTests : MockedODataClientTestBase
 	public async Task SetStreamAsync_SendsContentType()
 	{
 		// Arrange
-		HttpRequestMessage? capturedRequest = null;
 
-		SetupSendAsync()
-			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
+		SetupCapturingResponse(new HttpResponseMessage(HttpStatusCode.NoContent));
 
 		// Act
 		using var stream = new MemoryStream([1, 2, 3]);
 		await Client.SetStreamAsync("Photos", 1, stream, "image/png", cancellationToken: CancellationToken.None);
 
 		// Assert
-		capturedRequest.Should().NotBeNull();
-		capturedRequest!.Content!.Headers.ContentType!.MediaType.Should().Be("image/png");
+		CapturedRequest.Should().NotBeNull();
+		CapturedRequest!.Content!.Headers.ContentType!.MediaType.Should().Be("image/png");
 	}
 
 	#endregion
@@ -145,11 +133,8 @@ public class ODataClientStreamTests : MockedODataClientTestBase
 	public async Task GetStreamPropertyAsync_SendsGetToPropertyUrl()
 	{
 		// Arrange
-		HttpRequestMessage? capturedRequest = null;
 
-		SetupSendAsync()
-			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+		SetupCapturingResponse(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new ByteArrayContent([])
 			});
@@ -158,9 +143,9 @@ public class ODataClientStreamTests : MockedODataClientTestBase
 		await Client.GetStreamPropertyAsync("Products", 1, "Thumbnail", cancellationToken: CancellationToken.None);
 
 		// Assert
-		capturedRequest.Should().NotBeNull();
-		capturedRequest!.Method.Should().Be(HttpMethod.Get);
-		capturedRequest.RequestUri!.PathAndQuery.Should().Be("/Products(1)/Thumbnail");
+		CapturedRequest.Should().NotBeNull();
+		CapturedRequest!.Method.Should().Be(HttpMethod.Get);
+		CapturedRequest.RequestUri!.PathAndQuery.Should().Be("/Products(1)/Thumbnail");
 	}
 
 	/// <summary>
@@ -199,21 +184,18 @@ public class ODataClientStreamTests : MockedODataClientTestBase
 	public async Task SetStreamPropertyAsync_SendsPutToPropertyUrl()
 	{
 		// Arrange
-		HttpRequestMessage? capturedRequest = null;
 
-		SetupSendAsync()
-			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
+		SetupCapturingResponse(new HttpResponseMessage(HttpStatusCode.NoContent));
 
 		// Act
 		using var stream = new MemoryStream([1, 2, 3]);
 		await Client.SetStreamPropertyAsync("Products", 1, "Thumbnail", stream, "image/jpeg", cancellationToken: CancellationToken.None);
 
 		// Assert
-		capturedRequest.Should().NotBeNull();
-		capturedRequest!.Method.Should().Be(HttpMethod.Put);
-		capturedRequest.RequestUri!.PathAndQuery.Should().Be("/Products(1)/Thumbnail");
-		capturedRequest.Content!.Headers.ContentType!.MediaType.Should().Be("image/jpeg");
+		CapturedRequest.Should().NotBeNull();
+		CapturedRequest!.Method.Should().Be(HttpMethod.Put);
+		CapturedRequest.RequestUri!.PathAndQuery.Should().Be("/Products(1)/Thumbnail");
+		CapturedRequest.Content!.Headers.ContentType!.MediaType.Should().Be("image/jpeg");
 	}
 
 	#endregion

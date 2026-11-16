@@ -49,11 +49,8 @@ public class ODataClientSingletonTests : MockedODataClientTestBase
 	public async Task GetSingletonAsync_SendsCorrectUrl()
 	{
 		// Arrange
-		HttpRequestMessage? capturedRequest = null;
 
-		SetupSendAsync()
-			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+		SetupCapturingResponse(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent("""{"UserName": "test"}""")
 			});
@@ -62,9 +59,9 @@ public class ODataClientSingletonTests : MockedODataClientTestBase
 		await Client.GetSingletonAsync<Person>("Me", cancellationToken: CancellationToken.None);
 
 		// Assert
-		capturedRequest.Should().NotBeNull();
-		capturedRequest!.Method.Should().Be(HttpMethod.Get);
-		capturedRequest.RequestUri!.PathAndQuery.Should().Be("/Me");
+		CapturedRequest.Should().NotBeNull();
+		CapturedRequest!.Method.Should().Be(HttpMethod.Get);
+		CapturedRequest.RequestUri!.PathAndQuery.Should().Be("/Me");
 	}
 
 	/// <summary>
@@ -126,11 +123,8 @@ public class ODataClientSingletonTests : MockedODataClientTestBase
 	public async Task UpdateSingletonAsync_SendsPatchRequest()
 	{
 		// Arrange
-		HttpRequestMessage? capturedRequest = null;
 
-		SetupSendAsync()
-			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+		SetupCapturingResponse(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent("""{"UserName": "currentuser", "FirstName": "Jane"}""")
 			});
@@ -139,9 +133,9 @@ public class ODataClientSingletonTests : MockedODataClientTestBase
 		var result = await Client.UpdateSingletonAsync<Person>("Me", new { FirstName = "Jane" }, cancellationToken: CancellationToken.None);
 
 		// Assert
-		capturedRequest.Should().NotBeNull();
-		capturedRequest!.Method.Should().Be(new HttpMethod("PATCH"));
-		capturedRequest.RequestUri!.PathAndQuery.Should().Be("/Me");
+		CapturedRequest.Should().NotBeNull();
+		CapturedRequest!.Method.Should().Be(new HttpMethod("PATCH"));
+		CapturedRequest.RequestUri!.PathAndQuery.Should().Be("/Me");
 		result.FirstName.Should().Be("Jane");
 	}
 
@@ -152,11 +146,8 @@ public class ODataClientSingletonTests : MockedODataClientTestBase
 	public async Task UpdateSingletonAsync_WithETag_SendsIfMatchHeader()
 	{
 		// Arrange
-		HttpRequestMessage? capturedRequest = null;
 
-		SetupSendAsync()
-			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+		SetupCapturingResponse(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent("""{"UserName": "currentuser"}""")
 			});
@@ -165,9 +156,9 @@ public class ODataClientSingletonTests : MockedODataClientTestBase
 		await Client.UpdateSingletonAsync<Person>("Me", new { FirstName = "Jane" }, "W/\"v1\"", cancellationToken: CancellationToken.None);
 
 		// Assert
-		capturedRequest.Should().NotBeNull();
-		capturedRequest!.Headers.IfMatch.Should().ContainSingle();
-		capturedRequest.Headers.IfMatch.First().ToString().Should().Be("W/\"v1\"");
+		CapturedRequest.Should().NotBeNull();
+		CapturedRequest!.Headers.IfMatch.Should().ContainSingle();
+		CapturedRequest.Headers.IfMatch.First().ToString().Should().Be("W/\"v1\"");
 	}
 
 	/// <summary>

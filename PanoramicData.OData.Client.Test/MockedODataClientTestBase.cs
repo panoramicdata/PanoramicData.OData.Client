@@ -103,6 +103,19 @@ public abstract class MockedODataClientTestBase : TestBase, IDisposable
 				ItExpr.IsAny<CancellationToken>());
 
 	/// <summary>
+	/// The last request the handler saw, set by <see cref="SetupCapturingResponse"/>.
+	/// </summary>
+	protected HttpRequestMessage? CapturedRequest { get; private set; }
+
+	/// <summary>
+	/// Answers every request with <paramref name="response"/> and records it in <see cref="CapturedRequest"/>.
+	/// </summary>
+	protected void SetupCapturingResponse(HttpResponseMessage response)
+		=> SetupSendAsync()
+			.Callback<HttpRequestMessage, CancellationToken>((request, _) => CapturedRequest = request)
+			.ReturnsAsync(response);
+
+	/// <summary>
 	/// Answers every request with <paramref name="response"/>.
 	/// </summary>
 	protected void SetupResponse(HttpResponseMessage response)

@@ -67,11 +67,8 @@ public class ODataClientETagTests : MockedODataClientTestBase
 	public async Task UpdateAsync_WithETag_SendsIfMatchHeader()
 	{
 		// Arrange
-		HttpRequestMessage? capturedRequest = null;
 
-		SetupSendAsync()
-			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+		SetupCapturingResponse(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent("""{"Id": 1, "Name": "Updated Widget"}""")
 			});
@@ -80,9 +77,9 @@ public class ODataClientETagTests : MockedODataClientTestBase
 		await Client.UpdateAsync<Product>("Products", 1, new { Name = "Updated Widget" }, "W/\"abc123\"", cancellationToken: CancellationToken.None);
 
 		// Assert
-		capturedRequest.Should().NotBeNull();
-		capturedRequest!.Headers.IfMatch.Should().ContainSingle();
-		capturedRequest.Headers.IfMatch.First().ToString().Should().Be("W/\"abc123\"");
+		CapturedRequest.Should().NotBeNull();
+		CapturedRequest!.Headers.IfMatch.Should().ContainSingle();
+		CapturedRequest.Headers.IfMatch.First().ToString().Should().Be("W/\"abc123\"");
 	}
 
 	/// <summary>
@@ -92,11 +89,8 @@ public class ODataClientETagTests : MockedODataClientTestBase
 	public async Task UpdateAsync_WithoutETag_NoIfMatchHeader()
 	{
 		// Arrange
-		HttpRequestMessage? capturedRequest = null;
 
-		SetupSendAsync()
-			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+		SetupCapturingResponse(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent("""{"Id": 1, "Name": "Updated Widget"}""")
 			});
@@ -105,8 +99,8 @@ public class ODataClientETagTests : MockedODataClientTestBase
 		await Client.UpdateAsync<Product>("Products", 1, new { Name = "Updated Widget" }, cancellationToken: CancellationToken.None);
 
 		// Assert
-		capturedRequest.Should().NotBeNull();
-		capturedRequest!.Headers.IfMatch.Should().BeEmpty();
+		CapturedRequest.Should().NotBeNull();
+		CapturedRequest!.Headers.IfMatch.Should().BeEmpty();
 	}
 
 	/// <summary>
@@ -146,19 +140,16 @@ public class ODataClientETagTests : MockedODataClientTestBase
 	public async Task DeleteAsync_WithETag_SendsIfMatchHeader()
 	{
 		// Arrange
-		HttpRequestMessage? capturedRequest = null;
 
-		SetupSendAsync()
-			.Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
-			.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
+		SetupCapturingResponse(new HttpResponseMessage(HttpStatusCode.NoContent));
 
 		// Act
 		await Client.DeleteAsync("Products", 1, "W/\"abc123\"", cancellationToken: CancellationToken.None);
 
 		// Assert
-		capturedRequest.Should().NotBeNull();
-		capturedRequest!.Headers.IfMatch.Should().ContainSingle();
-		capturedRequest.Headers.IfMatch.First().ToString().Should().Be("W/\"abc123\"");
+		CapturedRequest.Should().NotBeNull();
+		CapturedRequest!.Headers.IfMatch.Should().ContainSingle();
+		CapturedRequest.Headers.IfMatch.First().ToString().Should().Be("W/\"abc123\"");
 	}
 
 	/// <summary>
