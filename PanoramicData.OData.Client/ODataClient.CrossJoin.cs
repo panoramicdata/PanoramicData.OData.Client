@@ -58,30 +58,22 @@ public partial class ODataClient
 
 		LoggerMessages.GetAllCrossJoinAsyncInitial(_logger, url);
 
-		var pageCount = 0;
-		do
-		{
-			cancellationToken.ThrowIfCancellationRequested();
-
-			pageCount++;
-			LoggerMessages.GetAllCrossJoinAsyncFetchingPage(_logger, pageCount, url);
-
-			var content = await SendForContentAsync(HttpMethod.Get, url, crossJoin.CustomHeaders, cancellationToken).ConfigureAwait(false);
-			var pageResult = ParseCrossJoinResponse(content);
-
-			allResults.Value.AddRange(pageResult.Value);
-
-			// Only set count from first page
-			if (pageResult.Count.HasValue && !allResults.Count.HasValue)
+		await FetchPagesAsync(
+			url,
+			async (pageUrl, pageNumber) =>
 			{
-				allResults.Count = pageResult.Count;
-			}
-
-			LoggerMessages.GetAllCrossJoinAsyncPageReturned(_logger, pageCount, pageResult.Value.Count);
-
-			url = pageResult.NextLink;
-		}
-		while (!string.IsNullOrEmpty(url));
+				LoggerMessages.GetAllCrossJoinAsyncFetchingPage(_logger, pageNumber, pageUrl);
+				var content = await SendForContentAsync(HttpMethod.Get, pageUrl, crossJoin.CustomHeaders, cancellationToken).ConfigureAwait(false);
+				return ParseCrossJoinResponse(content);
+			},
+			page => page.NextLink,
+			(page, pageNumber) =>
+			{
+				allResults.Value.AddRange(page.Value);
+				allResults.Count ??= page.Count;
+				LoggerMessages.GetAllCrossJoinAsyncPageReturned(_logger, pageNumber, page.Value.Count);
+			},
+			cancellationToken).ConfigureAwait(false);
 
 		LoggerMessages.GetAllCrossJoinAsyncComplete(_logger, allResults.Value.Count);
 

@@ -42,40 +42,32 @@ public partial class ODataClient
 		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		var allResults = new ODataDeltaResponse<T>();
-		var url = deltaLink;
 		var typeName = typeof(T).Name;
 
 		LoggerMessages.GetAllDeltaAsyncInitial(_logger, typeName, deltaLink);
 
-		var pageCount = 0;
-		do
-		{
-			cancellationToken.ThrowIfCancellationRequested();
-
-			pageCount++;
-			LoggerMessages.GetAllDeltaAsyncFetchingPage(_logger, typeName, pageCount, url);
-
-			var response = await GetDeltaAsync<T>(url, headers, cancellationToken).ConfigureAwait(false);
-			allResults.Value.AddRange(response.Value);
-			allResults.Deleted.AddRange(response.Deleted);
-
-			// Preserve count from first page
-			if (response.Count.HasValue && !allResults.Count.HasValue)
+		await FetchPagesAsync(
+			deltaLink,
+			(pageUrl, pageNumber) =>
 			{
-				allResults.Count = response.Count;
-			}
-
-			// Keep the final delta link
-			if (!string.IsNullOrEmpty(response.DeltaLink))
+				LoggerMessages.GetAllDeltaAsyncFetchingPage(_logger, typeName, pageNumber, pageUrl);
+				return GetDeltaAsync<T>(pageUrl, headers, cancellationToken);
+			},
+			page => page.NextLink,
+			(page, pageNumber) =>
 			{
-				allResults.DeltaLink = response.DeltaLink;
-			}
+				allResults.Value.AddRange(page.Value);
+				allResults.Deleted.AddRange(page.Deleted);
+				allResults.Count ??= page.Count;
 
-			LoggerMessages.GetAllDeltaAsyncPageReturned(_logger, typeName, pageCount, response.Value.Count, response.Deleted.Count);
+				if (!string.IsNullOrEmpty(page.DeltaLink))
+				{
+					allResults.DeltaLink = page.DeltaLink;
+				}
 
-			url = response.NextLink;
-		}
-		while (!string.IsNullOrEmpty(url));
+				LoggerMessages.GetAllDeltaAsyncPageReturned(_logger, typeName, pageNumber, page.Value.Count, page.Deleted.Count);
+			},
+			cancellationToken).ConfigureAwait(false);
 
 		LoggerMessages.GetAllDeltaAsyncComplete(_logger, typeName, allResults.Value.Count, allResults.Deleted.Count);
 

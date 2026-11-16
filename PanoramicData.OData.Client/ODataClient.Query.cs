@@ -30,29 +30,21 @@ public partial class ODataClient
 
 		LoggerMessages.GetAllAsyncInitial(_logger, typeName, url);
 
-		var pageCount = 0;
-		do
-		{
-			// Check for cancellation at the start of each iteration
-			cancellationToken.ThrowIfCancellationRequested();
-
-			pageCount++;
-			LoggerMessages.GetAllAsyncFetchingPage(_logger, typeName, pageCount, url);
-
-			var response = await GetAsync<T>(url, query.CustomHeaders, cancellationToken).ConfigureAwait(false);
-			allResults.Value.AddRange(response.Value);
-
-			// Only set count from first page (or if a later page has count and first didn't)
-			if (response.Count.HasValue && !allResults.Count.HasValue)
+		await FetchPagesAsync(
+			url,
+			(pageUrl, pageNumber) =>
 			{
-				allResults.Count = response.Count;
-			}
-
-			LoggerMessages.GetAllAsyncPageReturned(_logger, typeName, pageCount, response.Value.Count, allResults.Value.Count);
-
-			url = response.NextLink;
-		}
-		while (!string.IsNullOrEmpty(url));
+				LoggerMessages.GetAllAsyncFetchingPage(_logger, typeName, pageNumber, pageUrl);
+				return GetAsync<T>(pageUrl, query.CustomHeaders, cancellationToken);
+			},
+			page => page.NextLink,
+			(page, pageNumber) =>
+			{
+				allResults.Value.AddRange(page.Value);
+				allResults.Count ??= page.Count;
+				LoggerMessages.GetAllAsyncPageReturned(_logger, typeName, pageNumber, page.Value.Count, allResults.Value.Count);
+			},
+			cancellationToken).ConfigureAwait(false);
 
 		LoggerMessages.GetAllAsyncComplete(_logger, typeName, allResults.Value.Count, allResults.Count);
 
