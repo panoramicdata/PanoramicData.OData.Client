@@ -8,120 +8,36 @@ public class ODataServiceDocumentTests
 	#region ODataServiceDocument Tests
 
 	/// <summary>
-	/// Tests that EntitySets property filters correctly.
+	/// Tests that EntitySets, Singletons and FunctionImports each return only their own kind.
 	/// </summary>
 	[Fact]
-	public void EntitySets_FiltersCorrectly()
+	public void KindFilters_ReturnOnlyMatchingResources()
 	{
-		// Arrange
 		var doc = new ODataServiceDocument();
 		doc.Resources.Add(new ODataServiceResource { Name = "Products", Kind = ODataServiceResourceKind.EntitySet });
-		doc.Resources.Add(new ODataServiceResource { Name = "Me", Kind = ODataServiceResourceKind.Singleton });
 		doc.Resources.Add(new ODataServiceResource { Name = "Categories", Kind = ODataServiceResourceKind.EntitySet });
-
-		// Act
-		var entitySets = doc.EntitySets.ToList();
-
-		// Assert
-		entitySets.Should().HaveCount(2);
-		entitySets.Should().Contain(r => r.Name == "Products");
-		entitySets.Should().Contain(r => r.Name == "Categories");
-	}
-
-	/// <summary>
-	/// Tests that Singletons property filters correctly.
-	/// </summary>
-	[Fact]
-	public void Singletons_FiltersCorrectly()
-	{
-		// Arrange
-		var doc = new ODataServiceDocument();
-		doc.Resources.Add(new ODataServiceResource { Name = "Products", Kind = ODataServiceResourceKind.EntitySet });
 		doc.Resources.Add(new ODataServiceResource { Name = "Me", Kind = ODataServiceResourceKind.Singleton });
 		doc.Resources.Add(new ODataServiceResource { Name = "Settings", Kind = ODataServiceResourceKind.Singleton });
-
-		// Act
-		var singletons = doc.Singletons.ToList();
-
-		// Assert
-		singletons.Should().HaveCount(2);
-		singletons.Should().Contain(r => r.Name == "Me");
-		singletons.Should().Contain(r => r.Name == "Settings");
-	}
-
-	/// <summary>
-	/// Tests that FunctionImports property filters correctly.
-	/// </summary>
-	[Fact]
-	public void FunctionImports_FiltersCorrectly()
-	{
-		// Arrange
-		var doc = new ODataServiceDocument();
-		doc.Resources.Add(new ODataServiceResource { Name = "Products", Kind = ODataServiceResourceKind.EntitySet });
-		doc.Resources.Add(new ODataServiceResource { Name = "GetTopProducts", Kind = ODataServiceResourceKind.FunctionImport });
 		doc.Resources.Add(new ODataServiceResource { Name = "Search", Kind = ODataServiceResourceKind.FunctionImport });
 
-		// Act
-		var functions = doc.FunctionImports.ToList();
-
-		// Assert
-		functions.Should().HaveCount(2);
-		functions.Should().Contain(r => r.Name == "GetTopProducts");
-		functions.Should().Contain(r => r.Name == "Search");
+		doc.EntitySets.Select(r => r.Name).Should().BeEquivalentTo("Products", "Categories");
+		doc.Singletons.Select(r => r.Name).Should().BeEquivalentTo("Me", "Settings");
+		doc.FunctionImports.Select(r => r.Name).Should().BeEquivalentTo("Search");
 	}
 
 	/// <summary>
-	/// Tests that GetResource finds a resource by name.
+	/// Tests that GetResource finds by name ignoring case, and returns null when absent.
 	/// </summary>
 	[Fact]
-	public void GetResource_FindsByName()
+	public void GetResource_FindsByNameIgnoringCase()
 	{
-		// Arrange
 		var doc = new ODataServiceDocument();
 		doc.Resources.Add(new ODataServiceResource { Name = "Products", Url = "Products" });
 		doc.Resources.Add(new ODataServiceResource { Name = "Categories", Url = "Categories" });
 
-		// Act
-		var result = doc.GetResource("Products");
-
-		// Assert
-		result.Should().NotBeNull();
-		result!.Name.Should().Be("Products");
-	}
-
-	/// <summary>
-	/// Tests that GetResource is case insensitive.
-	/// </summary>
-	[Fact]
-	public void GetResource_CaseInsensitive()
-	{
-		// Arrange
-		var doc = new ODataServiceDocument();
-		doc.Resources.Add(new ODataServiceResource { Name = "Products", Url = "Products" });
-
-		// Act
-		var result = doc.GetResource("products");
-
-		// Assert
-		result.Should().NotBeNull();
-		result!.Name.Should().Be("Products");
-	}
-
-	/// <summary>
-	/// Tests that GetResource returns null when resource not found.
-	/// </summary>
-	[Fact]
-	public void GetResource_NotFound_ReturnsNull()
-	{
-		// Arrange
-		var doc = new ODataServiceDocument();
-		doc.Resources.Add(new ODataServiceResource { Name = "Products", Url = "Products" });
-
-		// Act
-		var result = doc.GetResource("NonExistent");
-
-		// Assert
-		result.Should().BeNull();
+		doc.GetResource("Products")!.Name.Should().Be("Products");
+		doc.GetResource("products")!.Name.Should().Be("Products");
+		doc.GetResource("NonExistent").Should().BeNull();
 	}
 
 	/// <summary>

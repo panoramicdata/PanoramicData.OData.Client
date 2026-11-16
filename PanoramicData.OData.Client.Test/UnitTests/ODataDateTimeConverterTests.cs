@@ -4,317 +4,98 @@ using System.Text.Json;
 namespace PanoramicData.OData.Client.Test.UnitTests;
 
 /// <summary>
-/// Tests for ODataDateTimeConverter and ODataNullableDateTimeConverter.
+/// Unit tests for the OData date and nullable date JSON converters.
 /// </summary>
 public class ODataDateTimeConverterTests
 {
-	private readonly JsonSerializerOptions _options;
-	private readonly JsonSerializerOptions _nullableOptions;
+	private const string Expected = "\"2024-01-15T10:30:00Z\"";
+
+	private readonly JsonSerializerOptions _options = Options(new ODataDateTimeConverter());
+	private readonly JsonSerializerOptions _nullableOptions = Options(new ODataNullableDateTimeConverter());
 
 	/// <summary>
-	/// Initializes a new instance of the test class.
+	/// Valid inputs read to the expected UTC time, for both converters.
 	/// </summary>
-	public ODataDateTimeConverterTests()
+	[Theory]
+	[InlineData("\"2024-01-15T10:30:00Z\"", 10)]
+	[InlineData("\"2024-01-15T10:30:00+02:00\"", 8)]
+	public void Read_ValidDate_ReturnsUtcDateTime(string json, int expectedHour)
 	{
-		_options = new JsonSerializerOptions();
-		_options.Converters.Add(new ODataDateTimeConverter());
-
-		_nullableOptions = new JsonSerializerOptions();
-		_nullableOptions.Converters.Add(new ODataNullableDateTimeConverter());
-	}
-
-	#region ODataDateTimeConverter Tests
-
-	/// <summary>
-	/// Tests reading a valid ISO 8601 date with Z suffix.
-	/// </summary>
-	[Fact]
-	public void Read_ValidIso8601WithZ_ReturnsUtcDateTime()
-	{
-		// Arrange
-		var json = "\"2024-01-15T10:30:00Z\"";
-
-		// Act
 		var result = JsonSerializer.Deserialize<DateTime>(json, _options);
+		var nullable = JsonSerializer.Deserialize<DateTime?>(json, _nullableOptions);
 
-		// Assert
-		result.Year.Should().Be(2024);
-		result.Month.Should().Be(1);
-		result.Day.Should().Be(15);
-		result.Hour.Should().Be(10);
-		result.Minute.Should().Be(30);
-		result.Second.Should().Be(0);
+		result.Should().Be(new DateTime(2024, 1, 15, expectedHour, 30, 0, DateTimeKind.Utc));
+		nullable.Should().Be(result);
 	}
 
 	/// <summary>
-	/// Tests reading a valid ISO 8601 date with timezone offset.
-	/// </summary>
-	[Fact]
-	public void Read_ValidIso8601WithOffset_ReturnsUtcDateTime()
-	{
-		// Arrange - 10:30 with +02:00 offset = 08:30 UTC
-		var json = "\"2024-01-15T10:30:00+02:00\"";
-
-		// Act
-		var result = JsonSerializer.Deserialize<DateTime>(json, _options);
-
-		// Assert
-		result.Hour.Should().Be(8); // Converted to UTC
-	}
-
-	/// <summary>
-	/// Tests reading an empty string returns default DateTime.
-	/// </summary>
-	[Fact]
-	public void Read_EmptyString_ReturnsDefault()
-	{
-		// Arrange
-		var json = "\"\"";
-
-		// Act
-		var result = JsonSerializer.Deserialize<DateTime>(json, _options);
-
-		// Assert
-		result.Should().Be(default);
-	}
-
-	/// <summary>
-	/// Tests reading an invalid date string returns default DateTime.
-	/// </summary>
-	[Fact]
-	public void Read_InvalidDate_ReturnsDefault()
-	{
-		// Arrange
-		var json = "\"not-a-date\"";
-
-		// Act
-		var result = JsonSerializer.Deserialize<DateTime>(json, _options);
-
-		// Assert
-		result.Should().Be(default);
-	}
-
-	/// <summary>
-	/// Tests reading a simple date format.
+	/// A date-only string reads as midnight UTC.
 	/// </summary>
 	[Fact]
 	public void Read_SimpleDateFormat_ParsesCorrectly()
 	{
-		// Arrange
-		var json = "\"2024-01-15\"";
+		var result = JsonSerializer.Deserialize<DateTime>("\"2024-01-15\"", _options);
 
-		// Act
-		var result = JsonSerializer.Deserialize<DateTime>(json, _options);
-
-		// Assert
-		result.Year.Should().Be(2024);
-		result.Month.Should().Be(1);
-		result.Day.Should().Be(15);
-		result.Hour.Should().Be(0);
-		result.Minute.Should().Be(0);
-		result.Second.Should().Be(0);
+		result.Should().Be(new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc));
 		result.Kind.Should().Be(DateTimeKind.Utc);
 	}
 
 	/// <summary>
-	/// Tests writing a UTC DateTime includes Z suffix.
+	/// Empty, invalid and null inputs read as default, or null for the nullable converter.
 	/// </summary>
-	[Fact]
-	public void Write_UtcDateTime_WritesWithZSuffix()
+	[Theory]
+	[InlineData("\"\"")]
+	[InlineData("\"not-a-date\"")]
+	public void Read_EmptyOrInvalid_ReturnsDefaultOrNull(string json)
 	{
-		// Arrange
-		var dateTime = new DateTime(2024, 1, 15, 10, 30, 0, DateTimeKind.Utc);
-
-		// Act
-		var json = JsonSerializer.Serialize(dateTime, _options);
-
-		// Assert
-		json.Should().Be("\"2024-01-15T10:30:00Z\"");
+		JsonSerializer.Deserialize<DateTime>(json, _options).Should().Be(default);
+		JsonSerializer.Deserialize<DateTime?>(json, _nullableOptions).Should().BeNull();
 	}
 
 	/// <summary>
-	/// Tests writing a local DateTime converts to UTC.
+	/// A JSON null reads as null for the nullable converter.
+	/// </summary>
+	[Fact]
+	public void NullableRead_Null_ReturnsNull()
+		=> JsonSerializer.Deserialize<DateTime?>("null", _nullableOptions).Should().BeNull();
+
+	/// <summary>
+	/// UTC and unspecified kinds write with a Z suffix, for both converters.
+	/// </summary>
+	[Theory]
+	[InlineData(DateTimeKind.Utc)]
+	[InlineData(DateTimeKind.Unspecified)]
+	public void Write_UtcOrUnspecified_WritesWithZSuffix(DateTimeKind kind)
+	{
+		var dateTime = new DateTime(2024, 1, 15, 10, 30, 0, kind);
+
+		JsonSerializer.Serialize(dateTime, _options).Should().Be(Expected);
+		JsonSerializer.Serialize<DateTime?>(dateTime, _nullableOptions).Should().Be(Expected);
+	}
+
+	/// <summary>
+	/// A local time is converted to UTC and written with a Z suffix, for both converters.
 	/// </summary>
 	[Fact]
 	public void Write_LocalDateTime_ConvertsToUtc()
 	{
-		// Arrange
 		var dateTime = new DateTime(2024, 1, 15, 10, 30, 0, DateTimeKind.Local);
 
-		// Act
-		var json = JsonSerializer.Serialize(dateTime, _options);
-
-		// Assert
-		json.Should().Contain("Z"); // Should end with Z indicating UTC
+		JsonSerializer.Serialize(dateTime, _options).Should().Contain("Z");
+		JsonSerializer.Serialize<DateTime?>(dateTime, _nullableOptions).Should().Contain("Z");
 	}
 
 	/// <summary>
-	/// Tests writing an unspecified kind DateTime treats as UTC.
-	/// </summary>
-	[Fact]
-	public void Write_UnspecifiedKind_TreatsAsUtc()
-	{
-		// Arrange
-		var dateTime = new DateTime(2024, 1, 15, 10, 30, 0, DateTimeKind.Unspecified);
-
-		// Act
-		var json = JsonSerializer.Serialize(dateTime, _options);
-
-		// Assert
-		json.Should().Be("\"2024-01-15T10:30:00Z\"");
-	}
-
-	#endregion
-
-	#region ODataNullableDateTimeConverter Tests
-
-	/// <summary>
-	/// Tests reading null returns null.
-	/// </summary>
-	[Fact]
-	public void NullableRead_Null_ReturnsNull()
-	{
-		// Arrange
-		var json = "null";
-
-		// Act
-		var result = JsonSerializer.Deserialize<DateTime?>(json, _nullableOptions);
-
-		// Assert
-		result.Should().BeNull();
-	}
-
-	/// <summary>
-	/// Tests reading empty string returns null.
-	/// </summary>
-	[Fact]
-	public void NullableRead_EmptyString_ReturnsNull()
-	{
-		// Arrange
-		var json = "\"\"";
-
-		// Act
-		var result = JsonSerializer.Deserialize<DateTime?>(json, _nullableOptions);
-
-		// Assert
-		result.Should().BeNull();
-	}
-
-	/// <summary>
-	/// Tests reading a valid date returns DateTime.
-	/// </summary>
-	[Fact]
-	public void NullableRead_ValidDate_ReturnsDateTime()
-	{
-		// Arrange
-		var json = "\"2024-01-15T10:30:00Z\"";
-
-		// Act
-		var result = JsonSerializer.Deserialize<DateTime?>(json, _nullableOptions);
-
-		// Assert
-		result.Should().NotBeNull();
-		result!.Value.Year.Should().Be(2024);
-		result.Value.Month.Should().Be(1);
-		result.Value.Day.Should().Be(15);
-	}
-
-	/// <summary>
-	/// Tests reading a date with offset converts to UTC.
-	/// </summary>
-	[Fact]
-	public void NullableRead_ValidDateWithOffset_ReturnsUtc()
-	{
-		// Arrange
-		var json = "\"2024-01-15T10:30:00+02:00\"";
-
-		// Act
-		var result = JsonSerializer.Deserialize<DateTime?>(json, _nullableOptions);
-
-		// Assert
-		result.Should().NotBeNull();
-		result!.Value.Hour.Should().Be(8); // Converted to UTC
-	}
-
-	/// <summary>
-	/// Tests reading an invalid date returns null.
-	/// </summary>
-	[Fact]
-	public void NullableRead_InvalidDate_ReturnsNull()
-	{
-		// Arrange
-		var json = "\"not-a-date\"";
-
-		// Act
-		var result = JsonSerializer.Deserialize<DateTime?>(json, _nullableOptions);
-
-		// Assert
-		result.Should().BeNull();
-	}
-
-	/// <summary>
-	/// Tests writing null writes null.
+	/// A null value writes JSON null for the nullable converter.
 	/// </summary>
 	[Fact]
 	public void NullableWrite_Null_WritesNull()
+		=> JsonSerializer.Serialize<DateTime?>(null, _nullableOptions).Should().Be("null");
+
+	private static JsonSerializerOptions Options(System.Text.Json.Serialization.JsonConverter converter)
 	{
-		// Arrange
-		DateTime? dateTime = null;
-
-		// Act
-		var json = JsonSerializer.Serialize(dateTime, _nullableOptions);
-
-		// Assert
-		json.Should().Be("null");
+		var options = new JsonSerializerOptions();
+		options.Converters.Add(converter);
+		return options;
 	}
-
-	/// <summary>
-	/// Tests writing a valid date includes Z suffix.
-	/// </summary>
-	[Fact]
-	public void NullableWrite_ValidDate_WritesWithZSuffix()
-	{
-		// Arrange
-		DateTime? dateTime = new DateTime(2024, 1, 15, 10, 30, 0, DateTimeKind.Utc);
-
-		// Act
-		var json = JsonSerializer.Serialize(dateTime, _nullableOptions);
-
-		// Assert
-		json.Should().Be("\"2024-01-15T10:30:00Z\"");
-	}
-
-	/// <summary>
-	/// Tests writing unspecified kind treats as UTC.
-	/// </summary>
-	[Fact]
-	public void NullableWrite_UnspecifiedKind_TreatsAsUtc()
-	{
-		// Arrange
-		DateTime? dateTime = new DateTime(2024, 1, 15, 10, 30, 0, DateTimeKind.Unspecified);
-
-		// Act
-		var json = JsonSerializer.Serialize(dateTime, _nullableOptions);
-
-		// Assert
-		json.Should().Be("\"2024-01-15T10:30:00Z\"");
-	}
-
-	/// <summary>
-	/// Tests writing local DateTime converts to UTC.
-	/// </summary>
-	[Fact]
-	public void NullableWrite_LocalDateTime_ConvertsToUtc()
-	{
-		// Arrange
-		DateTime? dateTime = new DateTime(2024, 1, 15, 10, 30, 0, DateTimeKind.Local);
-
-		// Act
-		var json = JsonSerializer.Serialize(dateTime, _nullableOptions);
-
-		// Assert
-		json.Should().Contain("Z");
-	}
-
-	#endregion
 }
