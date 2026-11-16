@@ -162,15 +162,9 @@ public partial class ODataClient
 			result.Value = [.. valueElement.EnumerateArray().Select(ODataLegacyJson.LegacyJsonElementToDictionary)];
 		}
 
-		if (doc.RootElement.TryGetProperty("@odata.count", out var countElement))
-		{
-			result.Count = countElement.GetInt64();
-		}
-
-		if (doc.RootElement.TryGetProperty("@odata.nextLink", out var nextLinkElement))
-		{
-			result.NextLink = nextLinkElement.GetString();
-		}
+		var paging = ODataPagingAnnotations.Read(doc.RootElement);
+		result.Count = paging.Count;
+		result.NextLink = paging.NextLink;
 
 		return result;
 	}

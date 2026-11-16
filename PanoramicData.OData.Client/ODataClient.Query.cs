@@ -30,29 +30,21 @@ public partial class ODataClient
 
 		LoggerMessages.GetAllAsyncInitial(_logger, typeName, url);
 
-		var pageCount = 0;
-		do
-		{
-			// Check for cancellation at the start of each iteration
-			cancellationToken.ThrowIfCancellationRequested();
-
-			pageCount++;
-			LoggerMessages.GetAllAsyncFetchingPage(_logger, typeName, pageCount, url);
-
-			var response = await GetAsync<T>(url, query.CustomHeaders, cancellationToken).ConfigureAwait(false);
-			allResults.Value.AddRange(response.Value);
-
-			// Only set count from first page (or if a later page has count and first didn't)
-			if (response.Count.HasValue && !allResults.Count.HasValue)
+		await FetchPagesAsync(
+			url,
+			(pageUrl, pageNumber) =>
 			{
-				allResults.Count = response.Count;
-			}
-
-			LoggerMessages.GetAllAsyncPageReturned(_logger, typeName, pageCount, response.Value.Count, allResults.Value.Count);
-
-			url = response.NextLink;
-		}
-		while (!string.IsNullOrEmpty(url));
+				LoggerMessages.GetAllAsyncFetchingPage(_logger, typeName, pageNumber, pageUrl);
+				return GetAsync<T>(pageUrl, query.CustomHeaders, cancellationToken);
+			},
+			page => page.NextLink,
+			(page, pageNumber) =>
+			{
+				allResults.Value.AddRange(page.Value);
+				allResults.Count ??= page.Count;
+				LoggerMessages.GetAllAsyncPageReturned(_logger, typeName, pageNumber, page.Value.Count, allResults.Value.Count);
+			},
+			cancellationToken).ConfigureAwait(false);
 
 		LoggerMessages.GetAllAsyncComplete(_logger, typeName, allResults.Value.Count, allResults.Count);
 
@@ -267,24 +259,19 @@ public partial class ODataClient
 			LoggerMessages.GetAsyncParsedItems(_logger, typeName, result.Value.Count);
 		}
 
-		// Parse count
-		if (doc.RootElement.TryGetProperty("@odata.count", out var countElement))
+		var paging = ODataPagingAnnotations.Read(doc.RootElement);
+		result.Count = paging.Count;
+		result.NextLink = paging.NextLink;
+		result.DeltaLink = paging.DeltaLink;
+
+		if (result.Count.HasValue)
 		{
-			result.Count = countElement.GetInt64();
 			LoggerMessages.GetAsyncODataCount(_logger, typeName, result.Count.Value);
 		}
 
-		// Parse nextLink
-		if (doc.RootElement.TryGetProperty("@odata.nextLink", out var nextLinkElement))
+		if (result.NextLink is not null)
 		{
-			result.NextLink = nextLinkElement.GetString();
 			LoggerMessages.GetAsyncNextLink(_logger, typeName, result.NextLink);
-		}
-
-		// Parse deltaLink
-		if (doc.RootElement.TryGetProperty("@odata.deltaLink", out var deltaLinkElement))
-		{
-			result.DeltaLink = deltaLinkElement.GetString();
 		}
 
 		// Extract ETag from response headers

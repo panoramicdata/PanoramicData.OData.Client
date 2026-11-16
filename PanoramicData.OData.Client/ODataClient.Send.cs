@@ -31,4 +31,25 @@ public partial class ODataClient
 		var response = await SendRequestAsync(method, url, headers, cancellationToken).ConfigureAwait(false);
 		return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 	}
+
+	private static async Task FetchPagesAsync<TPage>(
+		string firstUrl,
+		Func<string, int, Task<TPage>> fetchPage,
+		Func<TPage, string?> nextLink,
+		Action<TPage, int> onPage,
+		CancellationToken cancellationToken)
+	{
+		var url = firstUrl;
+		var pageNumber = 0;
+		do
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+
+			pageNumber++;
+			var page = await fetchPage(url, pageNumber).ConfigureAwait(false);
+			onPage(page, pageNumber);
+			url = nextLink(page);
+		}
+		while (!string.IsNullOrEmpty(url));
+	}
 }

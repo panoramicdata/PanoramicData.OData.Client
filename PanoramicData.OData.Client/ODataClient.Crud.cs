@@ -111,7 +111,7 @@ public partial class ODataClient
 			LoggerMessages.UpdateAsyncIfMatch(_logger, typeName, etag);
 		}
 
-		return await SendEntityWriteAsync<T>(request, url, etag, headers, "updated", () => LoggerMessages.UpdateAsyncNoContentRefetch(_logger, typeName), cancellationToken).ConfigureAwait(false);
+		return await SendEntityWriteAsync<T>(request, url, etag, headers, "updated entity", () => LoggerMessages.UpdateAsyncNoContentRefetch(_logger, typeName), cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -231,7 +231,7 @@ public partial class ODataClient
 			LoggerMessages.ReplaceAsyncIfMatch(_logger, typeName, etag);
 		}
 
-		return await SendEntityWriteAsync<T>(request, url, etag, headers, "replaced", () => LoggerMessages.ReplaceAsyncNoContentRefetch(_logger, typeName), cancellationToken).ConfigureAwait(false);
+		return await SendEntityWriteAsync<T>(request, url, etag, headers, "replaced entity", () => LoggerMessages.ReplaceAsyncNoContentRefetch(_logger, typeName), cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -258,7 +258,7 @@ public partial class ODataClient
 		string url,
 		string? etag,
 		IReadOnlyDictionary<string, string>? headers,
-		string verb,
+		string description,
 		Action logRefetch,
 		CancellationToken cancellationToken) where T : class
 	{
@@ -266,7 +266,7 @@ public partial class ODataClient
 		await EnsureSuccessAsync(response, url, etag, cancellationToken).ConfigureAwait(false);
 
 		// A 204 carries no entity, so fetch the current state.
-		var failure = $"Failed to deserialize {verb} entity";
+		var failure = $"Failed to deserialize {description}";
 		if (response.StatusCode == HttpStatusCode.NoContent)
 		{
 			logRefetch();

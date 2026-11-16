@@ -42,40 +42,32 @@ public partial class ODataClient
 		[Optional] CancellationToken cancellationToken) where T : class
 	{
 		var allResults = new ODataDeltaResponse<T>();
-		var url = deltaLink;
 		var typeName = typeof(T).Name;
 
 		LoggerMessages.GetAllDeltaAsyncInitial(_logger, typeName, deltaLink);
 
-		var pageCount = 0;
-		do
-		{
-			cancellationToken.ThrowIfCancellationRequested();
-
-			pageCount++;
-			LoggerMessages.GetAllDeltaAsyncFetchingPage(_logger, typeName, pageCount, url);
-
-			var response = await GetDeltaAsync<T>(url, headers, cancellationToken).ConfigureAwait(false);
-			allResults.Value.AddRange(response.Value);
-			allResults.Deleted.AddRange(response.Deleted);
-
-			// Preserve count from first page
-			if (response.Count.HasValue && !allResults.Count.HasValue)
+		await FetchPagesAsync(
+			deltaLink,
+			(pageUrl, pageNumber) =>
 			{
-				allResults.Count = response.Count;
-			}
-
-			// Keep the final delta link
-			if (!string.IsNullOrEmpty(response.DeltaLink))
+				LoggerMessages.GetAllDeltaAsyncFetchingPage(_logger, typeName, pageNumber, pageUrl);
+				return GetDeltaAsync<T>(pageUrl, headers, cancellationToken);
+			},
+			page => page.NextLink,
+			(page, pageNumber) =>
 			{
-				allResults.DeltaLink = response.DeltaLink;
-			}
+				allResults.Value.AddRange(page.Value);
+				allResults.Deleted.AddRange(page.Deleted);
+				allResults.Count ??= page.Count;
 
-			LoggerMessages.GetAllDeltaAsyncPageReturned(_logger, typeName, pageCount, response.Value.Count, response.Deleted.Count);
+				if (!string.IsNullOrEmpty(page.DeltaLink))
+				{
+					allResults.DeltaLink = page.DeltaLink;
+				}
 
-			url = response.NextLink;
-		}
-		while (!string.IsNullOrEmpty(url));
+				LoggerMessages.GetAllDeltaAsyncPageReturned(_logger, typeName, pageNumber, page.Value.Count, page.Deleted.Count);
+			},
+			cancellationToken).ConfigureAwait(false);
 
 		LoggerMessages.GetAllDeltaAsyncComplete(_logger, typeName, allResults.Value.Count, allResults.Deleted.Count);
 
@@ -97,24 +89,7 @@ public partial class ODataClient
 				if (item.TryGetProperty("@removed", out var removedElement) ||
 					item.TryGetProperty("@odata.removed", out removedElement))
 				{
-					var deletedEntity = new ODataDeletedEntity();
-
-					// Get the reason if present
-					if (removedElement.TryGetProperty("reason", out var reasonElement))
-					{
-						deletedEntity.Reason = reasonElement.GetString();
-					}
-
-					// Get the ID
-					if (item.TryGetProperty("@odata.id", out var idElement))
-					{
-						deletedEntity.Id = idElement.GetString();
-					}
-					else if (item.TryGetProperty("id", out idElement))
-					{
-						deletedEntity.Id = idElement.GetString();
-					}
-
+					var deletedEntity = ParseDeletedEntity(item, removedElement);
 					result.Deleted.Add(deletedEntity);
 					LoggerMessages.ParseDeltaResponseDeletedEntity(_logger, deletedEntity.Id, deletedEntity.Reason);
 				}
@@ -132,24 +107,28 @@ public partial class ODataClient
 			LoggerMessages.ParseDeltaResponseComplete(_logger, typeName, result.Value.Count, result.Deleted.Count);
 		}
 
-		// Parse count
-		if (doc.RootElement.TryGetProperty("@odata.count", out var countElement))
-		{
-			result.Count = countElement.GetInt64();
-		}
-
-		// Parse nextLink (for paging within delta)
-		if (doc.RootElement.TryGetProperty("@odata.nextLink", out var nextLinkElement))
-		{
-			result.NextLink = nextLinkElement.GetString();
-		}
-
-		// Parse deltaLink (for next delta query)
-		if (doc.RootElement.TryGetProperty("@odata.deltaLink", out var deltaLinkElement))
-		{
-			result.DeltaLink = deltaLinkElement.GetString();
-		}
+		var paging = ODataPagingAnnotations.Read(doc.RootElement);
+		result.Count = paging.Count;
+		result.NextLink = paging.NextLink;
+		result.DeltaLink = paging.DeltaLink;
 
 		return result;
+	}
+
+	private static ODataDeletedEntity ParseDeletedEntity(JsonElement item, JsonElement removedElement)
+	{
+		var deletedEntity = new ODataDeletedEntity();
+
+		if (removedElement.TryGetProperty("reason", out var reasonElement))
+		{
+			deletedEntity.Reason = reasonElement.GetString();
+		}
+
+		if (item.TryGetProperty("@odata.id", out var idElement) || item.TryGetProperty("id", out idElement))
+		{
+			deletedEntity.Id = idElement.GetString();
+		}
+
+		return deletedEntity;
 	}
 }

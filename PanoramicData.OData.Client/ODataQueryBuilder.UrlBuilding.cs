@@ -104,61 +104,42 @@ public partial class ODataQueryBuilder<T> where T : class
 
 	private void AppendFilterParameter(List<string> queryParams)
 	{
-		if (_filterClauses.Count <= 0)
+		if (ODataQueryString.AddFilter(queryParams, _filterClauses) is { } filter)
 		{
-			return;
+			LoggerMessages.QueryBuilderFilter(_logger, filter);
 		}
-
-		var combinedFilter = string.Join(" and ", _filterClauses.Select(f => $"({f})"));
-		queryParams.Add($"$filter={Uri.EscapeDataString(combinedFilter)}");
-		LoggerMessages.QueryBuilderFilter(_logger, combinedFilter);
 	}
 
 	private void AppendSearchParameter(List<string> queryParams)
 	{
-		if (string.IsNullOrWhiteSpace(_search))
+		if (ODataQueryString.AddEscaped(queryParams, "$search", _search) is { } search)
 		{
-			return;
+			LoggerMessages.QueryBuilderSearch(_logger, search);
 		}
-
-		queryParams.Add($"$search={Uri.EscapeDataString(_search)}");
-		LoggerMessages.QueryBuilderSearch(_logger, _search);
 	}
 
 	private void AppendSelectParameter(List<string> queryParams)
 	{
-		if (_selectFields.Count <= 0)
+		if (ODataQueryString.AddJoined(queryParams, "$select", _selectFields) is { } select)
 		{
-			return;
+			LoggerMessages.QueryBuilderSelect(_logger, select);
 		}
-
-		var selectClause = string.Join(",", _selectFields);
-		queryParams.Add($"$select={selectClause}");
-		LoggerMessages.QueryBuilderSelect(_logger, selectClause);
 	}
 
 	private void AppendExpandParameter(List<string> queryParams)
 	{
-		if (_expandFields.Count <= 0)
+		if (ODataQueryString.AddJoined(queryParams, "$expand", _expandFields) is { } expand)
 		{
-			return;
+			LoggerMessages.QueryBuilderExpand(_logger, expand);
 		}
-
-		var expandClause = string.Join(",", _expandFields);
-		queryParams.Add($"$expand={expandClause}");
-		LoggerMessages.QueryBuilderExpand(_logger, expandClause);
 	}
 
 	private void AppendOrderByParameter(List<string> queryParams)
 	{
-		if (_orderByClauses.Count <= 0)
+		if (ODataQueryString.AddJoined(queryParams, "$orderby", _orderByClauses) is { } orderBy)
 		{
-			return;
+			LoggerMessages.QueryBuilderOrderBy(_logger, orderBy);
 		}
-
-		var orderByClause = string.Join(",", _orderByClauses);
-		queryParams.Add($"$orderby={orderByClause}");
-		LoggerMessages.QueryBuilderOrderBy(_logger, orderByClause);
 	}
 
 	private void AppendSkipParameter(List<string> queryParams)
@@ -196,13 +177,10 @@ public partial class ODataQueryBuilder<T> where T : class
 
 	private void AppendApplyParameter(List<string> queryParams)
 	{
-		if (string.IsNullOrWhiteSpace(_apply))
+		if (ODataQueryString.AddEscaped(queryParams, "$apply", _apply) is { } apply)
 		{
-			return;
+			LoggerMessages.QueryBuilderApply(_logger, apply);
 		}
-
-		queryParams.Add($"$apply={Uri.EscapeDataString(_apply)}");
-		LoggerMessages.QueryBuilderApply(_logger, _apply);
 	}
 
 	private void AppendComputeParameter(List<string> queryParams)
