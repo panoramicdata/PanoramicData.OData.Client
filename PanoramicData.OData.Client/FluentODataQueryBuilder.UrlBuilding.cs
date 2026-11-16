@@ -15,52 +15,11 @@ public partial class FluentODataQueryBuilder
 		var sb = new StringBuilder();
 		sb.Append(_entitySet);
 
-		AppendKeySegment(sb);
-		AppendFunctionSegment(sb);
-		AppendQueryString(sb);
+		ODataQueryString.AppendKey(sb, _key);
+		ODataQueryString.AppendFunction(sb, _function, _functionParameters is null ? null : FormatFunctionParameters(_functionParameters));
+		ODataQueryString.AppendQueryString(sb, BuildQueryParameters());
 
 		return sb.ToString();
-	}
-
-	private void AppendKeySegment(StringBuilder sb)
-	{
-		if (_key is null)
-		{
-			return;
-		}
-
-		sb.Append('(');
-		sb.Append(ODataLiteral.FormatKey(_key));
-		sb.Append(')');
-	}
-
-	private void AppendFunctionSegment(StringBuilder sb)
-	{
-		if (string.IsNullOrEmpty(_function))
-		{
-			return;
-		}
-
-		sb.Append('/');
-		sb.Append(_function);
-		sb.Append('(');
-		if (_functionParameters is not null)
-		{
-			sb.Append(FormatFunctionParameters(_functionParameters));
-		}
-
-		sb.Append(')');
-	}
-
-	private void AppendQueryString(StringBuilder sb)
-	{
-		var queryParams = BuildQueryParameters();
-
-		if (queryParams.Count > 0)
-		{
-			sb.Append('?');
-			sb.Append(string.Join("&", queryParams));
-		}
 	}
 
 	private List<string> BuildQueryParameters()
@@ -72,40 +31,13 @@ public partial class FluentODataQueryBuilder
 		ODataQueryString.AddJoined(queryParams, "$select", _selectFields);
 		ODataQueryString.AddJoined(queryParams, "$expand", _expandFields);
 		ODataQueryString.AddJoined(queryParams, "$orderby", _orderByClauses);
-		AddPagingParameters(queryParams);
+		ODataQueryString.AddNumber(queryParams, "$skip", _skip);
+		ODataQueryString.AddNumber(queryParams, "$top", _top);
+		ODataQueryString.AddCount(queryParams, _count);
 		ODataQueryString.AddEscaped(queryParams, "$apply", _apply);
-		AddRawQueryOptions(queryParams);
+		queryParams.AddRange(_rawQueryOptions);
 
 		return queryParams;
-	}
-
-	private void AddPagingParameters(List<string> queryParams)
-	{
-		if (_skip.HasValue)
-		{
-			queryParams.Add($"$skip={_skip.Value}");
-		}
-
-		if (_top.HasValue)
-		{
-			queryParams.Add($"$top={_top.Value}");
-		}
-
-		if (_count)
-		{
-			queryParams.Add("$count=true");
-		}
-	}
-
-	private void AddRawQueryOptions(List<string> queryParams)
-	{
-		if (_rawQueryOptions.Count > 0)
-		{
-			foreach (var option in _rawQueryOptions)
-			{
-				queryParams.Add(option);
-			}
-		}
 	}
 
 	private static string FormatFunctionParameters(object parameters)

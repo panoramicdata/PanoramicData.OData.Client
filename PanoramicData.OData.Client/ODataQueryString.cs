@@ -40,4 +40,54 @@ internal static class ODataQueryString
 		target.Add($"{name}={joined}");
 		return joined;
 	}
+
+	internal static bool AppendKey(StringBuilder sb, object? key)
+	{
+		if (key is null)
+		{
+			return false;
+		}
+
+		sb.Append('(').Append(ODataLiteral.FormatKey(key)).Append(')');
+		return true;
+	}
+
+	internal static bool AppendFunction(StringBuilder sb, string? function, string? formattedParameters)
+	{
+		if (string.IsNullOrEmpty(function))
+		{
+			return false;
+		}
+
+		sb.Append('/').Append(function).Append('(').Append(formattedParameters).Append(')');
+		return true;
+	}
+
+	internal static void AppendQueryString(StringBuilder sb, List<string> queryParams)
+	{
+		if (queryParams.Count > 0)
+		{
+			sb.Append('?').Append(string.Join("&", queryParams));
+		}
+	}
+
+	internal static long? AddNumber(List<string> target, string name, long? value)
+	{
+		if (value.HasValue)
+		{
+			target.Add($"{name}={value.Value}");
+		}
+
+		return value;
+	}
+
+	internal static bool AddCount(List<string> target, bool count)
+	{
+		if (count)
+		{
+			target.Add("$count=true");
+		}
+
+		return count;
+	}
 }

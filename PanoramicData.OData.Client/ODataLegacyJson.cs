@@ -23,8 +23,7 @@ internal static class ODataLegacyJson
 	private static object? LegacyJsonElementToObject(JsonElement element) => element.ValueKind switch
 	{
 		JsonValueKind.Null => null,
-		JsonValueKind.True => true,
-		JsonValueKind.False => false,
+		JsonValueKind.True or JsonValueKind.False => element.GetBoolean(),
 		JsonValueKind.Number when element.TryGetInt64(out var l) => l,
 		JsonValueKind.Number when element.TryGetDouble(out var d) => d,
 		JsonValueKind.Number => element.GetDecimal(),
