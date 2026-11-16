@@ -21,14 +21,7 @@ public class ODataChangesetBuilder
 	/// <returns>This builder for method chaining.</returns>
 	public ODataChangesetBuilder Create<T>(string entitySet, T entity) where T : class
 	{
-		var operation = new ODataBatchOperation
-		{
-			OperationType = ODataBatchOperationType.Create,
-			Url = entitySet,
-			Body = entity,
-			ResultType = typeof(T)
-		};
-		_changeset.Operations.Add(operation);
+		_changeset.Operations.Add(ODataBatchOperation.ForCreate(entitySet, entity));
 		return this;
 	}
 
@@ -44,15 +37,7 @@ public class ODataChangesetBuilder
 	/// <returns>This builder for method chaining.</returns>
 	public ODataChangesetBuilder Update<T, TKey>(string entitySet, TKey key, object patchValues, [Optional] string? etag) where T : class
 	{
-		var operation = new ODataBatchOperation
-		{
-			OperationType = ODataBatchOperationType.Update,
-			Url = $"{entitySet}({ODataLiteral.FormatKey(key)})",
-			Body = patchValues,
-			ResultType = typeof(T),
-			ETag = etag
-		};
-		_changeset.Operations.Add(operation);
+		_changeset.Operations.Add(ODataBatchOperation.ForUpdate<T>(entitySet, key, patchValues, etag));
 		return this;
 	}
 
@@ -78,13 +63,7 @@ public class ODataChangesetBuilder
 	/// <returns>This builder for method chaining.</returns>
 	public ODataChangesetBuilder Delete<TKey>(string entitySet, TKey key, [Optional] string? etag)
 	{
-		var operation = new ODataBatchOperation
-		{
-			OperationType = ODataBatchOperationType.Delete,
-			Url = $"{entitySet}({ODataLiteral.FormatKey(key)})",
-			ETag = etag
-		};
-		_changeset.Operations.Add(operation);
+		_changeset.Operations.Add(ODataBatchOperation.ForDelete(entitySet, key, etag));
 		return this;
 	}
 

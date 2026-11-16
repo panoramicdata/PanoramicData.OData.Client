@@ -39,4 +39,37 @@ public class ODataBatchOperation
 	/// Gets or sets the ETag for concurrency control (Update/Delete).
 	/// </summary>
 	public string? ETag { get; set; }
+	internal static ODataBatchOperation ForGet<T>(string entitySet, object? key) => new()
+	{
+		OperationType = ODataBatchOperationType.Get,
+		Url = EntityUrl(entitySet, key),
+		ResultType = typeof(T)
+	};
+
+	internal static ODataBatchOperation ForCreate<T>(string entitySet, T entity) => new()
+	{
+		OperationType = ODataBatchOperationType.Create,
+		Url = entitySet,
+		Body = entity,
+		ResultType = typeof(T)
+	};
+
+	internal static ODataBatchOperation ForUpdate<T>(string entitySet, object? key, object patchValues, string? etag) => new()
+	{
+		OperationType = ODataBatchOperationType.Update,
+		Url = EntityUrl(entitySet, key),
+		Body = patchValues,
+		ResultType = typeof(T),
+		ETag = etag
+	};
+
+	internal static ODataBatchOperation ForDelete(string entitySet, object? key, string? etag) => new()
+	{
+		OperationType = ODataBatchOperationType.Delete,
+		Url = EntityUrl(entitySet, key),
+		ETag = etag
+	};
+
+	private static string EntityUrl(string entitySet, object? key)
+		=> $"{entitySet}({ODataLiteral.FormatKey(key)})";
 }
