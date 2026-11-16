@@ -53,12 +53,7 @@ public class TripPinIntegrationTests : TestBase, IAsyncLifetime
 	[Fact]
 	public async Task GetPeople_ReturnsResults()
 	{
-		// Arrange
-		var query = _client.For<Person>("People")
-			.Top(5);
-
-		// Act
-		var response = await _client.GetAsync(query, TestContext.Current.CancellationToken);
+		var response = await GetPageAsync<Person>("People", query => query.Top(5));
 
 		// Assert
 		response.Value.Should().NotBeEmpty();
@@ -75,13 +70,8 @@ public class TripPinIntegrationTests : TestBase, IAsyncLifetime
 	[Fact]
 	public async Task GetPeople_FilterByFirstName_ReturnsFiltered()
 	{
-		// Arrange
-		var query = _client.For<Person>("People")
-			.Filter("FirstName eq 'Russell'")
-			.Top(5);
-
-		// Act
-		var response = await _client.GetAsync(query, TestContext.Current.CancellationToken);
+		var response = await GetPageAsync<Person>("People", query => query.Filter("FirstName eq 'Russell'")
+			.Top(5));
 
 		// Assert
 		response.Value.Should().AllSatisfy(p => p.FirstName.Should().Be("Russell"));
@@ -93,13 +83,7 @@ public class TripPinIntegrationTests : TestBase, IAsyncLifetime
 	[Fact]
 	public async Task GetPerson_ExpandFriends_ReturnsFriends()
 	{
-		// Arrange
-		var query = _client.For<Person>("People")
-			.Key("russellwhyte")
-			.Expand("Friends");
-
-		// Act
-		var person = await _client.GetByKeyAsync<Person, string>("russellwhyte", query, TestContext.Current.CancellationToken);
+		var person = await GetRussellWhyteAsync("Friends");
 
 		// Assert
 		person.Should().NotBeNull();
@@ -112,13 +96,7 @@ public class TripPinIntegrationTests : TestBase, IAsyncLifetime
 	[Fact]
 	public async Task GetPerson_ExpandTrips_ReturnsTrips()
 	{
-		// Arrange
-		var query = _client.For<Person>("People")
-			.Key("russellwhyte")
-			.Expand("Trips");
-
-		// Act
-		var person = await _client.GetByKeyAsync<Person, string>("russellwhyte", query, TestContext.Current.CancellationToken);
+		var person = await GetRussellWhyteAsync("Trips");
 
 		// Assert
 		person.Should().NotBeNull();
@@ -131,13 +109,7 @@ public class TripPinIntegrationTests : TestBase, IAsyncLifetime
 	[Fact]
 	public async Task GetPerson_MultipleExpands_ReturnsAll()
 	{
-		// Arrange
-		var query = _client.For<Person>("People")
-			.Key("russellwhyte")
-			.Expand("Friends,Trips");
-
-		// Act
-		var person = await _client.GetByKeyAsync<Person, string>("russellwhyte", query, TestContext.Current.CancellationToken);
+		var person = await GetRussellWhyteAsync("Friends,Trips");
 
 		// Assert
 		person.Should().NotBeNull();
@@ -155,12 +127,7 @@ public class TripPinIntegrationTests : TestBase, IAsyncLifetime
 	[Fact]
 	public async Task GetAirlines_ReturnsResults()
 	{
-		// Arrange
-		var query = _client.For<Airline>("Airlines")
-			.Top(10);
-
-		// Act
-		var response = await _client.GetAsync(query, TestContext.Current.CancellationToken);
+		var response = await GetPageAsync<Airline>("Airlines", query => query.Top(10));
 
 		// Assert
 		response.Value.Should().NotBeEmpty();
@@ -194,12 +161,7 @@ public class TripPinIntegrationTests : TestBase, IAsyncLifetime
 	[Fact]
 	public async Task GetAirports_ReturnsResults()
 	{
-		// Arrange
-		var query = _client.For<Airport>("Airports")
-			.Top(10);
-
-		// Act
-		var response = await _client.GetAsync(query, TestContext.Current.CancellationToken);
+		var response = await GetPageAsync<Airport>("Airports", query => query.Top(10));
 
 		// Assert
 		response.Value.Should().NotBeEmpty();
@@ -215,13 +177,8 @@ public class TripPinIntegrationTests : TestBase, IAsyncLifetime
 	[Fact]
 	public async Task GetAirports_FilterContains_ReturnsFiltered()
 	{
-		// Arrange
-		var query = _client.For<Airport>("Airports")
-			.Filter("contains(Name, 'International')")
-			.Top(5);
-
-		// Act
-		var response = await _client.GetAsync(query, TestContext.Current.CancellationToken);
+		var response = await GetPageAsync<Airport>("Airports", query => query.Filter("contains(Name, 'International')")
+			.Top(5));
 
 		// Assert
 		response.Value.Should().AllSatisfy(a =>
@@ -283,4 +240,13 @@ public class TripPinIntegrationTests : TestBase, IAsyncLifetime
 	}
 
 	#endregion
+
+	private Task<ODataResponse<T>> GetPageAsync<T>(string entitySet, Func<ODataQueryBuilder<T>, ODataQueryBuilder<T>> shape) where T : class
+		=> _client.GetAsync(shape(_client.For<T>(entitySet)), TestContext.Current.CancellationToken);
+
+	private Task<Person?> GetRussellWhyteAsync(string expand)
+		=> _client.GetByKeyAsync<Person, string>(
+			"russellwhyte",
+			_client.For<Person>("People").Key("russellwhyte").Expand(expand),
+			TestContext.Current.CancellationToken);
 }
