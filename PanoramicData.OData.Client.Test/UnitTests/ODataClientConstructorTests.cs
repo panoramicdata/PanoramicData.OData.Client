@@ -20,22 +20,6 @@ public class ODataClientConstructorTests : TestBase
 	}
 
 	/// <summary>
-	/// Tests that constructor creates HttpClient when not provided.
-	/// </summary>
-	[Fact]
-	public void Constructor_NoHttpClient_CreatesHttpClient()
-	{
-		// Act
-		using var client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/"
-		});
-
-		// Assert - client should be usable (HttpClient was created internally)
-		client.Should().NotBeNull();
-	}
-
-	/// <summary>
 	/// Tests that constructor uses provided HttpClient.
 	/// </summary>
 	[Fact]
@@ -66,78 +50,6 @@ public class ODataClientConstructorTests : TestBase
 		});
 
 		// Assert - verify the provided HttpClient is used
-		client.Should().NotBeNull();
-	}
-
-	/// <summary>
-	/// Tests that constructor uses NullLogger when no logger provided.
-	/// </summary>
-	[Fact]
-	public void Constructor_NoLogger_UsesNullLogger()
-	{
-		// Act
-		using var client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/"
-		});
-
-		// Assert - no exception means NullLogger was used
-		client.Should().NotBeNull();
-	}
-
-	/// <summary>
-	/// Tests that constructor uses provided logger.
-	/// </summary>
-	[Fact]
-	public void Constructor_WithLogger_UsesProvidedLogger()
-	{
-		// Arrange
-		var mockLogger = new Mock<ILogger>();
-
-		// Act
-		using var client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			Logger = mockLogger.Object
-		});
-
-		// Assert
-		client.Should().NotBeNull();
-	}
-
-	/// <summary>
-	/// Tests that constructor sets default timeout.
-	/// </summary>
-	[Fact]
-	public void Constructor_DefaultTimeout_SetToFiveMinutes()
-	{
-		// Act
-		using var client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/"
-		});
-
-		// Assert - defaults are applied (can't directly access, but client should work)
-		client.Should().NotBeNull();
-	}
-
-	/// <summary>
-	/// Tests that constructor respects custom timeout.
-	/// </summary>
-	[Fact]
-	public void Constructor_CustomTimeout_Applied()
-	{
-		// Arrange
-		var customTimeout = TimeSpan.FromSeconds(30);
-
-		// Act
-		using var client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			Timeout = customTimeout
-		});
-
-		// Assert
 		client.Should().NotBeNull();
 	}
 
@@ -184,77 +96,31 @@ public class ODataClientConstructorTests : TestBase
 	}
 
 	/// <summary>
-	/// Tests that constructor uses custom JsonSerializerOptions.
+	/// Tests that a client can be built with each option set on its own.
 	/// </summary>
 	[Fact]
-	public void Constructor_CustomJsonOptions_Applied()
+	public void Constructor_WithEachOption_BuildsAClient()
 	{
-		// Arrange
-		var jsonOptions = new System.Text.Json.JsonSerializerOptions
+		Action<ODataClientOptions>[] configurations =
+		[
+			_ => { },
+			options => options.Logger = new Mock<ILogger>().Object,
+			options => options.Timeout = TimeSpan.FromSeconds(30),
+			options => options.JsonSerializerOptions = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = false },
+			options => options.MetadataCacheDuration = TimeSpan.FromHours(1),
+			options => options.RetryCount = 5,
+			options => options.RetryDelay = TimeSpan.FromSeconds(2)
+		];
+
+		foreach (var configure in configurations)
 		{
-			PropertyNameCaseInsensitive = false
-		};
+			var options = new ODataClientOptions { BaseUrl = "https://test.odata.org/" };
+			configure(options);
 
-		// Act
-		using var client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			JsonSerializerOptions = jsonOptions
-		});
+			using var client = new ODataClient(options);
 
-		// Assert
-		client.Should().NotBeNull();
-	}
-
-	/// <summary>
-	/// Tests that constructor sets metadata cache duration.
-	/// </summary>
-	[Fact]
-	public void Constructor_WithMetadataCacheDuration_Applied()
-	{
-		// Act
-		using var client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			MetadataCacheDuration = TimeSpan.FromHours(1)
-		});
-
-		// Assert
-		client.Should().NotBeNull();
-	}
-
-	/// <summary>
-	/// Tests that constructor sets retry count.
-	/// </summary>
-	[Fact]
-	public void Constructor_CustomRetryCount_Applied()
-	{
-		// Act
-		using var client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			RetryCount = 5
-		});
-
-		// Assert
-		client.Should().NotBeNull();
-	}
-
-	/// <summary>
-	/// Tests that constructor sets retry delay.
-	/// </summary>
-	[Fact]
-	public void Constructor_CustomRetryDelay_Applied()
-	{
-		// Act
-		using var client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			RetryDelay = TimeSpan.FromSeconds(2)
-		});
-
-		// Assert
-		client.Should().NotBeNull();
+			client.Should().NotBeNull();
+		}
 	}
 
 	private sealed class TestEntity
