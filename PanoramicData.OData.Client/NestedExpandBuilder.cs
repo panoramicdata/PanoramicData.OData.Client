@@ -124,15 +124,8 @@ public class NestedExpandBuilder<T> where T : class
 	{
 		var options = new List<string>();
 
-		if (_selectFields.Count > 0)
-		{
-			options.Add($"$select={string.Join(",", _selectFields)}");
-		}
-
-		if (_expandFields.Count > 0)
-		{
-			options.Add($"$expand={string.Join(",", _expandFields)}");
-		}
+		ODataQueryString.AddJoined(options, "$select", _selectFields);
+		ODataQueryString.AddJoined(options, "$expand", _expandFields);
 
 		if (_filterClauses.Count > 0)
 		{
@@ -140,10 +133,7 @@ public class NestedExpandBuilder<T> where T : class
 			options.Add($"$filter={combinedFilter}");
 		}
 
-		if (_orderByClauses.Count > 0)
-		{
-			options.Add($"$orderby={string.Join(",", _orderByClauses)}");
-		}
+		ODataQueryString.AddJoined(options, "$orderby", _orderByClauses);
 
 		if (_top.HasValue)
 		{

@@ -68,15 +68,18 @@ internal static partial class ODataExpressionTranslator
 
 		return methodName switch
 		{
-			"Contains" => $"contains({stringPath},{FormatValue(GetValue(methodCall.Arguments[0]))})",
-			"StartsWith" => $"startswith({stringPath},{FormatValue(GetValue(methodCall.Arguments[0]))})",
-			"EndsWith" => $"endswith({stringPath},{FormatValue(GetValue(methodCall.Arguments[0]))})",
+			"Contains" => StringFunction("contains", stringPath, methodCall),
+			"StartsWith" => StringFunction("startswith", stringPath, methodCall),
+			"EndsWith" => StringFunction("endswith", stringPath, methodCall),
 			"ToLower" => $"tolower({stringPath})",
 			"ToUpper" => $"toupper({stringPath})",
 			"Trim" => $"trim({stringPath})",
 			_ => throw new NotSupportedException($"Method {methodName} is not supported")
 		};
 	}
+
+	private static string StringFunction(string name, string stringPath, MethodCallExpression methodCall)
+		=> $"{name}({stringPath},{FormatValue(GetValue(methodCall.Arguments[0]))})";
 
 	private static string? TryParseCollectionContains(MethodCallExpression methodCall)
 	{
@@ -94,22 +97,14 @@ internal static partial class ODataExpressionTranslator
 	}
 
 	private static string? TryParseStaticContains(MethodCallExpression methodCall)
-	{
-		var collection = GetValue(methodCall.Arguments[0]);
-		var propertyArg = methodCall.Arguments[1];
-
-		if (propertyArg is MemberExpression memberExpr && collection is System.Collections.IEnumerable enumerable)
-		{
-			return FormatInClause(GetMemberPath(memberExpr), enumerable);
-		}
-
-		return null;
-	}
+		=> TryFormatInClause(methodCall.Arguments[0], methodCall.Arguments[1]);
 
 	private static string? TryParseInstanceContains(MethodCallExpression methodCall)
+		=> TryFormatInClause(methodCall.Object!, methodCall.Arguments[0]);
+
+	private static string? TryFormatInClause(Expression collectionExpression, Expression propertyArg)
 	{
-		var collection = GetValue(methodCall.Object!);
-		var propertyArg = methodCall.Arguments[0];
+		var collection = GetValue(collectionExpression);
 
 		if (propertyArg is MemberExpression memberExpr && collection is System.Collections.IEnumerable enumerable)
 		{
