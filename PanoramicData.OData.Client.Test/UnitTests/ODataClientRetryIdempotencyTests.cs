@@ -40,30 +40,7 @@ public class ODataClientRetryIdempotencyTests : TestBase
 	private static (ODataClient Client, HttpClient HttpClient, Func<int> AttemptCount) CreateAlwaysFailingClient(
 		HttpStatusCode status)
 	{
-		var attempts = 0;
-
-		var handler = new MockHttpMessageHandler(_ =>
-		{
-			attempts++;
-
-			return new HttpResponseMessage(status)
-			{
-				Content = new StringContent("{}", Encoding.UTF8, "application/json")
-			};
-		});
-
-		var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://test.odata.org/") };
-
-		var options = new ODataClientOptions
-		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 3,
-			RetryDelay = TimeSpan.FromMilliseconds(1)
-		};
-
-		return (new ODataClient(options), httpClient, () => attempts);
+		return RetryTestClientFactory.Create(_ => RetryTestClientFactory.JsonResponse(status), TimeSpan.FromMilliseconds(1), configure: null);
 	}
 
 	private static Product NewProduct() => new() { Id = 1, Name = "Widget" };

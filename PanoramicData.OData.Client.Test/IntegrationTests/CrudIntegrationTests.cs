@@ -107,13 +107,8 @@ public class CrudIntegrationTests : TripPinTestBase
 	[Fact]
 	public async Task GetAsync_WithFilter_ReturnsFilteredResults()
 	{
-		// Arrange
-		var query = Client.For<Person>("People")
-			.Filter("FirstName eq 'Russell'")
-			.Top(5);
-
-		// Act
-		var response = await Client.GetAsync(query, CancellationToken);
+		var response = await GetPageAsync<Person>("People", query => query.Filter("FirstName eq 'Russell'")
+			.Top(5));
 
 		// Assert
 		response.Value.Should().AllSatisfy(p => p.FirstName.Should().Be("Russell"));
@@ -125,13 +120,7 @@ public class CrudIntegrationTests : TripPinTestBase
 	[Fact]
 	public async Task GetAsync_WithExpand_ReturnsRelatedEntities()
 	{
-		// Arrange
-		var query = Client.For<Person>("People")
-			.Key("russellwhyte")
-			.Expand("Friends");
-
-		// Act
-		var person = await Client.GetByKeyAsync<Person, string>("russellwhyte", query, CancellationToken);
+		var person = await GetRussellWhyteAsync("Friends");
 
 		// Assert
 		person.Should().NotBeNull();
@@ -144,21 +133,11 @@ public class CrudIntegrationTests : TripPinTestBase
 	[Fact]
 	public async Task GetAsync_WithSelect_ReturnsSelectedFields()
 	{
-		// Arrange
-		var query = Client.For<Person>("People")
-			.Select("UserName,FirstName")
-			.Top(3);
-
-		// Act
-		var response = await Client.GetAsync(query, CancellationToken);
+		var response = await GetPageAsync<Person>("People", query => query.Select("UserName,FirstName")
+			.Top(3));
 
 		// Assert
-		response.Value.Should().NotBeEmpty();
-		response.Value.Should().AllSatisfy(p =>
-		{
-			p.UserName.Should().NotBeNullOrEmpty();
-			p.FirstName.Should().NotBeNullOrEmpty();
-		});
+		AssertPeopleHaveNames(response);
 	}
 
 	/// <summary>
@@ -167,13 +146,8 @@ public class CrudIntegrationTests : TripPinTestBase
 	[Fact]
 	public async Task GetAsync_WithOrderBy_ReturnsOrderedResults()
 	{
-		// Arrange
-		var query = Client.For<Person>("People")
-			.OrderBy("FirstName")
-			.Top(5);
-
-		// Act
-		var response = await Client.GetAsync(query, CancellationToken);
+		var response = await GetPageAsync<Person>("People", query => query.OrderBy("FirstName")
+			.Top(5));
 
 		// Assert
 		response.Value.Should().NotBeEmpty();

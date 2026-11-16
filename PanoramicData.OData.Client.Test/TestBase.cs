@@ -46,4 +46,35 @@ public abstract class TestBase
 	protected static Task<ODataResponse<T>> GetPageAsync<T>(ODataClient client, string entitySet, Func<ODataQueryBuilder<T>, ODataQueryBuilder<T>> shape)
 		where T : class
 		=> client.GetAsync(shape(client.For<T>(entitySet)), CancellationToken);
+
+	/// <summary>
+	/// Asserts a product page is not empty and every product has an ID and a name.
+	/// </summary>
+	protected static void AssertProductsHaveIdAndName(ODataResponse<Product> response)
+	{
+		response.Value.Should().NotBeEmpty();
+		response.Value.Should().AllSatisfy(p =>
+		{
+			p.Id.Should().BeGreaterThanOrEqualTo(0);
+			p.Name.Should().NotBeNullOrEmpty();
+		});
+	}
+
+	/// <summary>
+	/// Asserts every product on the page has a rating above 3.
+	/// </summary>
+	protected static void AssertRatingsAboveThree(ODataResponse<Product> response)
+		=> response.Value.Should().AllSatisfy(p => p.Rating.Should().BeGreaterThan(3));
+
+	/// <summary>
+	/// Asserts the priced products on the page are in descending price order.
+	/// </summary>
+	protected static void AssertPricesDescending(ODataResponse<Product> response)
+	{
+		response.Value.Should().NotBeEmpty();
+		response.Value
+			.Where(p => p.Price.HasValue)
+			.Select(p => p.Price!.Value)
+			.Should().BeInDescendingOrder();
+	}
 }
