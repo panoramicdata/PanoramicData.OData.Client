@@ -71,15 +71,7 @@ public class ODataBatchResponseTests : TestBase
 	public void AllSucceeded_AllOperationsSuccessful_ReturnsTrue()
 	{
 		// Arrange
-		var response = new ODataBatchResponse
-		{
-			Results =
-			[
-				new ODataBatchOperationResult { StatusCode = 200 },
-				new ODataBatchOperationResult { StatusCode = 201 },
-				new ODataBatchOperationResult { StatusCode = 204 }
-			]
-		};
+		var response = Batch(200, 201, 204);
 
 		// Assert
 		response.AllSucceeded.Should().BeTrue();
@@ -92,15 +84,7 @@ public class ODataBatchResponseTests : TestBase
 	public void AllSucceeded_SomeOperationsFailed_ReturnsFalse()
 	{
 		// Arrange
-		var response = new ODataBatchResponse
-		{
-			Results =
-			[
-				new ODataBatchOperationResult { StatusCode = 200 },
-				new ODataBatchOperationResult { StatusCode = 400 },
-				new ODataBatchOperationResult { StatusCode = 201 }
-			]
-		};
+		var response = Batch(200, 400, 201);
 
 		// Assert
 		response.AllSucceeded.Should().BeFalse();
@@ -130,14 +114,7 @@ public class ODataBatchResponseTests : TestBase
 	public void HasErrors_SomeOperationsFailed_ReturnsTrue()
 	{
 		// Arrange
-		var response = new ODataBatchResponse
-		{
-			Results =
-			[
-				new ODataBatchOperationResult { StatusCode = 200 },
-				new ODataBatchOperationResult { StatusCode = 500 }
-			]
-		};
+		var response = Batch(200, 500);
 
 		// Assert
 		response.HasErrors.Should().BeTrue();
@@ -150,14 +127,7 @@ public class ODataBatchResponseTests : TestBase
 	public void HasErrors_AllOperationsSuccessful_ReturnsFalse()
 	{
 		// Arrange
-		var response = new ODataBatchResponse
-		{
-			Results =
-			[
-				new ODataBatchOperationResult { StatusCode = 200 },
-				new ODataBatchOperationResult { StatusCode = 201 }
-			]
-		};
+		var response = Batch(200, 201);
 
 		// Assert
 		response.HasErrors.Should().BeFalse();
@@ -213,14 +183,7 @@ public class ODataBatchResponseTests : TestBase
 	public void FailedResults_AllSuccessful_ReturnsEmpty()
 	{
 		// Arrange
-		var response = new ODataBatchResponse
-		{
-			Results =
-			[
-				new ODataBatchOperationResult { StatusCode = 200 },
-				new ODataBatchOperationResult { StatusCode = 201 }
-			]
-		};
+		var response = Batch(200, 201);
 
 		// Assert
 		response.FailedResults.Should().BeEmpty();
@@ -619,4 +582,7 @@ public class ODataBatchResponseTests : TestBase
 	}
 
 	#endregion
+
+	private static ODataBatchResponse Batch(params int[] statusCodes)
+		=> new() { Results = [.. statusCodes.Select(code => new ODataBatchOperationResult { StatusCode = code })] };
 }
