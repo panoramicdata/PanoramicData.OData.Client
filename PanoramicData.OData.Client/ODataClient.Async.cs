@@ -37,31 +37,9 @@ public partial class ODataClient
 
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
 
-		// Check if server accepted async processing
-		if (response.StatusCode == HttpStatusCode.Accepted)
+		if (TryStartAsyncOperation<TResult>(response, pollInterval, LoggerMessages.CallActionAsyncNoLocationHeader, LoggerMessages.CallActionAsyncMonitorUrl) is { } started)
 		{
-			var monitorUrl = response.Headers.Location?.ToString();
-
-			if (string.IsNullOrEmpty(monitorUrl))
-			{
-				LoggerMessages.CallActionAsyncNoLocationHeader(_logger);
-				throw new InvalidOperationException("Server accepted async request but did not provide a monitor URL");
-			}
-
-			LoggerMessages.CallActionAsyncMonitorUrl(_logger, monitorUrl);
-
-			var asyncOp = new ODataAsyncOperation<TResult>(
-				_httpClient,
-				monitorUrl,
-				_jsonOptions,
-				_logger,
-				pollInterval);
-
-			return new ODataAsyncOperationResult<TResult>
-			{
-				IsAsync = true,
-				AsyncOperation = asyncOp
-			};
+			return started;
 		}
 
 		// Server completed synchronously
@@ -150,30 +128,9 @@ public partial class ODataClient
 
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
 
-		// Check if server accepted async processing
-		if (response.StatusCode == HttpStatusCode.Accepted)
+		if (TryStartAsyncOperation<ODataBatchResponse>(response, pollInterval, null, LoggerMessages.ExecuteBatchAsyncMonitorUrl) is { } started)
 		{
-			var monitorUrl = response.Headers.Location?.ToString();
-
-			if (string.IsNullOrEmpty(monitorUrl))
-			{
-				throw new InvalidOperationException("Server accepted async request but did not provide a monitor URL");
-			}
-
-			LoggerMessages.ExecuteBatchAsyncMonitorUrl(_logger, monitorUrl);
-
-			var asyncOp = new ODataAsyncOperation<ODataBatchResponse>(
-				_httpClient,
-				monitorUrl,
-				_jsonOptions,
-				_logger,
-				pollInterval);
-
-			return new ODataAsyncOperationResult<ODataBatchResponse>
-			{
-				IsAsync = true,
-				AsyncOperation = asyncOp
-			};
+			return started;
 		}
 
 		// Server completed synchronously
@@ -188,6 +145,34 @@ public partial class ODataClient
 		{
 			IsAsync = false,
 			SynchronousResult = batchResponse
+		};
+	}
+
+	private ODataAsyncOperationResult<TResult>? TryStartAsyncOperation<TResult>(
+		HttpResponseMessage response,
+		TimeSpan? pollInterval,
+		Action<ILogger>? logNoLocation,
+		Action<ILogger, string> logMonitorUrl)
+	{
+		if (response.StatusCode != HttpStatusCode.Accepted)
+		{
+			return null;
+		}
+
+		var monitorUrl = response.Headers.Location?.ToString();
+
+		if (string.IsNullOrEmpty(monitorUrl))
+		{
+			logNoLocation?.Invoke(_logger);
+			throw new InvalidOperationException("Server accepted async request but did not provide a monitor URL");
+		}
+
+		logMonitorUrl(_logger, monitorUrl);
+
+		return new ODataAsyncOperationResult<TResult>
+		{
+			IsAsync = true,
+			AsyncOperation = new ODataAsyncOperation<TResult>(_httpClient, monitorUrl, _jsonOptions, _logger, pollInterval)
 		};
 	}
 }
