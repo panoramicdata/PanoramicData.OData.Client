@@ -38,47 +38,26 @@ public class ODataClientRetryStatusCodeTests : TestBase
 		TimeSpan? retryAfter = null,
 		TimeSpan? maximumRetryAfterDelay = null)
 	{
-		var attempts = 0;
-
-		var handler = new MockHttpMessageHandler(_ =>
-		{
-			var index = attempts++;
-
-			if (index >= failuresThenSuccess.Length)
+		return RetryTestClientFactory.Create(
+			index => index >= failuresThenSuccess.Length ? Ok() : WithRetryAfter(RetryTestClientFactory.JsonResponse(failuresThenSuccess[index]), retryAfter),
+			retryDelay ?? TimeSpan.FromMilliseconds(1),
+			options =>
 			{
-				return Ok();
-			}
+				if (maximumRetryAfterDelay is { } maximum)
+				{
+					options.MaximumRetryAfterDelay = maximum;
+				}
+			});
+	}
 
-			var response = new HttpResponseMessage(failuresThenSuccess[index])
-			{
-				Content = new StringContent("{}", Encoding.UTF8, "application/json")
-			};
-
-			if (retryAfter is { } delta)
-			{
-				response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(delta);
-			}
-
-			return response;
-		});
-
-		var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://test.odata.org/") };
-
-		var options = new ODataClientOptions
+	private static HttpResponseMessage WithRetryAfter(HttpResponseMessage response, TimeSpan? retryAfter)
+	{
+		if (retryAfter is { } delta)
 		{
-			BaseUrl = "https://test.odata.org/",
-			HttpClient = httpClient,
-			Logger = NullLogger.Instance,
-			RetryCount = 3,
-			RetryDelay = retryDelay ?? TimeSpan.FromMilliseconds(1)
-		};
-
-		if (maximumRetryAfterDelay is { } maximum)
-		{
-			options.MaximumRetryAfterDelay = maximum;
+			response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(delta);
 		}
 
-		return (new ODataClient(options), httpClient, () => attempts);
+		return response;
 	}
 
 	/// <summary>

@@ -27,12 +27,7 @@ public class ODataClientIntegrationTests(ODataClientFixture fixture) : TestBase,
 		var response = await GetProductsAsync(query => query.Top(5));
 
 		// Assert
-		response.Value.Should().NotBeEmpty();
-		response.Value.Should().AllSatisfy(p =>
-		{
-			p.Id.Should().BeGreaterThanOrEqualTo(0);
-			p.Name.Should().NotBeNullOrEmpty();
-		});
+		AssertProductsHaveIdAndName(response);
 	}
 
 	/// <summary>
@@ -58,10 +53,7 @@ public class ODataClientIntegrationTests(ODataClientFixture fixture) : TestBase,
 		var response = await GetProductsAsync(query => query.Filter("Rating gt 3").Top(3));
 
 		// Assert
-		response.Value.Should().AllSatisfy(p =>
-		{
-			p.Rating.Should().BeGreaterThan(3);
-		});
+		AssertRatingsAboveThree(response);
 	}
 
 	/// <summary>
@@ -73,12 +65,7 @@ public class ODataClientIntegrationTests(ODataClientFixture fixture) : TestBase,
 		var response = await GetProductsAsync(query => query.Select("ID,Name,Price").Top(3));
 
 		// Assert
-		response.Value.Should().NotBeEmpty();
-		response.Value.Should().AllSatisfy(p =>
-		{
-			p.Id.Should().BeGreaterThan(-1);
-			p.Name.Should().NotBeNullOrEmpty();
-		});
+		AssertProductsHaveIdAndName(response);
 	}
 
 	/// <summary>
@@ -90,12 +77,7 @@ public class ODataClientIntegrationTests(ODataClientFixture fixture) : TestBase,
 		var response = await GetProductsAsync(query => query.OrderBy("Price desc").Top(5));
 
 		// Assert
-		response.Value.Should().NotBeEmpty();
-		var prices = response.Value
-			.Where(p => p.Price.HasValue)
-			.Select(p => p.Price!.Value)
-			.ToList();
-		prices.Should().BeInDescendingOrder();
+		AssertPricesDescending(response);
 	}
 
 	private Task<ODataResponse<Product>> GetProductsAsync(Func<ODataQueryBuilder<Product>, ODataQueryBuilder<Product>> shape)

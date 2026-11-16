@@ -44,4 +44,33 @@ public abstract class TripPinTestBase : TestBase, IAsyncLifetime
 
 		GC.SuppressFinalize(this);
 	}
+
+	/// <summary>
+	/// Runs a typed query over <paramref name="entitySet"/> shaped by <paramref name="shape"/> and returns one page.
+	/// </summary>
+	protected Task<ODataResponse<T>> GetPageAsync<T>(string entitySet, Func<ODataQueryBuilder<T>, ODataQueryBuilder<T>> shape)
+		where T : class
+		=> GetPageAsync(Client, entitySet, shape);
+
+	/// <summary>
+	/// Fetches the russellwhyte person expanding <paramref name="expand"/>.
+	/// </summary>
+	protected Task<Person?> GetRussellWhyteAsync(string expand)
+		=> Client.GetByKeyAsync<Person, string>(
+			"russellwhyte",
+			Client.For<Person>("People").Key("russellwhyte").Expand(expand),
+			CancellationToken);
+
+	/// <summary>
+	/// Asserts a page of people is not empty and everyone has a user name and first name.
+	/// </summary>
+	protected static void AssertPeopleHaveNames(ODataResponse<Person> response)
+	{
+		response.Value.Should().NotBeEmpty();
+		response.Value.Should().AllSatisfy(p =>
+		{
+			p.UserName.Should().NotBeNullOrEmpty();
+			p.FirstName.Should().NotBeNullOrEmpty();
+		});
+	}
 }

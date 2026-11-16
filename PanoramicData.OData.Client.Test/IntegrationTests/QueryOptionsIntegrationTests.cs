@@ -46,7 +46,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 			.Top(5));
 
 		// Assert
-		response.Value.Should().AllSatisfy(p => p.Rating.Should().BeGreaterThan(3));
+		AssertRatingsAboveThree(response);
 	}
 
 	/// <summary>
@@ -109,13 +109,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 			.Top(3));
 
 		// Assert
-		response.Value.Should().NotBeEmpty();
-		// Selected fields should be present
-		response.Value.Should().AllSatisfy(p =>
-		{
-			p.Id.Should().BeGreaterThanOrEqualTo(0);
-			p.Name.Should().NotBeNullOrEmpty();
-		});
+		AssertProductsHaveIdAndName(response);
 	}
 
 	#endregion
@@ -166,12 +160,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 			.Top(5));
 
 		// Assert
-		response.Value.Should().NotBeEmpty();
-		var prices = response.Value
-			.Where(p => p.Price.HasValue)
-			.Select(p => p.Price!.Value)
-			.ToList();
-		prices.Should().BeInDescendingOrder();
+		AssertPricesDescending(response);
 	}
 
 	/// <summary>

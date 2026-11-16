@@ -20,12 +20,7 @@ public class TripPinIntegrationTests : TripPinTestBase
 		var response = await GetPageAsync<Person>("People", query => query.Top(5));
 
 		// Assert
-		response.Value.Should().NotBeEmpty();
-		response.Value.Should().AllSatisfy(p =>
-		{
-			p.UserName.Should().NotBeNullOrEmpty();
-			p.FirstName.Should().NotBeNullOrEmpty();
-		});
+		AssertPeopleHaveNames(response);
 	}
 
 	/// <summary>
@@ -204,13 +199,4 @@ public class TripPinIntegrationTests : TripPinTestBase
 	}
 
 	#endregion
-
-	private Task<ODataResponse<T>> GetPageAsync<T>(string entitySet, Func<ODataQueryBuilder<T>, ODataQueryBuilder<T>> shape) where T : class
-		=> GetPageAsync(Client, entitySet, shape);
-
-	private Task<Person?> GetRussellWhyteAsync(string expand)
-		=> Client.GetByKeyAsync<Person, string>(
-			"russellwhyte",
-			Client.For<Person>("People").Key("russellwhyte").Expand(expand),
-			TestContext.Current.CancellationToken);
 }
