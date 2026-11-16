@@ -195,6 +195,27 @@ internal static class MemberPathResolver
 		// (entity references like Tenant, Role, etc.)
 		return propertyType.IsClass;
 	}
+
+	internal static void AddSelectedNames(Expression selectorBody, List<string> target)
+	{
+		var body = selectorBody is UnaryExpression { NodeType: ExpressionType.Convert } unary ? unary.Operand : selectorBody;
+
+		if (body is NewExpression newExpr)
+		{
+			foreach (var arg in newExpr.Arguments)
+			{
+				var memberName = GetLeafMemberNameOrEmpty(arg);
+				if (!string.IsNullOrEmpty(memberName) && !target.Contains(memberName))
+				{
+					target.Add(memberName);
+				}
+			}
+		}
+		else if (body is MemberExpression member)
+		{
+			target.Add(member.Member.Name);
+		}
+	}
 }
 
 /// <summary>

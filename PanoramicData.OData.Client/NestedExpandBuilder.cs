@@ -18,28 +18,7 @@ public class NestedExpandBuilder<T> where T : class
 	/// </summary>
 	public NestedExpandBuilder<T> Select(Expression<Func<T, object?>> selector)
 	{
-		var body = selector.Body;
-
-		if (body is UnaryExpression unary && unary.NodeType == ExpressionType.Convert)
-		{
-			body = unary.Operand;
-		}
-
-		if (body is NewExpression newExpr)
-		{
-			foreach (var arg in newExpr.Arguments)
-			{
-				var memberName = MemberPathResolver.GetLeafMemberNameOrEmpty(arg);
-				if (!string.IsNullOrEmpty(memberName) && !_selectFields.Contains(memberName))
-				{
-					_selectFields.Add(memberName);
-				}
-			}
-		}
-		else if (body is MemberExpression member)
-		{
-			_selectFields.Add(member.Member.Name);
-		}
+		MemberPathResolver.AddSelectedNames(selector.Body, _selectFields);
 
 		return this;
 	}
