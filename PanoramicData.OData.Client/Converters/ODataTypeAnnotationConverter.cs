@@ -92,6 +92,7 @@ public class ODataTypeAnnotationConverter : JsonConverterFactory
 
         public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
+            ArgumentNullException.ThrowIfNull(typeToConvert);
             ArgumentNullException.ThrowIfNull(options);
 
             // Deserializing: skip the @odata.type annotation and use default behavior

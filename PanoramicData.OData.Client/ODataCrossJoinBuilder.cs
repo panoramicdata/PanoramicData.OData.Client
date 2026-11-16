@@ -43,10 +43,7 @@ public class ODataCrossJoinBuilder
 	/// <returns>This builder.</returns>
 	public ODataCrossJoinBuilder Filter(string filterExpression)
 	{
-		if (!string.IsNullOrWhiteSpace(filterExpression))
-		{
-			_filterClauses.Add(filterExpression);
-		}
+		ODataListText.AddIfNotBlank(_filterClauses, filterExpression);
 
 		return this;
 	}
@@ -59,10 +56,7 @@ public class ODataCrossJoinBuilder
 	/// <returns>This builder.</returns>
 	public ODataCrossJoinBuilder Select(string fields)
 	{
-		if (!string.IsNullOrWhiteSpace(fields))
-		{
-			_selectFields.AddRange(fields.Split(',').Select(f => f.Trim()));
-		}
+		ODataListText.AddCommaSeparated(_selectFields, fields);
 
 		return this;
 	}
@@ -74,10 +68,7 @@ public class ODataCrossJoinBuilder
 	/// <returns>This builder.</returns>
 	public ODataCrossJoinBuilder Expand(string fields)
 	{
-		if (!string.IsNullOrWhiteSpace(fields))
-		{
-			_expandFields.AddRange(fields.Split(',').Select(f => f.Trim()));
-		}
+		ODataListText.AddCommaSeparated(_expandFields, fields);
 
 		return this;
 	}
@@ -90,10 +81,7 @@ public class ODataCrossJoinBuilder
 	/// <returns>This builder.</returns>
 	public ODataCrossJoinBuilder OrderBy(string orderByExpression)
 	{
-		if (!string.IsNullOrWhiteSpace(orderByExpression))
-		{
-			_orderByClauses.Add(orderByExpression);
-		}
+		ODataListText.AddIfNotBlank(_orderByClauses, orderByExpression);
 
 		return this;
 	}

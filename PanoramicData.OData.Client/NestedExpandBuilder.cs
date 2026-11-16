@@ -49,10 +49,7 @@ public class NestedExpandBuilder<T> where T : class
 	/// </summary>
 	public NestedExpandBuilder<T> Select(string fields)
 	{
-		if (!string.IsNullOrWhiteSpace(fields))
-		{
-			_selectFields.AddRange(fields.Split(',').Select(f => f.Trim()));
-		}
+		ODataListText.AddCommaSeparated(_selectFields, fields);
 
 		return this;
 	}
@@ -77,10 +74,7 @@ public class NestedExpandBuilder<T> where T : class
 	/// </summary>
 	public NestedExpandBuilder<T> Expand(string fields)
 	{
-		if (!string.IsNullOrWhiteSpace(fields))
-		{
-			_expandFields.AddRange(fields.Split(',').Select(f => f.Trim()));
-		}
+		ODataListText.AddCommaSeparated(_expandFields, fields);
 
 		return this;
 	}
@@ -90,10 +84,7 @@ public class NestedExpandBuilder<T> where T : class
 	/// </summary>
 	public NestedExpandBuilder<T> Filter(string filterExpression)
 	{
-		if (!string.IsNullOrWhiteSpace(filterExpression))
-		{
-			_filterClauses.Add(filterExpression);
-		}
+		ODataListText.AddIfNotBlank(_filterClauses, filterExpression);
 
 		return this;
 	}
@@ -103,10 +94,7 @@ public class NestedExpandBuilder<T> where T : class
 	/// </summary>
 	public NestedExpandBuilder<T> OrderBy(string orderByExpression)
 	{
-		if (!string.IsNullOrWhiteSpace(orderByExpression))
-		{
-			_orderByClauses.Add(orderByExpression);
-		}
+		ODataListText.AddIfNotBlank(_orderByClauses, orderByExpression);
 
 		return this;
 	}

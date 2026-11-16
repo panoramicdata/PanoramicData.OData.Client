@@ -178,10 +178,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	public ODataQueryBuilder<T> Filter(Expression<Func<T, bool>> predicate)
 	{
 		var filterString = ODataExpressionTranslator.ExpressionToODataFilter(predicate.Body);
-		if (!string.IsNullOrWhiteSpace(filterString))
-		{
-			_filterClauses.Add(filterString);
-		}
+		ODataListText.AddIfNotBlank(_filterClauses, filterString);
 
 		return this;
 	}
@@ -191,10 +188,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// </summary>
 	public ODataQueryBuilder<T> Filter(string rawFilter)
 	{
-		if (!string.IsNullOrWhiteSpace(rawFilter))
-		{
-			_filterClauses.Add(rawFilter);
-		}
+		ODataListText.AddIfNotBlank(_filterClauses, rawFilter);
 
 		return this;
 	}
@@ -232,10 +226,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// </summary>
 	public ODataQueryBuilder<T> OrderBy(string orderByExpression)
 	{
-		if (!string.IsNullOrWhiteSpace(orderByExpression))
-		{
-			_orderByClauses.Add(orderByExpression);
-		}
+		ODataListText.AddIfNotBlank(_orderByClauses, orderByExpression);
 
 		return this;
 	}
@@ -293,10 +284,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// <param name="computeExpression">The compute expression (e.g., "Price mul Quantity as Total").</param>
 	public ODataQueryBuilder<T> Compute(string computeExpression)
 	{
-		if (!string.IsNullOrWhiteSpace(computeExpression))
-		{
-			_computeExpressions.Add(computeExpression);
-		}
+		ODataListText.AddIfNotBlank(_computeExpressions, computeExpression);
 
 		return this;
 	}
@@ -317,10 +305,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// </remarks>
 	public ODataQueryBuilder<T> QueryOptions(string rawQueryOptions)
 	{
-		if (!string.IsNullOrWhiteSpace(rawQueryOptions))
-		{
-			_rawQueryOptions.Add(rawQueryOptions);
-		}
+		ODataListText.AddIfNotBlank(_rawQueryOptions, rawQueryOptions);
 
 		return this;
 	}
