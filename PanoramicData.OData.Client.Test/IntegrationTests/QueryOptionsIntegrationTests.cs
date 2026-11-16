@@ -28,7 +28,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 	[Fact]
 	public async Task Filter_Equality_ReturnsMatchingProducts()
 	{
-		var response = await GetPageAsync<Product>("Products", query => query.Filter("ID eq 0")
+		var response = await GetProductsAsync(query => query.Filter("ID eq 0")
 			.Top(1));
 
 		// Assert
@@ -42,7 +42,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 	[Fact]
 	public async Task Filter_GreaterThan_ReturnsFilteredProducts()
 	{
-		var response = await GetPageAsync<Product>("Products", query => query.Filter("Rating gt 3")
+		var response = await GetProductsAsync(query => query.Filter("Rating gt 3")
 			.Top(5));
 
 		// Assert
@@ -55,7 +55,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 	[Fact]
 	public async Task Filter_Contains_ReturnsMatchingProducts()
 	{
-		var response = await GetPageAsync<Product>("Products", query => query.Filter("contains(Name, 'Bread')")
+		var response = await GetProductsAsync(query => query.Filter("contains(Name, 'Bread')")
 			.Top(5));
 
 		// Assert
@@ -68,7 +68,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 	[Fact]
 	public async Task Filter_CombinedAnd_ReturnsMatchingProducts()
 	{
-		var response = await GetPageAsync<Product>("Products", query => query.Filter("Rating ge 3 and Price lt 50")
+		var response = await GetProductsAsync(query => query.Filter("Rating ge 3 and Price lt 50")
 			.Top(5));
 
 		// Assert
@@ -85,7 +85,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 	[Fact]
 	public async Task Filter_CombinedOr_ReturnsMatchingProducts()
 	{
-		var response = await GetPageAsync<Product>("Products", query => query.Filter("Rating eq 5 or Rating eq 4")
+		var response = await GetProductsAsync(query => query.Filter("Rating eq 5 or Rating eq 4")
 			.Top(10));
 
 		// Assert
@@ -105,7 +105,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 	[Fact]
 	public async Task Select_SpecificFields_ReturnsOnlyThoseFields()
 	{
-		var response = await GetPageAsync<Product>("Products", query => query.Select("ID,Name")
+		var response = await GetProductsAsync(query => query.Select("ID,Name")
 			.Top(3));
 
 		// Assert
@@ -146,7 +146,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 	[Fact]
 	public async Task OrderBy_Ascending_ReturnsSortedResults()
 	{
-		var response = await GetPageAsync<Product>("Products", query => query.OrderBy("Name")
+		var response = await GetProductsAsync(query => query.OrderBy("Name")
 			.Top(5));
 
 		// Assert
@@ -161,7 +161,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 	[Fact]
 	public async Task OrderBy_Descending_ReturnsSortedResults()
 	{
-		var response = await GetPageAsync<Product>("Products", query => query.Filter("Price ne null")
+		var response = await GetProductsAsync(query => query.Filter("Price ne null")
 			.OrderBy("Price desc")
 			.Top(5));
 
@@ -180,7 +180,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 	[Fact]
 	public async Task OrderBy_Multiple_ReturnsSortedResults()
 	{
-		var response = await GetPageAsync<Product>("Products", query => query.OrderBy("Rating desc,Name")
+		var response = await GetProductsAsync(query => query.OrderBy("Rating desc,Name")
 			.Top(10));
 
 		// Assert
@@ -197,7 +197,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 	[Fact]
 	public async Task Top_LimitsResults()
 	{
-		var response = await GetPageAsync<Product>("Products", query => query.Top(3));
+		var response = await GetProductsAsync(query => query.Top(3));
 
 		// Assert
 		response.Value.Should().HaveCountLessThanOrEqualTo(3);
@@ -240,7 +240,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 	[Fact]
 	public async Task Count_ReturnsTotalCount()
 	{
-		var response = await GetPageAsync<Product>("Products", query => query.Count()
+		var response = await GetProductsAsync(query => query.Count()
 			.Top(1));
 
 		// Assert
@@ -253,7 +253,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 	[Fact]
 	public async Task Count_WithFilter_ReturnsFilteredCount()
 	{
-		var response = await GetPageAsync<Product>("Products", query => query.Filter("Rating gt 3")
+		var response = await GetProductsAsync(query => query.Filter("Rating gt 3")
 			.Count()
 			.Top(1));
 
@@ -308,7 +308,7 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 	[Fact]
 	public async Task ComplexQuery_AllOptions_ReturnsCorrectResults()
 	{
-		var response = await GetPageAsync<Product>("Products", query => query.Filter("Rating ge 3")
+		var response = await GetProductsAsync(query => query.Filter("Rating ge 3")
 			.Select("ID,Name,Rating,Price")
 			.OrderBy("Rating desc")
 			.Skip(0)
@@ -327,6 +327,9 @@ public class QueryOptionsIntegrationTests : TestBase, IClassFixture<ODataClientF
 
 	#endregion
 
+	private Task<ODataResponse<Product>> GetProductsAsync(Func<ODataQueryBuilder<Product>, ODataQueryBuilder<Product>> shape)
+		=> GetPageAsync("Products", shape);
+
 	private Task<ODataResponse<T>> GetPageAsync<T>(string entitySet, Func<ODataQueryBuilder<T>, ODataQueryBuilder<T>> shape) where T : class
-		=> _fixture.Client.GetAsync(shape(_fixture.Client.For<T>(entitySet)), TestContext.Current.CancellationToken);
+		=> GetPageAsync(_fixture.Client, entitySet, shape);
 }

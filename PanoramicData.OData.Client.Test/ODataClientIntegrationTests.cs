@@ -99,5 +99,5 @@ public class ODataClientIntegrationTests(ODataClientFixture fixture) : TestBase,
 	}
 
 	private Task<ODataResponse<Product>> GetProductsAsync(Func<ODataQueryBuilder<Product>, ODataQueryBuilder<Product>> shape)
-		=> fixture.Client.GetAsync(shape(fixture.Client.For<Product>("Products")), TestContext.Current.CancellationToken);
+		=> GetPageAsync(fixture.Client, "Products", shape);
 }

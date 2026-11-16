@@ -39,4 +39,11 @@ public abstract class TestBase
 	/// Gets a CancellationToken from the current test context.
 	/// </summary>
 	protected static CancellationToken CancellationToken => TestContext.Current.CancellationToken;
+
+	/// <summary>
+	/// Runs a typed query over <paramref name="entitySet"/> shaped by <paramref name="shape"/> and returns one page.
+	/// </summary>
+	protected static Task<ODataResponse<T>> GetPageAsync<T>(ODataClient client, string entitySet, Func<ODataQueryBuilder<T>, ODataQueryBuilder<T>> shape)
+		where T : class
+		=> client.GetAsync(shape(client.For<T>(entitySet)), CancellationToken);
 }

@@ -220,10 +220,7 @@ public class ODataBatchResponseTests : TestBase
 	public void Indexer_InvalidIndex_ThrowsArgumentOutOfRangeException()
 	{
 		// Arrange
-		var response = new ODataBatchResponse
-		{
-			Results = [new ODataBatchOperationResult()]
-		};
+		var response = Batch(0);
 
 		// Act
 		var act = () => response[5];
@@ -239,10 +236,7 @@ public class ODataBatchResponseTests : TestBase
 	public void Indexer_NegativeIndex_ThrowsArgumentOutOfRangeException()
 	{
 		// Arrange
-		var response = new ODataBatchResponse
-		{
-			Results = [new ODataBatchOperationResult()]
-		};
+		var response = Batch(0);
 
 		// Act
 		var act = () => response[-1];
@@ -263,13 +257,7 @@ public class ODataBatchResponseTests : TestBase
 	{
 		// Arrange
 		var product = new TestProduct { Id = 1, Name = "Widget" };
-		var response = new ODataBatchResponse
-		{
-			Results =
-			[
-				new ODataBatchOperationResult { StatusCode = 200, Result = product }
-			]
-		};
+		var response = BatchWith(200, product);
 
 		// Act
 		var result = response.GetResult<TestProduct>(0);
@@ -286,13 +274,7 @@ public class ODataBatchResponseTests : TestBase
 	public void GetResult_NullResult_ThrowsInvalidOperationException()
 	{
 		// Arrange
-		var response = new ODataBatchResponse
-		{
-			Results =
-			[
-				new ODataBatchOperationResult { StatusCode = 404, Result = null }
-			]
-		};
+		var response = BatchWith(404, null);
 
 		// Act
 		var act = () => response.GetResult<TestProduct>(0);
@@ -309,13 +291,7 @@ public class ODataBatchResponseTests : TestBase
 	public void GetResult_WrongType_ThrowsInvalidOperationException()
 	{
 		// Arrange
-		var response = new ODataBatchResponse
-		{
-			Results =
-			[
-				new ODataBatchOperationResult { StatusCode = 200, Result = "not a product" }
-			]
-		};
+		var response = BatchWith(200, "not a product");
 
 		// Act
 		var act = () => response.GetResult<TestProduct>(0);
@@ -353,13 +329,7 @@ public class ODataBatchResponseTests : TestBase
 	{
 		// Arrange
 		var product = new TestProduct { Id = 1, Name = "Widget" };
-		var response = new ODataBatchResponse
-		{
-			Results =
-			[
-				new ODataBatchOperationResult { StatusCode = 200, Result = product }
-			]
-		};
+		var response = BatchWith(200, product);
 
 		// Act
 		var success = response.TryGetResult<TestProduct>(0, out var result);
@@ -394,10 +364,7 @@ public class ODataBatchResponseTests : TestBase
 	public void TryGetResult_NegativeIndex_ReturnsFalse()
 	{
 		// Arrange
-		var response = new ODataBatchResponse
-		{
-			Results = [new ODataBatchOperationResult()]
-		};
+		var response = Batch(0);
 
 		// Act
 		var success = response.TryGetResult<TestProduct>(-1, out var result);
@@ -414,13 +381,7 @@ public class ODataBatchResponseTests : TestBase
 	public void TryGetResult_WrongType_ReturnsFalse()
 	{
 		// Arrange
-		var response = new ODataBatchResponse
-		{
-			Results =
-			[
-				new ODataBatchOperationResult { StatusCode = 200, Result = "not a product" }
-			]
-		};
+		var response = BatchWith(200, "not a product");
 
 		// Act
 		var success = response.TryGetResult<TestProduct>(0, out var result);
@@ -437,13 +398,7 @@ public class ODataBatchResponseTests : TestBase
 	public void TryGetResult_NullResult_ReturnsFalse()
 	{
 		// Arrange
-		var response = new ODataBatchResponse
-		{
-			Results =
-			[
-				new ODataBatchOperationResult { StatusCode = 200, Result = null }
-			]
-		};
+		var response = BatchWith(200, null);
 
 		// Act
 		var success = response.TryGetResult<TestProduct>(0, out var result);
@@ -582,6 +537,9 @@ public class ODataBatchResponseTests : TestBase
 	}
 
 	#endregion
+
+	private static ODataBatchResponse BatchWith(int statusCode, object? result)
+		=> new() { Results = [new ODataBatchOperationResult { StatusCode = statusCode, Result = result }] };
 
 	private static ODataBatchResponse Batch(params int[] statusCodes)
 		=> new() { Results = [.. statusCodes.Select(code => new ODataBatchOperationResult { StatusCode = code })] };
