@@ -47,15 +47,7 @@ public class QueryBuilderOrPrecedenceTests
 	[Fact]
 	public void Filter_WithMixedAndOr_PreservesParentheses()
 	{
-		// Arrange & Act
-		var url = new ODataQueryBuilder<TestEntity>("TestEntities", NullLogger.Instance)
-			.Filter(e => e.Status == "Active" && (e.Name.Contains("foo") || e.Name.Contains("bar")))
-			.BuildUrl();
-
-		// Assert - The URL should contain parentheses around the OR group
-		// Decoded: Status eq 'Active' and (contains(Name,'foo') or contains(Name,'bar'))
-		// The OR group must be wrapped in parentheses to preserve precedence
-		var decoded = Uri.UnescapeDataString(url);
+		var decoded = Decode(e => e.Status == "Active" && (e.Name.Contains("foo") || e.Name.Contains("bar")));
 
 		// Verify the structure: AND with (OR group)
 		decoded.Should().Contain("Status eq 'Active'");
@@ -73,13 +65,7 @@ public class QueryBuilderOrPrecedenceTests
 	[Fact]
 	public void Filter_WithNestedOrInAnd_ReturnsCorrectResults()
 	{
-		// Arrange & Act
-		var url = new ODataQueryBuilder<TestEntity>("TestEntities", NullLogger.Instance)
-			.Filter(e => e.Id == 1 && e.Category == "A" && (e.Tag == "X" || e.Tag == "Y"))
-			.BuildUrl();
-
-		// Assert
-		var decoded = Uri.UnescapeDataString(url);
+		var decoded = Decode(e => e.Id == 1 && e.Category == "A" && (e.Tag == "X" || e.Tag == "Y"));
 
 		// Verify the structure
 		decoded.Should().Contain("Id eq 1");
@@ -101,13 +87,7 @@ public class QueryBuilderOrPrecedenceTests
 	[Fact]
 	public void Filter_WithSimpleOr_GeneratesCorrectUrl()
 	{
-		// Arrange & Act
-		var url = new ODataQueryBuilder<TestEntity>("TestEntities", NullLogger.Instance)
-			.Filter(e => e.Status == "Active" || e.Status == "Pending")
-			.BuildUrl();
-
-		// Assert
-		var decoded = Uri.UnescapeDataString(url);
+		var decoded = Decode(e => e.Status == "Active" || e.Status == "Pending");
 		decoded.Should().Contain("Status eq 'Active'");
 		decoded.Should().Contain("Status eq 'Pending'");
 	}
@@ -118,13 +98,7 @@ public class QueryBuilderOrPrecedenceTests
 	[Fact]
 	public void Filter_WithMultipleOrs_GeneratesCorrectUrl()
 	{
-		// Arrange & Act
-		var url = new ODataQueryBuilder<TestEntity>("TestEntities", NullLogger.Instance)
-			.Filter(e => e.Status == "Active" || e.Status == "Pending" || e.Status == "Draft")
-			.BuildUrl();
-
-		// Assert
-		var decoded = Uri.UnescapeDataString(url);
+		var decoded = Decode(e => e.Status == "Active" || e.Status == "Pending" || e.Status == "Draft");
 		decoded.Should().Contain("Status eq 'Active'");
 		decoded.Should().Contain("Status eq 'Pending'");
 		decoded.Should().Contain("Status eq 'Draft'");
@@ -142,13 +116,7 @@ public class QueryBuilderOrPrecedenceTests
 	[Fact]
 	public void Filter_WithOrOnLeftOfAnd_PreservesParentheses()
 	{
-		// Arrange & Act
-		var url = new ODataQueryBuilder<TestEntity>("TestEntities", NullLogger.Instance)
-			.Filter(e => (e.Status == "Active" || e.Status == "Pending") && e.IsActive)
-			.BuildUrl();
-
-		// Assert
-		var decoded = Uri.UnescapeDataString(url);
+		var decoded = Decode(e => (e.Status == "Active" || e.Status == "Pending") && e.IsActive);
 
 		// The OR must be wrapped in parentheses
 		decoded.Should().Contain("(Status eq 'Active' or Status eq 'Pending')");
@@ -162,13 +130,7 @@ public class QueryBuilderOrPrecedenceTests
 	[Fact]
 	public void Filter_WithMultipleOrGroups_PreservesAllParentheses()
 	{
-		// Arrange & Act
-		var url = new ODataQueryBuilder<TestEntity>("TestEntities", NullLogger.Instance)
-			.Filter(e => (e.Status == "Active" || e.Status == "Pending") && (e.Category == "A" || e.Category == "B"))
-			.BuildUrl();
-
-		// Assert
-		var decoded = Uri.UnescapeDataString(url);
+		var decoded = Decode(e => (e.Status == "Active" || e.Status == "Pending") && (e.Category == "A" || e.Category == "B"));
 
 		// Both OR groups must be wrapped in parentheses
 		decoded.Should().Contain("(Status eq 'Active' or Status eq 'Pending')");
@@ -182,13 +144,7 @@ public class QueryBuilderOrPrecedenceTests
 	[Fact]
 	public void Filter_WithDeeplyNestedBoolean_PreservesStructure()
 	{
-		// Arrange & Act
-		var url = new ODataQueryBuilder<TestEntity>("TestEntities", NullLogger.Instance)
-			.Filter(e => e.IsActive && (e.Priority > 5 || (e.Status == "Active" && e.Category == "A")))
-			.BuildUrl();
-
-		// Assert
-		var decoded = Uri.UnescapeDataString(url);
+		var decoded = Decode(e => e.IsActive && (e.Priority > 5 || (e.Status == "Active" && e.Category == "A")));
 
 		decoded.Should().Contain("IsActive");
 		decoded.Should().Contain("Priority gt 5");
@@ -225,13 +181,7 @@ public class QueryBuilderOrPrecedenceTests
 	[Fact]
 	public void Filter_WithStringMethodsAndOrInAnd_PreservesParentheses()
 	{
-		// Arrange & Act
-		var url = new ODataQueryBuilder<TestEntity>("TestEntities", NullLogger.Instance)
-			.Filter(e => e.IsActive && (e.Name.StartsWith("Test") || e.Name.EndsWith("Demo")))
-			.BuildUrl();
-
-		// Assert
-		var decoded = Uri.UnescapeDataString(url);
+		var decoded = Decode(e => e.IsActive && (e.Name.StartsWith("Test") || e.Name.EndsWith("Demo")));
 
 		decoded.Should().Contain("IsActive");
 		decoded.Should().Contain("startswith(Name,'Test')");
@@ -247,13 +197,7 @@ public class QueryBuilderOrPrecedenceTests
 	[Fact]
 	public void Filter_WithNumericComparisonsAndOrInAnd_PreservesParentheses()
 	{
-		// Arrange & Act
-		var url = new ODataQueryBuilder<TestEntity>("TestEntities", NullLogger.Instance)
-			.Filter(e => e.IsActive && (e.Priority < 3 || e.Priority > 7))
-			.BuildUrl();
-
-		// Assert
-		var decoded = Uri.UnescapeDataString(url);
+		var decoded = Decode(e => e.IsActive && (e.Priority < 3 || e.Priority > 7));
 
 		decoded.Should().Contain("IsActive");
 		decoded.Should().Contain("Priority lt 3");
@@ -264,4 +208,7 @@ public class QueryBuilderOrPrecedenceTests
 	}
 
 	#endregion
+
+	private static string Decode(System.Linq.Expressions.Expression<Func<TestEntity, bool>> predicate)
+		=> Uri.UnescapeDataString(new ODataQueryBuilder<TestEntity>("TestEntities", NullLogger.Instance).Filter(predicate).BuildUrl());
 }

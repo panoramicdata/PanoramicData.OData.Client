@@ -7,44 +7,8 @@ namespace PanoramicData.OData.Client.Test.IntegrationTests;
 /// TripPin provides more complex entity relationships and features.
 /// </summary>
 [Trait("Category", "Integration")]
-public class TripPinIntegrationTests : TestBase, IAsyncLifetime
+public class TripPinIntegrationTests : TripPinTestBase
 {
-	private ServiceProvider? _serviceProvider;
-	private ODataClient _client = null!;
-
-	/// <inheritdoc/>
-	public ValueTask InitializeAsync()
-	{
-		var services = new ServiceCollection();
-		services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Debug));
-
-		_serviceProvider = services.BuildServiceProvider();
-		var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
-
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = TripPinV4ReadWriteUri,
-			Logger = loggerFactory.CreateLogger<ODataClient>(),
-			RetryCount = 2,
-			RetryDelay = TimeSpan.FromMilliseconds(500)
-		});
-
-		return ValueTask.CompletedTask;
-	}
-
-	/// <inheritdoc/>
-	public async ValueTask DisposeAsync()
-	{
-		_client?.Dispose();
-
-		if (_serviceProvider is not null)
-		{
-			await _serviceProvider.DisposeAsync();
-		}
-
-		GC.SuppressFinalize(this);
-	}
-
 	#region People Queries
 
 	/// <summary>
@@ -144,7 +108,7 @@ public class TripPinIntegrationTests : TestBase, IAsyncLifetime
 	public async Task GetAirlineByKey_ReturnsEntity()
 	{
 		// Act
-		var airline = await _client.GetByKeyAsync<Airline, string>("AA", cancellationToken: TestContext.Current.CancellationToken);
+		var airline = await Client.GetByKeyAsync<Airline, string>("AA", cancellationToken: TestContext.Current.CancellationToken);
 
 		// Assert
 		airline.Should().NotBeNull();
@@ -198,12 +162,12 @@ public class TripPinIntegrationTests : TestBase, IAsyncLifetime
 	public async Task GetPerson_ComplexTypeProperty_IsDeserialized()
 	{
 		// Arrange
-		var query = _client.For<Person>("People")
+		var query = Client.For<Person>("People")
 			.Key("russellwhyte")
 			.Select("UserName,FirstName,AddressInfo");
 
 		// Act
-		var person = await _client.GetByKeyAsync<Person, string>("russellwhyte", query, TestContext.Current.CancellationToken);
+		var person = await Client.GetByKeyAsync<Person, string>("russellwhyte", query, TestContext.Current.CancellationToken);
 
 		// Assert
 		person.Should().NotBeNull();
@@ -223,14 +187,14 @@ public class TripPinIntegrationTests : TestBase, IAsyncLifetime
 	{
 		// Note: Not all OData services support $search
 		// Arrange
-		var query = _client.For<Person>("People")
+		var query = Client.For<Person>("People")
 			.Search("Russell")
 			.Top(5);
 
 		// Act - This may fail if the service doesn't support $search
 		try
 		{
-			var response = await _client.GetAsync(query, TestContext.Current.CancellationToken);
+			var response = await Client.GetAsync(query, TestContext.Current.CancellationToken);
 			response.Value.Should().NotBeEmpty();
 		}
 		catch (ODataClientException)
@@ -242,11 +206,11 @@ public class TripPinIntegrationTests : TestBase, IAsyncLifetime
 	#endregion
 
 	private Task<ODataResponse<T>> GetPageAsync<T>(string entitySet, Func<ODataQueryBuilder<T>, ODataQueryBuilder<T>> shape) where T : class
-		=> _client.GetAsync(shape(_client.For<T>(entitySet)), TestContext.Current.CancellationToken);
+		=> Client.GetAsync(shape(Client.For<T>(entitySet)), TestContext.Current.CancellationToken);
 
 	private Task<Person?> GetRussellWhyteAsync(string expand)
-		=> _client.GetByKeyAsync<Person, string>(
+		=> Client.GetByKeyAsync<Person, string>(
 			"russellwhyte",
-			_client.For<Person>("People").Key("russellwhyte").Expand(expand),
+			Client.For<Person>("People").Key("russellwhyte").Expand(expand),
 			TestContext.Current.CancellationToken);
 }

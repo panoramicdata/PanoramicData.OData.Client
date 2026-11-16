@@ -8,44 +8,8 @@ namespace PanoramicData.OData.Client.Test.IntegrationTests;
 /// Note: The TripPin service has specific behavior - entities may not persist across calls.
 /// </summary>
 [Trait("Category", "Integration")]
-public class CrudIntegrationTests : TestBase, IAsyncLifetime
+public class CrudIntegrationTests : TripPinTestBase
 {
-	private ServiceProvider? _serviceProvider;
-	private ODataClient _client = null!;
-
-	/// <inheritdoc/>
-	public ValueTask InitializeAsync()
-	{
-		var services = new ServiceCollection();
-		services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Debug));
-
-		_serviceProvider = services.BuildServiceProvider();
-		var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
-
-		_client = new ODataClient(new ODataClientOptions
-		{
-			BaseUrl = TripPinV4ReadWriteUri,
-			Logger = loggerFactory.CreateLogger<ODataClient>(),
-			RetryCount = 2,
-			RetryDelay = TimeSpan.FromMilliseconds(500)
-		});
-
-		return ValueTask.CompletedTask;
-	}
-
-	/// <inheritdoc/>
-	public async ValueTask DisposeAsync()
-	{
-		_client?.Dispose();
-
-		if (_serviceProvider is not null)
-		{
-			await _serviceProvider.DisposeAsync();
-		}
-
-		GC.SuppressFinalize(this);
-	}
-
 	#region Create Tests
 
 	/// <summary>
@@ -66,7 +30,7 @@ public class CrudIntegrationTests : TestBase, IAsyncLifetime
 		};
 
 		// Act
-		var created = await _client.CreateAsync("People", newPerson, cancellationToken: CancellationToken);
+		var created = await Client.CreateAsync("People", newPerson, cancellationToken: CancellationToken);
 
 		// Assert - Service creates the entity (TripPin may return minimal response)
 		created.Should().NotBeNull();
@@ -83,10 +47,10 @@ public class CrudIntegrationTests : TestBase, IAsyncLifetime
 	public async Task GetByKeyAsync_ExistingPerson_ReturnsEntity()
 	{
 		// Arrange - Create a query with explicit entity set name
-		var query = _client.For<Person>("People");
+		var query = Client.For<Person>("People");
 
 		// Act
-		var person = await _client.GetByKeyAsync<Person, string>("russellwhyte", query, CancellationToken);
+		var person = await Client.GetByKeyAsync<Person, string>("russellwhyte", query, CancellationToken);
 
 		// Assert
 		person.Should().NotBeNull();
@@ -101,10 +65,10 @@ public class CrudIntegrationTests : TestBase, IAsyncLifetime
 	public async Task GetByKeyAsync_NonExistentEntity_ThrowsException()
 	{
 		// Arrange
-		var query = _client.For<Person>("People");
+		var query = Client.For<Person>("People");
 
 		// Act
-		var act = async () => await _client.GetByKeyAsync<Person, string>(
+		var act = async () => await Client.GetByKeyAsync<Person, string>(
 			"nonexistent_user_xyz_12345",
 			query,
 			CancellationToken);
@@ -124,7 +88,7 @@ public class CrudIntegrationTests : TestBase, IAsyncLifetime
 	public async Task DeleteAsync_NonExistentEntity_ThrowsException()
 	{
 		// Arrange & Act
-		var act = async () => await _client.DeleteAsync(
+		var act = async () => await Client.DeleteAsync(
 			"People",
 			"nonexistent_user_to_delete_xyz",
 			cancellationToken: CancellationToken);
@@ -144,12 +108,12 @@ public class CrudIntegrationTests : TestBase, IAsyncLifetime
 	public async Task GetAsync_WithFilter_ReturnsFilteredResults()
 	{
 		// Arrange
-		var query = _client.For<Person>("People")
+		var query = Client.For<Person>("People")
 			.Filter("FirstName eq 'Russell'")
 			.Top(5);
 
 		// Act
-		var response = await _client.GetAsync(query, CancellationToken);
+		var response = await Client.GetAsync(query, CancellationToken);
 
 		// Assert
 		response.Value.Should().AllSatisfy(p => p.FirstName.Should().Be("Russell"));
@@ -162,12 +126,12 @@ public class CrudIntegrationTests : TestBase, IAsyncLifetime
 	public async Task GetAsync_WithExpand_ReturnsRelatedEntities()
 	{
 		// Arrange
-		var query = _client.For<Person>("People")
+		var query = Client.For<Person>("People")
 			.Key("russellwhyte")
 			.Expand("Friends");
 
 		// Act
-		var person = await _client.GetByKeyAsync<Person, string>("russellwhyte", query, CancellationToken);
+		var person = await Client.GetByKeyAsync<Person, string>("russellwhyte", query, CancellationToken);
 
 		// Assert
 		person.Should().NotBeNull();
@@ -181,12 +145,12 @@ public class CrudIntegrationTests : TestBase, IAsyncLifetime
 	public async Task GetAsync_WithSelect_ReturnsSelectedFields()
 	{
 		// Arrange
-		var query = _client.For<Person>("People")
+		var query = Client.For<Person>("People")
 			.Select("UserName,FirstName")
 			.Top(3);
 
 		// Act
-		var response = await _client.GetAsync(query, CancellationToken);
+		var response = await Client.GetAsync(query, CancellationToken);
 
 		// Assert
 		response.Value.Should().NotBeEmpty();
@@ -204,12 +168,12 @@ public class CrudIntegrationTests : TestBase, IAsyncLifetime
 	public async Task GetAsync_WithOrderBy_ReturnsOrderedResults()
 	{
 		// Arrange
-		var query = _client.For<Person>("People")
+		var query = Client.For<Person>("People")
 			.OrderBy("FirstName")
 			.Top(5);
 
 		// Act
-		var response = await _client.GetAsync(query, CancellationToken);
+		var response = await Client.GetAsync(query, CancellationToken);
 
 		// Assert
 		response.Value.Should().NotBeEmpty();
@@ -224,19 +188,19 @@ public class CrudIntegrationTests : TestBase, IAsyncLifetime
 	public async Task GetAsync_WithSkipAndTop_ReturnsPaginatedResults()
 	{
 		// Arrange
-		var queryPage1 = _client.For<Person>("People")
+		var queryPage1 = Client.For<Person>("People")
 			.OrderBy("UserName")
 			.Skip(0)
 			.Top(2);
 
-		var queryPage2 = _client.For<Person>("People")
+		var queryPage2 = Client.For<Person>("People")
 			.OrderBy("UserName")
 			.Skip(2)
 			.Top(2);
 
 		// Act
-		var page1 = await _client.GetAsync(queryPage1, CancellationToken);
-		var page2 = await _client.GetAsync(queryPage2, CancellationToken);
+		var page1 = await Client.GetAsync(queryPage1, CancellationToken);
+		var page2 = await Client.GetAsync(queryPage2, CancellationToken);
 
 		// Assert
 		page1.Value.Should().NotBeEmpty();
