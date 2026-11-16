@@ -25,6 +25,8 @@ public partial class ODataClient
 		ODataBatchBuilder batch,
 		[Optional] CancellationToken cancellationToken)
 	{
+		ThrowIfReadOnlyRefuses(batch);
+
 		var batchBoundary = $"batch_{Guid.NewGuid():N}";
 
 		LoggerMessages.ExecuteBatchAsync(_logger, batch.Items.Count, batchBoundary);
@@ -37,6 +39,7 @@ public partial class ODataClient
 			Content = content
 		};
 
+		MarkReadOnlyVerified(request);
 		_options.ConfigureRequest?.Invoke(request);
 
 		var response = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);

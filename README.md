@@ -420,7 +420,10 @@ var client = new ODataClient(new ODataClientOptions
     },
 
     // Optional: Return null instead of throwing ODataNotFoundException on 404
-    IgnoreResourceNotFoundException = true
+    IgnoreResourceNotFoundException = true,
+
+    // Optional: Refuse every request that could change data (throws InvalidOperationException before sending)
+    IsReadOnly = false
 });
 ```
 
