@@ -84,6 +84,6 @@ public class PerformanceMeasurementTests
 		}
 
 		sw.Stop();
-		return sw.ElapsedMilliseconds * 1000.0 / Iterations;
+		return sw.Elapsed.TotalMilliseconds * 1000.0 / Iterations;
 	}
 }
