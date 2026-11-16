@@ -68,17 +68,7 @@ public partial class ODataClient
 		// Use the single-entity deserialization path to match the response shape.
 		if (query.HasKey)
 		{
-			var url = query.BuildUrl();
-			LoggerMessages.GetAsync(_logger, typeof(T).Name, url);
-			var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
-			var httpResponse = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-			if (_options.IgnoreResourceNotFoundException && httpResponse.StatusCode == HttpStatusCode.NotFound)
-			{
-				return null;
-			}
-
-			await EnsureSuccessAsync(httpResponse, url, cancellationToken).ConfigureAwait(false);
-			return await httpResponse.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false);
+			return await GetKeyedEntityAsync(query, _options.IgnoreResourceNotFoundException, cancellationToken).ConfigureAwait(false);
 		}
 
 		// Collection path: $top=1 to fetch only one item
@@ -102,12 +92,7 @@ public partial class ODataClient
 		// When a key is set, the endpoint returns a single JSON object directly
 		if (query.HasKey)
 		{
-			var url = query.BuildUrl();
-			LoggerMessages.GetAsync(_logger, typeof(T).Name, url);
-			var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
-			var httpResponse = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
-			await EnsureSuccessAsync(httpResponse, url, cancellationToken).ConfigureAwait(false);
-			return await httpResponse.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false)
+			return await GetKeyedEntityAsync(query, returnNullWhenNotFound: false, cancellationToken).ConfigureAwait(false)
 				?? throw new InvalidOperationException("Sequence contains no elements");
 		}
 
@@ -115,12 +100,9 @@ public partial class ODataClient
 		query.Top(2);
 		var response = await GetAsync(query, cancellationToken).ConfigureAwait(false);
 
-		return response.Value.Count switch
-		{
-			0 => throw new InvalidOperationException("Sequence contains no elements"),
-			1 => response.Value[0],
-			_ => throw new InvalidOperationException("Sequence contains more than one element")
-		};
+		return response.Value.Count == 0
+			? throw new InvalidOperationException("Sequence contains no elements")
+			: SingleOrDefaultFrom(response.Value)!;
 	}
 
 	/// <summary>
@@ -140,11 +122,29 @@ public partial class ODataClient
 
 		var response = await GetAsync(query, cancellationToken).ConfigureAwait(false);
 
-		return response.Value.Count switch
+		return SingleOrDefaultFrom(response.Value);
+	}
+
+	private async Task<T?> GetKeyedEntityAsync<T>(ODataQueryBuilder<T> query, bool returnNullWhenNotFound, CancellationToken cancellationToken) where T : class
+	{
+		var url = query.BuildUrl();
+		LoggerMessages.GetAsync(_logger, typeof(T).Name, url);
+		var request = CreateRequest(HttpMethod.Get, url, query.CustomHeaders);
+		var httpResponse = await SendWithRetryAsync(request, cancellationToken).ConfigureAwait(false);
+		if (returnNullWhenNotFound && httpResponse.StatusCode == HttpStatusCode.NotFound)
 		{
-			0 => default,
-			1 => response.Value[0],
+			return null;
+		}
+
+		await EnsureSuccessAsync(httpResponse, url, cancellationToken).ConfigureAwait(false);
+		return await httpResponse.Content.ReadFromJsonAsync<T>(_jsonOptions, cancellationToken).ConfigureAwait(false);
+	}
+
+	private static T? SingleOrDefaultFrom<T>(List<T> values) where T : class
+		=> values.Count switch
+		{
+			0 => null,
+			1 => values[0],
 			_ => throw new InvalidOperationException("Sequence contains more than one element")
 		};
-	}
 }
