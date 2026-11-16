@@ -20,11 +20,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// </summary>
 	public ODataQueryBuilder<T> Select(string fields)
 	{
-		if (!string.IsNullOrWhiteSpace(fields))
-		{
-			_selectFields.AddRange(fields.Split(',').Select(f => f.Trim()));
-		}
-
+		ODataListText.AddCommaSeparated(_selectFields, fields);
 		return this;
 	}
 
@@ -47,11 +43,7 @@ public partial class ODataQueryBuilder<T> where T : class
 	/// </summary>
 	public ODataQueryBuilder<T> Expand(string fields)
 	{
-		if (!string.IsNullOrWhiteSpace(fields))
-		{
-			_expandFields.AddRange(fields.Split(',').Select(f => f.Trim()));
-		}
-
+		ODataListText.AddCommaSeparated(_expandFields, fields);
 		return this;
 	}
 
@@ -110,22 +102,7 @@ public partial class ODataQueryBuilder<T> where T : class
 		Expression<Func<T, TNav?>> navigationProperty,
 		Action<NestedExpandBuilder<TNav>> configure) where TNav : class
 	{
-		var navPropertyName = GetNavigationPropertyName(navigationProperty);
-		if (string.IsNullOrEmpty(navPropertyName))
-		{
-			return this;
-		}
-
-		var nestedBuilder = new NestedExpandBuilder<TNav>();
-		configure(nestedBuilder);
-
-		var nestedOptions = nestedBuilder.Build();
-		var expandClause = string.IsNullOrEmpty(nestedOptions)
-			? navPropertyName
-			: $"{navPropertyName}({nestedOptions})";
-
-		_expandFields.Add(expandClause);
-
+		ExpandNavigation(GetNavigationPropertyName(navigationProperty), configure);
 		return this;
 	}
 
@@ -140,23 +117,22 @@ public partial class ODataQueryBuilder<T> where T : class
 		Expression<Func<T, IEnumerable<TNav>?>> navigationProperty,
 		Action<NestedExpandBuilder<TNav>> configure) where TNav : class
 	{
-		var navPropertyName = GetCollectionNavigationPropertyName(navigationProperty);
+		ExpandNavigation(GetCollectionNavigationPropertyName(navigationProperty), configure);
+		return this;
+	}
+
+	private void ExpandNavigation<TNav>(string navPropertyName, Action<NestedExpandBuilder<TNav>> configure) where TNav : class
+	{
 		if (string.IsNullOrEmpty(navPropertyName))
 		{
-			return this;
+			return;
 		}
 
 		var nestedBuilder = new NestedExpandBuilder<TNav>();
 		configure(nestedBuilder);
 
 		var nestedOptions = nestedBuilder.Build();
-		var expandClause = string.IsNullOrEmpty(nestedOptions)
-			? navPropertyName
-			: $"{navPropertyName}({nestedOptions})";
-
-		_expandFields.Add(expandClause);
-
-		return this;
+		_expandFields.Add(string.IsNullOrEmpty(nestedOptions) ? navPropertyName : $"{navPropertyName}({nestedOptions})");
 	}
 
 	private static string GetNavigationPropertyName<TNav>(Expression<Func<T, TNav?>> selector) =>

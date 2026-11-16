@@ -1,49 +1,54 @@
 namespace PanoramicData.OData.Client.Converters;
 
 /// <summary>
+/// Shared parsing and formatting for the OData date converters.
+/// </summary>
+internal static class ODataDateTimeText
+{
+	private const string Format = "yyyy-MM-ddTHH:mm:ssZ";
+
+	// Handles a 'Z' suffix, offsets, and date-only strings (treated as UTC).
+	internal static DateTime? ParseUtc(string? text)
+	{
+		if (string.IsNullOrEmpty(text))
+		{
+			return null;
+		}
+
+		if (DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dto))
+		{
+			return dto.UtcDateTime;
+		}
+
+		return DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dt)
+			? DateTime.SpecifyKind(dt, DateTimeKind.Utc)
+			: null;
+	}
+
+	// DateTime.MinValue is often used as a "not set" value, so Unspecified is treated as UTC.
+	internal static string ToODataString(DateTime value)
+	{
+		var utcValue = value.Kind == DateTimeKind.Unspecified
+			? DateTime.SpecifyKind(value, DateTimeKind.Utc)
+			: value.ToUniversalTime();
+
+		return utcValue.ToString(Format, CultureInfo.InvariantCulture);
+	}
+}
+
+/// <summary>
 /// Custom JSON converter for DateTime that formats dates as ISO 8601 with UTC 'Z' suffix
 /// as required by OData (Edm.DateTimeOffset).
 /// </summary>
 public class ODataDateTimeConverter : JsonConverter<DateTime>
 {
-	private const string ODataDateTimeFormat = "yyyy-MM-ddTHH:mm:ssZ";
-
 	/// <inheritdoc />
 	public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-	{
-		var dateString = reader.GetString();
-		if (string.IsNullOrEmpty(dateString))
-		{
-			return default;
-		}
-
-		// Try parsing as DateTimeOffset first (handles 'Z' suffix and timezone offsets)
-		// For date-only strings without timezone info, AssumeUniversal treats them as UTC
-		if (DateTimeOffset.TryParse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dto))
-		{
-			return dto.UtcDateTime;
-		}
-
-		// Fall back to DateTime parsing with AssumeUniversal for date-only strings
-		if (DateTime.TryParse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dt))
-		{
-			return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-		}
-
-		return default;
-	}
+		=> ODataDateTimeText.ParseUtc(reader.GetString()) ?? default;
 
 	/// <inheritdoc />
 	public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
-	{
-		// OData requires dates in ISO 8601 format with 'Z' suffix for UTC
-		// DateTime.MinValue is often used as a "not set" value, so we treat it as UTC
-		var utcValue = value.Kind == DateTimeKind.Unspecified
-			? DateTime.SpecifyKind(value, DateTimeKind.Utc)
-			: value.ToUniversalTime();
-
-		writer.WriteStringValue(utcValue.ToString(ODataDateTimeFormat, CultureInfo.InvariantCulture));
-	}
+		=> writer.WriteStringValue(ODataDateTimeText.ToODataString(value));
 }
 
 /// <summary>
@@ -52,52 +57,20 @@ public class ODataDateTimeConverter : JsonConverter<DateTime>
 /// </summary>
 public class ODataNullableDateTimeConverter : JsonConverter<DateTime?>
 {
-	private const string ODataDateTimeFormat = "yyyy-MM-ddTHH:mm:ssZ";
-
 	/// <inheritdoc />
 	public override DateTime? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-	{
-		if (reader.TokenType == JsonTokenType.Null)
-		{
-			return null;
-		}
-
-		var dateString = reader.GetString();
-		if (string.IsNullOrEmpty(dateString))
-		{
-			return null;
-		}
-
-		// Try parsing as DateTimeOffset first (handles 'Z' suffix and timezone offsets)
-		// For date-only strings without timezone info, AssumeUniversal treats them as UTC
-		if (DateTimeOffset.TryParse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dto))
-		{
-			return dto.UtcDateTime;
-		}
-
-		// Fall back to DateTime parsing with AssumeUniversal for date-only strings
-		if (DateTime.TryParse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dt))
-		{
-			return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-		}
-
-		return null;
-	}
+		=> reader.TokenType == JsonTokenType.Null ? null : ODataDateTimeText.ParseUtc(reader.GetString());
 
 	/// <inheritdoc />
 	public override void Write(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)
 	{
-		if (!value.HasValue)
+		if (value.HasValue)
+		{
+			writer.WriteStringValue(ODataDateTimeText.ToODataString(value.Value));
+		}
+		else
 		{
 			writer.WriteNullValue();
-			return;
 		}
-
-		// OData requires dates in ISO 8601 format with 'Z' suffix for UTC
-		var utcValue = value.Value.Kind == DateTimeKind.Unspecified
-			? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc)
-			: value.Value.ToUniversalTime();
-
-		writer.WriteStringValue(utcValue.ToString(ODataDateTimeFormat, CultureInfo.InvariantCulture));
 	}
 }

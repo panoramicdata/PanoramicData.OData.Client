@@ -106,10 +106,7 @@ public partial class FluentODataQueryBuilder
 	/// <returns>This builder for method chaining.</returns>
 	public FluentODataQueryBuilder Filter(string rawFilter)
 	{
-		if (!string.IsNullOrWhiteSpace(rawFilter))
-		{
-			_filterClauses.Add(rawFilter);
-		}
+		ODataListText.AddIfNotBlank(_filterClauses, rawFilter);
 
 		return this;
 	}
@@ -132,10 +129,7 @@ public partial class FluentODataQueryBuilder
 	/// <returns>This builder for method chaining.</returns>
 	public FluentODataQueryBuilder Select(string fields)
 	{
-		if (!string.IsNullOrWhiteSpace(fields))
-		{
-			_selectFields.AddRange(fields.Split(',').Select(f => f.Trim()));
-		}
+		ODataListText.AddCommaSeparated(_selectFields, fields);
 
 		return this;
 	}
@@ -147,10 +141,7 @@ public partial class FluentODataQueryBuilder
 	/// <returns>This builder for method chaining.</returns>
 	public FluentODataQueryBuilder Expand(string fields)
 	{
-		if (!string.IsNullOrWhiteSpace(fields))
-		{
-			_expandFields.AddRange(fields.Split(',').Select(f => f.Trim()));
-		}
+		ODataListText.AddCommaSeparated(_expandFields, fields);
 
 		return this;
 	}
@@ -162,10 +153,7 @@ public partial class FluentODataQueryBuilder
 	/// <returns>This builder for method chaining.</returns>
 	public FluentODataQueryBuilder OrderBy(string orderByExpression)
 	{
-		if (!string.IsNullOrWhiteSpace(orderByExpression))
-		{
-			_orderByClauses.Add(orderByExpression);
-		}
+		ODataListText.AddIfNotBlank(_orderByClauses, orderByExpression);
 
 		return this;
 	}
@@ -270,10 +258,7 @@ public partial class FluentODataQueryBuilder
 	/// </remarks>
 	public FluentODataQueryBuilder QueryOptions(string rawQueryOptions)
 	{
-		if (!string.IsNullOrWhiteSpace(rawQueryOptions))
-		{
-			_rawQueryOptions.Add(rawQueryOptions);
-		}
+		ODataListText.AddIfNotBlank(_rawQueryOptions, rawQueryOptions);
 
 		return this;
 	}
