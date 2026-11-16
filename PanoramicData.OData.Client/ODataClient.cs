@@ -108,6 +108,8 @@ public partial class ODataClient : IDisposable
 		HttpRequestMessage request,
 		CancellationToken cancellationToken)
 	{
+		ThrowIfReadOnlyRefuses(request);
+
 		var retryCount = 0;
 		HttpResponseMessage? lastResponse = null;
 
