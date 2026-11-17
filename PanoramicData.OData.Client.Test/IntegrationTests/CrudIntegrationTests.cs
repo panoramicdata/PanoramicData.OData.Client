@@ -107,11 +107,7 @@ public class CrudIntegrationTests : TripPinTestBase
 	[Fact]
 	public async Task GetAsync_WithFilter_ReturnsFilteredResults()
 	{
-		var response = await GetPageAsync<Person>("People", query => query.Filter("FirstName eq 'Russell'")
-			.Top(5));
-
-		// Assert
-		response.Value.Should().AllSatisfy(p => p.FirstName.Should().Be("Russell"));
+		await AssertFilterByFirstNameAsync();
 	}
 
 	/// <summary>
@@ -120,11 +116,7 @@ public class CrudIntegrationTests : TripPinTestBase
 	[Fact]
 	public async Task GetAsync_WithExpand_ReturnsRelatedEntities()
 	{
-		var person = await GetRussellWhyteAsync("Friends");
-
-		// Assert
-		person.Should().NotBeNull();
-		person!.Friends.Should().NotBeNull();
+		await AssertExpandFriendsAsync();
 	}
 
 	/// <summary>

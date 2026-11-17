@@ -29,11 +29,7 @@ public class TripPinIntegrationTests : TripPinTestBase
 	[Fact]
 	public async Task GetPeople_FilterByFirstName_ReturnsFiltered()
 	{
-		var response = await GetPageAsync<Person>("People", query => query.Filter("FirstName eq 'Russell'")
-			.Top(5));
-
-		// Assert
-		response.Value.Should().AllSatisfy(p => p.FirstName.Should().Be("Russell"));
+		await AssertFilterByFirstNameAsync();
 	}
 
 	/// <summary>
@@ -42,11 +38,7 @@ public class TripPinIntegrationTests : TripPinTestBase
 	[Fact]
 	public async Task GetPerson_ExpandFriends_ReturnsFriends()
 	{
-		var person = await GetRussellWhyteAsync("Friends");
-
-		// Assert
-		person.Should().NotBeNull();
-		person!.Friends.Should().NotBeNull();
+		await AssertExpandFriendsAsync();
 	}
 
 	/// <summary>
