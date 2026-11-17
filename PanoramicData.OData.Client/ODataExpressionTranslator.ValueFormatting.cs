@@ -7,7 +7,7 @@ namespace PanoramicData.OData.Client;
 /// </summary>
 internal static partial class ODataExpressionTranslator
 {
-	internal static string GetMemberPath(MemberExpression member) => MemberPathResolver.GetFlatPath(member);
+	internal static string GetMemberPath(MemberExpression member, bool useSerializedNames = true) => MemberPathResolver.GetFlatPath(member, useSerializedNames);
 
 	private static object? GetValue(Expression expression) => expression switch
 	{

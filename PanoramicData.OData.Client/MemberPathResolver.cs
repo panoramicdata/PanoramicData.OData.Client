@@ -10,6 +10,12 @@ namespace PanoramicData.OData.Client;
 internal static class MemberPathResolver
 {
 	/// <summary>
+	/// The name the member is serialised under: its <c>[JsonPropertyName]</c> when present, else the CLR name.
+	/// </summary>
+	internal static string GetSerializedName(MemberInfo member)
+		=> member.GetCustomAttribute<System.Text.Json.Serialization.JsonPropertyNameAttribute>()?.Name ?? member.Name;
+
+	/// <summary>
 	/// Walks a member access chain (e.g. <c>p.BestFriend.FirstName</c>) from leaf to root,
 	/// returning each segment's name and <see cref="MemberInfo"/>, plus the terminal
 	/// (non-<see cref="MemberExpression"/>) root expression - typically the lambda parameter,
@@ -22,7 +28,7 @@ internal static class MemberPathResolver
 
 		while (current is MemberExpression memberExpr)
 		{
-			segments.Push((memberExpr.Member.Name, memberExpr.Member));
+			segments.Push((GetSerializedName(memberExpr.Member), memberExpr.Member));
 			current = memberExpr.Expression;
 		}
 
@@ -32,16 +38,18 @@ internal static class MemberPathResolver
 	/// <summary>
 	/// Resolves a member access chain to a flat, slash-separated OData path (e.g. <c>BestFriend/FirstName</c>).
 	/// </summary>
-	internal static string GetFlatPath(MemberExpression member)
+	internal static string GetFlatPath(MemberExpression member, bool useSerializedNames = true)
 	{
 		var (segments, _) = WalkChain(member);
+
+		string Segment((string Name, MemberInfo Member) s) => useSerializedNames ? s.Name : s.Member.Name;
 
 		// For small paths (common case), avoid string.Join allocation
 		return segments.Count switch
 		{
 			0 => string.Empty,
-			1 => segments.Pop().Name,
-			_ => string.Join("/", segments.Select(s => s.Name))
+			1 => Segment(segments.Pop()),
+			_ => string.Join("/", segments.Select(Segment))
 		};
 	}
 
