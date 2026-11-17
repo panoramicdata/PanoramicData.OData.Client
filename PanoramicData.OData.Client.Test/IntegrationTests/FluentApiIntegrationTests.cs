@@ -209,10 +209,8 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	public async Task For_Key_GetEntryAsync_ReturnsEntity()
 	{
 		// Arrange & Act
-		var entity = await fixture.Client
-			.For("Products")
-			.Key(0)
-			.GetEntryAsync(CancellationToken);
+		var entity = await GetProductEntryAsync(query => query
+			.Key(0));
 
 		// Assert
 		entity.Should().NotBeNull();
@@ -227,11 +225,9 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	public async Task For_Key_WithSelect_GetEntryAsync_ReturnsSelectedFields()
 	{
 		// Arrange & Act
-		var entity = await fixture.Client
-			.For("Products")
+		var entity = await GetProductEntryAsync(query => query
 			.Key(0)
-			.Select("ID,Name")
-			.GetEntryAsync(CancellationToken);
+			.Select("ID,Name"));
 
 		// Assert
 		entity.Should().NotBeNull();
@@ -271,16 +267,11 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	public async Task For_GetJsonAsync_ReturnsJsonDocument()
 	{
 		// Arrange & Act
-		using var json = await fixture.Client
-			.For("Products")
-			.Top(5)
-			.GetJsonAsync(CancellationToken);
+		using var json = await GetProductsJsonAsync(query => query
+			.Top(5));
 
 		// Assert
-		json.Should().NotBeNull();
-		json.RootElement.TryGetProperty("value", out var valueElement).Should().BeTrue();
-		valueElement.ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
-		valueElement.GetArrayLength().Should().BePositive();
+		AssertValueArrayNotEmpty(json);
 	}
 
 	/// <summary>
@@ -290,20 +281,12 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	public async Task For_WithFilter_GetJsonAsync_ReturnsFilteredJson()
 	{
 		// Arrange & Act
-		using var json = await fixture.Client
-			.For("Products")
+		using var json = await GetProductsJsonAsync(query => query
 			.Filter("Rating gt 3")
-			.Top(5)
-			.GetJsonAsync(CancellationToken);
+			.Top(5));
 
 		// Assert
-		json.Should().NotBeNull();
-		var valueElement = json.RootElement.GetProperty("value");
-		foreach (var item in valueElement.EnumerateArray())
-		{
-			var rating = item.GetProperty("Rating").GetInt32();
-			rating.Should().BeGreaterThan(3);
-		}
+		AssertJsonRatingsAboveThree(json);
 	}
 
 	/// <summary>
@@ -313,11 +296,9 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 	public async Task For_GetJsonAsync_PreservesODataAnnotations()
 	{
 		// Arrange & Act
-		using var json = await fixture.Client
-			.For("Products")
+		using var json = await GetProductsJsonAsync(query => query
 			.Count()
-			.Top(1)
-			.GetJsonAsync(CancellationToken);
+			.Top(1));
 
 		// Assert
 		json.Should().NotBeNull();
@@ -360,4 +341,10 @@ public class FluentApiIntegrationTests(ODataClientFixture fixture) : TestBase, I
 
 	private Task<ODataResponse<Dictionary<string, object?>>> GetProductsAsync(Func<FluentODataQueryBuilder, FluentODataQueryBuilder> shape)
 		=> shape(fixture.Client.For("Products")).GetAsync(CancellationToken);
+
+	private Task<Dictionary<string, object?>?> GetProductEntryAsync(Func<FluentODataQueryBuilder, FluentODataQueryBuilder> shape)
+		=> shape(fixture.Client.For("Products")).GetEntryAsync(CancellationToken);
+
+	private Task<System.Text.Json.JsonDocument> GetProductsJsonAsync(Func<FluentODataQueryBuilder, FluentODataQueryBuilder> shape)
+		=> shape(fixture.Client.For("Products")).GetJsonAsync(CancellationToken);
 }

@@ -73,4 +73,26 @@ public abstract class TripPinTestBase : TestBase, IAsyncLifetime
 			p.FirstName.Should().NotBeNullOrEmpty();
 		});
 	}
+
+	/// <summary>
+	/// Asserts that filtering people by first name returns only Russells.
+	/// </summary>
+	protected async Task AssertFilterByFirstNameAsync()
+	{
+		var response = await GetPageAsync<Person>("People", query => query.Filter("FirstName eq 'Russell'")
+			.Top(5));
+
+		response.Value.Should().AllSatisfy(p => p.FirstName.Should().Be("Russell"));
+	}
+
+	/// <summary>
+	/// Asserts that expanding Friends on russellwhyte loads the navigation property.
+	/// </summary>
+	protected async Task AssertExpandFriendsAsync()
+	{
+		var person = await GetRussellWhyteAsync("Friends");
+
+		person.Should().NotBeNull();
+		person!.Friends.Should().NotBeNull();
+	}
 }

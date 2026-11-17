@@ -77,4 +77,27 @@ public abstract class TestBase
 			.Select(p => p.Price!.Value)
 			.Should().BeInDescendingOrder();
 	}
+
+	/// <summary>
+	/// Asserts the document holds a non-empty "value" array.
+	/// </summary>
+	protected static void AssertValueArrayNotEmpty(System.Text.Json.JsonDocument document)
+	{
+		document.Should().NotBeNull();
+		document.RootElement.TryGetProperty("value", out var valueElement).Should().BeTrue();
+		valueElement.ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
+		valueElement.GetArrayLength().Should().BePositive();
+	}
+
+	/// <summary>
+	/// Asserts every item in the document's "value" array has a rating above 3.
+	/// </summary>
+	protected static void AssertJsonRatingsAboveThree(System.Text.Json.JsonDocument document)
+	{
+		document.Should().NotBeNull();
+		foreach (var item in document.RootElement.GetProperty("value").EnumerateArray())
+		{
+			item.GetProperty("Rating").GetInt32().Should().BeGreaterThan(3);
+		}
+	}
 }

@@ -26,10 +26,7 @@ public class RawQueryIntegrationTests(ODataClientFixture fixture) : TestBase, IC
 		using var doc = await GetRawAsync("Products?$top=5");
 
 		// Assert
-		doc.Should().NotBeNull();
-		doc.RootElement.TryGetProperty("value", out var valueElement).Should().BeTrue();
-		valueElement.ValueKind.Should().Be(JsonValueKind.Array);
-		valueElement.GetArrayLength().Should().BePositive();
+		AssertValueArrayNotEmpty(doc);
 	}
 
 	/// <summary>
@@ -42,13 +39,7 @@ public class RawQueryIntegrationTests(ODataClientFixture fixture) : TestBase, IC
 		using var doc = await GetRawAsync("Products?$filter=Rating gt 3&$top=5");
 
 		// Assert
-		doc.Should().NotBeNull();
-		var valueElement = doc.RootElement.GetProperty("value");
-		foreach (var item in valueElement.EnumerateArray())
-		{
-			var rating = item.GetProperty("Rating").GetInt32();
-			rating.Should().BeGreaterThan(3);
-		}
+		AssertJsonRatingsAboveThree(doc);
 	}
 
 	/// <summary>

@@ -10,6 +10,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	private const string EmptyPage = """{"value":[]}""";
 
 	private int _callCount;
+	private readonly CapturingLogger _logger = new();
 	private readonly List<DateTime> _callTimes = [];
 
 	/// <summary>
@@ -80,13 +81,12 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	public async Task Request_TransientFailureThatRecovers_LogsAttemptAtDebugAndNoWarning()
 	{
 		SetupFailuresThenSuccess(1, () => Respond(HttpStatusCode.ServiceUnavailable, "{}"));
-		var logger = new CapturingLogger();
-		using var client = CreateRetryClient(3, logger);
+		using var client = CreateRetryClient(3);
 
 		await client.GetAsync(client.For<Product>("Products"), CancellationToken);
 
-		logger.Entries.Should().Contain(entry => entry.EventId.Id == 18 && entry.Level == LogLevel.Debug);
-		logger.Entries.Should().NotContain(entry => entry.Level == LogLevel.Warning);
+		_logger.Entries.Should().Contain(entry => entry.EventId.Id == 18 && entry.Level == LogLevel.Debug);
+		_logger.Entries.Should().NotContain(entry => entry.Level == LogLevel.Warning);
 	}
 
 	/// <summary>
@@ -96,13 +96,12 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	public async Task Request_RetriesExhaustedOnServerError_LogsSingleWarning()
 	{
 		SetupSendAsync().ReturnsAsync(() => Respond(HttpStatusCode.ServiceUnavailable, "{}"));
-		var logger = new CapturingLogger();
-		using var client = CreateRetryClient(2, logger);
+		using var client = CreateRetryClient(2);
 
 		var act = () => client.GetAsync(client.For<Product>("Products"), CancellationToken);
 
 		await act.Should().ThrowAsync<ODataClientException>();
-		AssertSingleWarningAndDebugAttempts(logger, warningEventId: 22, attemptEventId: 18);
+		AssertSingleWarningAndDebugAttempts(warningEventId: 22, attemptEventId: 18);
 	}
 
 	/// <summary>
@@ -113,13 +112,12 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	public async Task Request_RetriesExhaustedOnException_LogsSingleWarningAndThrows()
 	{
 		SetupSendAsync().ThrowsAsync(new HttpRequestException("Connection failed"));
-		var logger = new CapturingLogger();
-		using var client = CreateRetryClient(2, logger);
+		using var client = CreateRetryClient(2);
 
 		var act = () => client.GetAsync(client.For<Product>("Products"), CancellationToken);
 
 		await act.Should().ThrowAsync<HttpRequestException>();
-		AssertSingleWarningAndDebugAttempts(logger, warningEventId: 23, attemptEventId: 19);
+		AssertSingleWarningAndDebugAttempts(warningEventId: 23, attemptEventId: 19);
 	}
 
 	/// <summary>
@@ -129,12 +127,11 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	public async Task Request_RetryAttemptLogLevelWarning_LogsAttemptsAtWarning()
 	{
 		SetupFailuresThenSuccess(1, () => Respond(HttpStatusCode.ServiceUnavailable, "{}"));
-		var logger = new CapturingLogger();
-		using var client = CreateRetryClient(3, logger, LogLevel.Warning);
+		using var client = CreateRetryClient(3, LogLevel.Warning);
 
 		await client.GetAsync(client.For<Product>("Products"), CancellationToken);
 
-		logger.Entries.Should().Contain(entry => entry.EventId.Id == 18 && entry.Level == LogLevel.Warning);
+		_logger.Entries.Should().Contain(entry => entry.EventId.Id == 18 && entry.Level == LogLevel.Warning);
 	}
 
 	/// <summary>
@@ -144,12 +141,11 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	public async Task Request_RetryAttemptLogLevelNone_LogsNoAttempts()
 	{
 		SetupFailuresThenSuccess(1, () => Respond(HttpStatusCode.ServiceUnavailable, "{}"));
-		var logger = new CapturingLogger();
-		using var client = CreateRetryClient(3, logger, LogLevel.None);
+		using var client = CreateRetryClient(3, LogLevel.None);
 
 		await client.GetAsync(client.For<Product>("Products"), CancellationToken);
 
-		logger.Entries.Should().NotContain(entry => entry.EventId.Id == 18 || entry.EventId.Id == 19);
+		_logger.Entries.Should().NotContain(entry => entry.EventId.Id == 18 || entry.EventId.Id == 19);
 	}
 
 	/// <summary>
@@ -184,20 +180,20 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 			return _callCount <= failures ? failure() : Respond(HttpStatusCode.OK, EmptyPage);
 		});
 
-	private ODataClient CreateRetryClient(int retryCount, ILogger? logger = null, LogLevel? attemptLogLevel = null, TimeSpan? retryDelay = null)
+	private ODataClient CreateRetryClient(int retryCount, LogLevel? attemptLogLevel = null, TimeSpan? retryDelay = null)
 		=> CreateClient(options =>
 		{
-			options.Logger = logger ?? NullLogger.Instance;
+			options.Logger = _logger;
 			options.RetryCount = retryCount;
 			options.RetryDelay = retryDelay ?? TimeSpan.FromMilliseconds(1);
 			options.RetryAttemptLogLevel = attemptLogLevel ?? options.RetryAttemptLogLevel;
 		});
 
-	private static void AssertSingleWarningAndDebugAttempts(CapturingLogger logger, int warningEventId, int attemptEventId)
+	private void AssertSingleWarningAndDebugAttempts(int warningEventId, int attemptEventId)
 	{
-		logger.Entries.Where(entry => entry.Level == LogLevel.Warning).Should().ContainSingle()
+		_logger.Entries.Where(entry => entry.Level == LogLevel.Warning).Should().ContainSingle()
 			.Which.EventId.Id.Should().Be(warningEventId);
-		logger.Entries.Where(entry => entry.EventId.Id == attemptEventId).Should().HaveCount(2)
+		_logger.Entries.Where(entry => entry.EventId.Id == attemptEventId).Should().HaveCount(2)
 			.And.OnlyContain(entry => entry.Level == LogLevel.Debug);
 	}
 
