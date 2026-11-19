@@ -36,7 +36,7 @@ public class NestedExpandBuilderTests : MockedODataClientTestBase
 
 		// Assert
 		url.Should().Contain("$expand=Products");
-		url.Should().Contain("$select=Id,Name");
+		url.Should().Contain("$select=ID,Name");
 	}
 
 	/// <summary>
@@ -137,7 +137,7 @@ public class NestedExpandBuilderTests : MockedODataClientTestBase
 
 		// Assert
 		url.Should().Contain("$expand=Products");
-		url.Should().Contain("$select=Id,Name");
+		url.Should().Contain("$select=ID,Name");
 		url.Should().Contain("$filter=");
 		url.Should().Contain("$orderby=Name");
 		url.Should().Contain("$top=10");

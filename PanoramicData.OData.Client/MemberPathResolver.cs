@@ -90,13 +90,22 @@ internal static class MemberPathResolver
 	/// a <see cref="MemberExpression"/>.
 	/// </summary>
 	internal static string GetLeafMemberNameOrEmpty(Expression expression)
+		=> GetLeafMember(expression)?.Name ?? string.Empty;
+
+	/// <summary>
+	/// As <see cref="GetLeafMemberNameOrEmpty"/>, but returns the <c>[JsonPropertyName]</c> when present.
+	/// </summary>
+	internal static string GetLeafSerializedNameOrEmpty(Expression expression)
+		=> GetLeafMember(expression) is { } member ? GetSerializedName(member) : string.Empty;
+
+	private static MemberInfo? GetLeafMember(Expression expression)
 	{
 		if (expression is UnaryExpression unary && unary.NodeType == ExpressionType.Convert)
 		{
 			expression = unary.Operand;
 		}
 
-		return expression is MemberExpression member ? member.Member.Name : string.Empty;
+		return (expression as MemberExpression)?.Member;
 	}
 
 	/// <summary>
@@ -212,7 +221,7 @@ internal static class MemberPathResolver
 		{
 			foreach (var arg in newExpr.Arguments)
 			{
-				var memberName = GetLeafMemberNameOrEmpty(arg);
+				var memberName = GetLeafSerializedNameOrEmpty(arg);
 				if (!string.IsNullOrEmpty(memberName) && !target.Contains(memberName))
 				{
 					target.Add(memberName);
@@ -221,7 +230,7 @@ internal static class MemberPathResolver
 		}
 		else if (body is MemberExpression member)
 		{
-			target.Add(member.Member.Name);
+			target.Add(GetSerializedName(member.Member));
 		}
 	}
 }
