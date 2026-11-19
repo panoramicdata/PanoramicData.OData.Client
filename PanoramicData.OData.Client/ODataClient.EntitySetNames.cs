@@ -14,6 +14,12 @@ public partial class ODataClient
 	{
 		var type = typeof(T);
 
+		var resolvedEntitySetName = _options.EntitySetNameResolver?.Invoke(type);
+		if (!string.IsNullOrWhiteSpace(resolvedEntitySetName))
+		{
+			return resolvedEntitySetName;
+		}
+
 		return TryGetDeclaredEntitySetName(type)
 			?? (_options.AutoPluralization ? Pluralize(type.Name) : type.Name);
 	}

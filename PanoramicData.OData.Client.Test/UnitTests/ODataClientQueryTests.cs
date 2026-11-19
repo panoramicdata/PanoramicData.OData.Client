@@ -13,6 +13,18 @@ internal sealed class EntitySetAttribute(string entitySet) : Attribute
 internal sealed class GeneratedMailbox { }
 
 /// <summary>
+/// An application-defined entity-set attribute used to exercise attribute-based resolvers.
+/// </summary>
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
+internal sealed class CollectionNameAttribute(string name) : Attribute
+{
+	public string Name { get; } = name;
+}
+
+[CollectionName("service_products")]
+internal sealed class AttributeResolvedEntity { }
+
+/// <summary>
 /// Unit tests for how ODataClient resolves entity set names and navigation paths.
 /// </summary>
 public class ODataClientQueryTests : MockedODataClientTestBase
@@ -37,6 +49,79 @@ public class ODataClientQueryTests : MockedODataClientTestBase
 	[Fact]
 	public void For_EntitySetAttribute_OverridesPluralization()
 		=> Client.For<GeneratedMailbox>().BuildUrl().Should().Be("Mailbox");
+
+	/// <summary>
+	/// Tests that the configured resolver overrides the [EntitySet] attribute and pluralization.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolver_OverridesAttributeAndPluralization()
+	{
+		using var client = CreateClient(options => options.EntitySetNameResolver =
+			type => type == typeof(GeneratedMailbox) ? "custom_mailboxes" : type == typeof(Product) ? "custom_products" : null);
+
+		client.For<GeneratedMailbox>().BuildUrl().Should().Be("custom_mailboxes");
+		client.For<Product>().BuildUrl().Should().Be("custom_products");
+		client.For<Category>().BuildUrl().Should().Be("Categories");
+	}
+
+	/// <summary>
+	/// Tests that a null, empty or whitespace resolver result falls back to the existing conventions.
+	/// </summary>
+	[Theory]
+	[InlineData(null)]
+	[InlineData("")]
+	[InlineData(" ")]
+	public void For_EntitySetNameResolverReturnsNothing_UsesExistingConventions(string? resolved)
+	{
+		using var client = CreateClient(options => options.EntitySetNameResolver = _ => resolved);
+
+		client.For<GeneratedMailbox>().BuildUrl().Should().Be("Mailbox");
+		client.For<Product>().BuildUrl().Should().Be("Products");
+	}
+
+	/// <summary>
+	/// Tests that an explicit entity set name does not invoke the resolver.
+	/// </summary>
+	[Fact]
+	public void For_WithExplicitEntitySetName_DoesNotInvokeResolver()
+	{
+		using var client = CreateClient(options => options.EntitySetNameResolver =
+			_ => throw new InvalidOperationException("Resolver should not be invoked."));
+
+		client.For<Product>("CustomProducts").BuildUrl().Should().Be("CustomProducts");
+	}
+
+	/// <summary>
+	/// Tests that the resolver receives the requested type.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolver_ReceivesRequestedType()
+	{
+		Type? observedType = null;
+		using var client = CreateClient(options => options.EntitySetNameResolver = type =>
+		{
+			observedType = type;
+			return null;
+		});
+
+		client.For<Product>().BuildUrl();
+
+		observedType.Should().Be<Product>();
+	}
+
+	/// <summary>
+	/// Tests that an attribute-based resolver reads the name from a custom attribute on the model.
+	/// </summary>
+	[Fact]
+	public void For_EntitySetNameResolver_ResolvesFromCustomAttribute()
+	{
+		using var client = CreateClient(options => options.EntitySetNameResolver =
+			type => type.GetCustomAttributes(typeof(CollectionNameAttribute), inherit: false)
+				.OfType<CollectionNameAttribute>()
+				.FirstOrDefault()?.Name);
+
+		client.For<AttributeResolvedEntity>().BuildUrl().Should().Be("service_products");
+	}
 
 	/// <summary>
 	/// Tests that disabling AutoPluralization keeps the type name as is.
