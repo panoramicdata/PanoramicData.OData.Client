@@ -35,11 +35,8 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	public async Task Request_ClientError_DoesNotRetry()
 	{
 		SetupSendAsync().ReturnsAsync(() => CountedResponse(HttpStatusCode.BadRequest, "{}"));
-		using var client = CreateRetryClient(3);
 
-		var act = () => client.GetAsync(client.For<Product>("Products"), CancellationToken);
-
-		await act.Should().ThrowAsync<ODataClientException>();
+		await GetExpectingFailureAsync<ODataClientException>(3);
 		_callCount.Should().Be(1);
 	}
 
@@ -65,11 +62,8 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	public async Task Request_MaxRetries_ThrowsException()
 	{
 		SetupSendAsync().ReturnsAsync(() => CountedResponse(HttpStatusCode.ServiceUnavailable, "{}"));
-		using var client = CreateRetryClient(2);
 
-		var act = () => client.GetAsync(client.For<Product>("Products"), CancellationToken);
-
-		await act.Should().ThrowAsync<ODataClientException>();
+		await GetExpectingFailureAsync<ODataClientException>(2);
 		_callCount.Should().Be(3);
 	}
 
@@ -80,10 +74,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	[Fact]
 	public async Task Request_TransientFailureThatRecovers_LogsAttemptAtDebugAndNoWarning()
 	{
-		SetupFailuresThenSuccess(1, () => Respond(HttpStatusCode.ServiceUnavailable, "{}"));
-		using var client = CreateRetryClient(3);
-
-		await client.GetAsync(client.For<Product>("Products"), CancellationToken);
+		await GetAfterOneServerErrorAsync(3);
 
 		_logger.Entries.Should().Contain(entry => entry.EventId.Id == 18 && entry.Level == LogLevel.Debug);
 		_logger.Entries.Should().NotContain(entry => entry.Level == LogLevel.Warning);
@@ -96,11 +87,8 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	public async Task Request_RetriesExhaustedOnServerError_LogsSingleWarning()
 	{
 		SetupSendAsync().ReturnsAsync(() => Respond(HttpStatusCode.ServiceUnavailable, "{}"));
-		using var client = CreateRetryClient(2);
 
-		var act = () => client.GetAsync(client.For<Product>("Products"), CancellationToken);
-
-		await act.Should().ThrowAsync<ODataClientException>();
+		await GetExpectingFailureAsync<ODataClientException>(2);
 		AssertSingleWarningAndDebugAttempts(warningEventId: 22, attemptEventId: 18);
 	}
 
@@ -112,11 +100,8 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	public async Task Request_RetriesExhaustedOnException_LogsSingleWarningAndThrows()
 	{
 		SetupSendAsync().ThrowsAsync(new HttpRequestException("Connection failed"));
-		using var client = CreateRetryClient(2);
 
-		var act = () => client.GetAsync(client.For<Product>("Products"), CancellationToken);
-
-		await act.Should().ThrowAsync<HttpRequestException>();
+		await GetExpectingFailureAsync<HttpRequestException>(2);
 		AssertSingleWarningAndDebugAttempts(warningEventId: 23, attemptEventId: 19);
 	}
 
@@ -126,10 +111,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	[Fact]
 	public async Task Request_RetryAttemptLogLevelWarning_LogsAttemptsAtWarning()
 	{
-		SetupFailuresThenSuccess(1, () => Respond(HttpStatusCode.ServiceUnavailable, "{}"));
-		using var client = CreateRetryClient(3, LogLevel.Warning);
-
-		await client.GetAsync(client.For<Product>("Products"), CancellationToken);
+		await GetAfterOneServerErrorAsync(3, LogLevel.Warning);
 
 		_logger.Entries.Should().Contain(entry => entry.EventId.Id == 18 && entry.Level == LogLevel.Warning);
 	}
@@ -140,10 +122,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	[Fact]
 	public async Task Request_RetryAttemptLogLevelNone_LogsNoAttempts()
 	{
-		SetupFailuresThenSuccess(1, () => Respond(HttpStatusCode.ServiceUnavailable, "{}"));
-		using var client = CreateRetryClient(3, LogLevel.None);
-
-		await client.GetAsync(client.For<Product>("Products"), CancellationToken);
+		await GetAfterOneServerErrorAsync(3, LogLevel.None);
 
 		_logger.Entries.Should().NotContain(entry => entry.EventId.Id == 18 || entry.EventId.Id == 19);
 	}
@@ -154,10 +133,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	[Fact]
 	public async Task Request_RetryDelay_IsRespected()
 	{
-		SetupFailuresThenSuccess(1, () => Respond(HttpStatusCode.ServiceUnavailable, "{}"));
-		using var client = CreateRetryClient(2, retryDelay: TimeSpan.FromMilliseconds(100));
-
-		await client.GetAsync(client.For<Product>("Products"), CancellationToken);
+		await GetAfterOneServerErrorAsync(2, retryDelay: TimeSpan.FromMilliseconds(100));
 
 		_callTimes.Should().HaveCount(2);
 		(_callTimes[1] - _callTimes[0]).TotalMilliseconds.Should().BeGreaterThanOrEqualTo(90);
@@ -188,6 +164,24 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 			options.RetryDelay = retryDelay ?? TimeSpan.FromMilliseconds(1);
 			options.RetryAttemptLogLevel = attemptLogLevel ?? options.RetryAttemptLogLevel;
 		});
+
+	private async Task GetAfterOneServerErrorAsync(int retryCount, LogLevel? attemptLogLevel = null, TimeSpan? retryDelay = null)
+	{
+		SetupFailuresThenSuccess(1, () => Respond(HttpStatusCode.ServiceUnavailable, "{}"));
+		using var client = CreateRetryClient(retryCount, attemptLogLevel, retryDelay);
+
+		await client.GetAsync(client.For<Product>("Products"), CancellationToken);
+	}
+
+	private async Task GetExpectingFailureAsync<TException>(int retryCount)
+		where TException : Exception
+	{
+		using var client = CreateRetryClient(retryCount);
+
+		var act = () => client.GetAsync(client.For<Product>("Products"), CancellationToken);
+
+		await act.Should().ThrowAsync<TException>();
+	}
 
 	private void AssertSingleWarningAndDebugAttempts(int warningEventId, int attemptEventId)
 	{

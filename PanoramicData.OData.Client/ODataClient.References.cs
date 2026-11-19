@@ -26,8 +26,7 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken)
 	{
-		var url = NavigationReferenceUrl(entitySet, key, navigationProperty);
-		var targetUrl = EntityReferenceUrl(targetEntitySet, targetKey);
+		var (url, targetUrl) = ReferenceUrls(entitySet, key, navigationProperty, targetEntitySet, targetKey);
 
 		LoggerMessages.AddReferenceAsync(_logger, url, targetUrl);
 
@@ -84,8 +83,7 @@ public partial class ODataClient
 		[Optional] IReadOnlyDictionary<string, string>? headers,
 		[Optional] CancellationToken cancellationToken)
 	{
-		var url = NavigationReferenceUrl(entitySet, key, navigationProperty);
-		var targetUrl = EntityReferenceUrl(targetEntitySet, targetKey);
+		var (url, targetUrl) = ReferenceUrls(entitySet, key, navigationProperty, targetEntitySet, targetKey);
 
 		LoggerMessages.SetReferenceAsync(_logger, url, targetUrl);
 
@@ -114,6 +112,9 @@ public partial class ODataClient
 
 		await SendRequestAsync(HttpMethod.Delete, url, headers, cancellationToken).ConfigureAwait(false);
 	}
+
+	private static (string Url, string TargetUrl) ReferenceUrls(string entitySet, object key, string navigationProperty, string targetEntitySet, object targetKey)
+		=> (NavigationReferenceUrl(entitySet, key, navigationProperty), EntityReferenceUrl(targetEntitySet, targetKey));
 
 	private static string NavigationReferenceUrl(string entitySet, object key, string navigationProperty)
 		=> $"{EntityReferenceUrl(entitySet, key)}/{navigationProperty}/$ref";
