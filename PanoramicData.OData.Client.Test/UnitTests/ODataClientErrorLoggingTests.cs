@@ -7,7 +7,7 @@ namespace PanoramicData.OData.Client.Test.UnitTests;
 /// </summary>
 public class ODataClientErrorLoggingTests : MockedODataClientTestBase
 {
-	private readonly List<LogLevel> _levels = [];
+	private readonly CapturingLogger _logger = new();
 
 	/// <summary>
 	/// Tests that 401, 403 and 404 are logged below Error while the typed exception is still thrown.
@@ -21,7 +21,7 @@ public class ODataClientErrorLoggingTests : MockedODataClientTestBase
 		var exception = await Record.ExceptionAsync(() => GetAsync(status));
 
 		exception.Should().BeOfType(exceptionType);
-		_levels.Should().Equal(LogLevel.Information);
+		FailureLevels().Should().Equal(LogLevel.Information);
 	}
 
 	/// <summary>
@@ -35,29 +35,17 @@ public class ODataClientErrorLoggingTests : MockedODataClientTestBase
 		var exception = await Record.ExceptionAsync(() => GetAsync(status));
 
 		exception.Should().BeOfType<ODataClientException>();
-		_levels.Should().Equal(LogLevel.Error);
+		FailureLevels().Should().Equal(LogLevel.Error);
 	}
+
+	private IEnumerable<LogLevel> FailureLevels()
+		=> _logger.Entries.Where(entry => entry.Level >= LogLevel.Information).Select(entry => entry.Level);
 
 	private async Task GetAsync(HttpStatusCode status)
 	{
 		SetupSendAsync().ReturnsAsync(() => new HttpResponseMessage(status) { Content = new StringContent("{}") });
-		using var client = CreateClient(options => options.Logger = new LevelRecordingLogger(_levels));
+		using var client = CreateClient(options => options.Logger = _logger);
 
 		await client.GetAsync(client.For<Product>("Products"), CancellationToken);
-	}
-
-	private sealed class LevelRecordingLogger(List<LogLevel> levels) : ILogger
-	{
-		public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-
-		public bool IsEnabled(LogLevel logLevel) => true;
-
-		public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-		{
-			if (logLevel >= LogLevel.Information)
-			{
-				levels.Add(logLevel);
-			}
-		}
 	}
 }
