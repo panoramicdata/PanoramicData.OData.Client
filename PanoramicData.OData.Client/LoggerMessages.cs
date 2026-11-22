@@ -83,6 +83,12 @@ internal static partial class LoggerMessages
 	public static partial void RequestFailed(ILogger logger, string url, HttpStatusCode statusCode, string responseBody);
 
 	[LoggerMessage(
+		EventId = 24,
+		Level = LogLevel.Information,
+		Message = "Request to {Url} failed with status {StatusCode}: {ResponseBody}")]
+	public static partial void RequestFailedClientError(ILogger logger, string url, HttpStatusCode statusCode, string responseBody);
+
+	[LoggerMessage(
 		EventId = 21,
 		Level = LogLevel.Error,
 		Message = "Request to {Url} returned HTML content instead of JSON (Content-Type: {ContentType}). Response preview: {Preview}")]

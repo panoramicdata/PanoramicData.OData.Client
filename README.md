@@ -18,6 +18,7 @@ See the [CHANGELOG](https://github.com/panoramicdata/PanoramicData.OData.Client/
 ### Breaking changes
 
 - The default `ODataClientOptions.RetryAttemptLogLevel` is now `Information` (was `Debug`), so each failed attempt that will be retried is visible at the default log level. Set it to `Debug` to restore the previous behaviour.
+- Responses with status 401, 403 and 404 are now logged at `Information` (were `Error`), because the caller decides whether they are expected. The typed exception is thrown as before, and other failures are still logged at `Error`.
 
 ## OData V4 Feature Support
 

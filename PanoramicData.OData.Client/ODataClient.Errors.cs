@@ -35,7 +35,15 @@ public partial class ODataClient
 		int statusCode,
 		string responseBody)
 	{
-		LoggerMessages.RequestFailed(_logger, requestUrl, response.StatusCode, responseBody);
+		if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+		{
+			// The caller decides whether these are expected, so they are not Error.
+			LoggerMessages.RequestFailedClientError(_logger, requestUrl, response.StatusCode, responseBody);
+		}
+		else
+		{
+			LoggerMessages.RequestFailed(_logger, requestUrl, response.StatusCode, responseBody);
+		}
 
 		if (response.StatusCode == HttpStatusCode.PreconditionFailed)
 		{
