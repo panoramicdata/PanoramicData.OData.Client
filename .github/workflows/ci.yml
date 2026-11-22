@@ -19,9 +19,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v6
       with:
-        dotnet-version: |
-          10.0.x
-          11.0.x
+        dotnet-version: 11.0.x
 
     - name: Restore
       run: dotnet restore
@@ -72,7 +70,7 @@ jobs:
         dotnet-version: 11.0.x
 
     - name: Build tests
-      run: dotnet build PanoramicData.OData.Client.Test/PanoramicData.OData.Client.Test.csproj --configuration Debug --framework net11.0
+      run: dotnet build PanoramicData.OData.Client.Test/PanoramicData.OData.Client.Test.csproj --configuration Debug
 
     # The test project is a Microsoft.Testing.Platform application
     # (UseMicrosoftTestingPlatformRunner), so coverage is collected by running the
