@@ -15,6 +15,10 @@ Supports .NET 11.0.
 
 See the [CHANGELOG](https://github.com/panoramicdata/PanoramicData.OData.Client/blob/main/CHANGELOG.md) for a complete list of changes in each version.
 
+### Breaking changes
+
+- The default `ODataClientOptions.RetryAttemptLogLevel` is now `Information` (was `Debug`), so each failed attempt that will be retried is visible at the default log level. Set it to `Debug` to restore the previous behaviour.
+
 ## OData V4 Feature Support
 
 | Feature | Status | Documentation |
@@ -334,7 +338,8 @@ var response = await client.GetAsync(query);
 |-------|-------------------|
 | `Trace` | **Full HTTP traffic**: request URL, method, all headers, request body, response status, response headers, response body |
 | `Debug` | Request URLs, methods, status codes, content lengths, parsed item counts |
-| `Warning` | Retry attempts for failed requests |
+| `Information` | Each failed attempt that will be retried (see `RetryAttemptLogLevel`) |
+| `Warning` | Retries exhausted, request given up |
 | `Error` | Failed requests with response body |
 
 ### Full HTTP Traffic Logging (Trace Level)

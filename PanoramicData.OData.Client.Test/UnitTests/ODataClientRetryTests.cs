@@ -68,15 +68,15 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 	}
 
 	/// <summary>
-	/// Tests that a transient failure that recovers on retry logs the attempt at Debug
+	/// Tests that a transient failure that recovers on retry logs the attempt at Information
 	/// (the default RetryAttemptLogLevel) and logs no Warning.
 	/// </summary>
 	[Fact]
-	public async Task Request_TransientFailureThatRecovers_LogsAttemptAtDebugAndNoWarning()
+	public async Task Request_TransientFailureThatRecovers_LogsAttemptAtInformationAndNoWarning()
 	{
 		await GetAfterOneServerErrorAsync(3);
 
-		_logger.Entries.Should().Contain(entry => entry.EventId.Id == 18 && entry.Level == LogLevel.Debug);
+		_logger.Entries.Should().Contain(entry => entry.EventId.Id == 18 && entry.Level == LogLevel.Information);
 		_logger.Entries.Should().NotContain(entry => entry.Level == LogLevel.Warning);
 	}
 
@@ -89,7 +89,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 		SetupSendAsync().ReturnsAsync(() => Respond(HttpStatusCode.ServiceUnavailable, "{}"));
 
 		await GetExpectingFailureAsync<ODataClientException>(2);
-		AssertSingleWarningAndDebugAttempts(warningEventId: 22, attemptEventId: 18);
+		AssertSingleWarningAndInformationAttempts(warningEventId: 22, attemptEventId: 18);
 	}
 
 	/// <summary>
@@ -102,7 +102,7 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 		SetupSendAsync().ThrowsAsync(new HttpRequestException("Connection failed"));
 
 		await GetExpectingFailureAsync<HttpRequestException>(2);
-		AssertSingleWarningAndDebugAttempts(warningEventId: 23, attemptEventId: 19);
+		AssertSingleWarningAndInformationAttempts(warningEventId: 23, attemptEventId: 19);
 	}
 
 	/// <summary>
@@ -183,12 +183,12 @@ public class ODataClientRetryTests : MockedODataClientTestBase
 		await act.Should().ThrowAsync<TException>();
 	}
 
-	private void AssertSingleWarningAndDebugAttempts(int warningEventId, int attemptEventId)
+	private void AssertSingleWarningAndInformationAttempts(int warningEventId, int attemptEventId)
 	{
 		_logger.Entries.Where(entry => entry.Level == LogLevel.Warning).Should().ContainSingle()
 			.Which.EventId.Id.Should().Be(warningEventId);
 		_logger.Entries.Where(entry => entry.EventId.Id == attemptEventId).Should().HaveCount(2)
-			.And.OnlyContain(entry => entry.Level == LogLevel.Debug);
+			.And.OnlyContain(entry => entry.Level == LogLevel.Information);
 	}
 
 	/// <summary>

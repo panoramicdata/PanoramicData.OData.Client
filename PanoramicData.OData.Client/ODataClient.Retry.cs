@@ -172,7 +172,7 @@ public partial class ODataClient
 		}
 
 		// Individual failed attempts are logged at the configurable RetryAttemptLogLevel
-		// (Debug by default); a single Warning is logged once retries are exhausted, so
+		// (Information by default); a single Warning is logged once retries are exhausted, so
 		// transient failures that recover do not flood the logs.
 		if (retryCount < _options.RetryCount)
 		{
