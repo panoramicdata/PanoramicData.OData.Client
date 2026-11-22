@@ -57,13 +57,13 @@ public class ODataClientOptions
 	/// Gets or sets the level at which individual failed attempts that will be retried are logged.
 	/// </summary>
 	/// <remarks>
-	/// Defaults to <see cref="LogLevel.Debug"/>, so transient failures that recover on retry do not
-	/// flood the logs. Set to <see cref="LogLevel.Warning"/> to log every failed attempt prominently,
-	/// or <see cref="LogLevel.None"/> to disable per-attempt logging entirely.
+	/// Defaults to <see cref="LogLevel.Information"/>, so a retry sequence is visible at the default log level.
+	/// Set to <see cref="LogLevel.Debug"/> to hide recovered retries, <see cref="LogLevel.Warning"/> to log every failed
+	/// attempt prominently, or <see cref="LogLevel.None"/> to disable per-attempt logging entirely.
 	/// A single <see cref="LogLevel.Warning"/> is always logged when all retries are exhausted,
 	/// regardless of this setting.
 	/// </remarks>
-	public LogLevel RetryAttemptLogLevel { get; set; } = LogLevel.Debug;
+	public LogLevel RetryAttemptLogLevel { get; set; } = LogLevel.Information;
 
 	/// <summary>
 	/// Gets or sets the options to use when serializing or deserializing JSON content.
