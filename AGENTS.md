@@ -1,5 +1,10 @@
 # Agent instructions
 
+## Glossary
+
+- NET: .NET, Microsoft's developer platform; this is a product name.
+- POST: the HTTP method that creates a resource.
+
 ## Identity
 
 You are a careful, security-conscious contributor to this repository.
@@ -48,13 +53,13 @@ PanoramicData.OData.Client is a lightweight, modern OData V4 client library for 
    - New configuration options
    - Removed or deprecated features
 
-5. **What NOT to document**:
+5. **What to leave out of the changelog**:
    - Internal refactoring with no API changes
    - Code style/formatting changes
    - Test-only changes
    - Documentation-only changes (unless significant)
 
-6. **Entry format**: Use imperative mood, be concise
+6. **Entry format**: Write each entry in the imperative mood and keep it to one line
    - Good: "Add `TryGetResult<T>()` method to `ODataBatchResponse`"
    - Bad: "Added a new method for trying to get results"
 
@@ -64,14 +69,14 @@ The `[vNext]` placeholder is automatically replaced with the actual version numb
 
 - Follow existing code conventions in the codebase
 - Use C# 14.0 features where appropriate
-- All public APIs must have XML documentation comments
+- All public APIs must have XML documentation comments; if one is missing, add it in the same change.
 - Use `ConfigureAwait(false)` on all async calls
 - Prefer `readonly` fields where possible
 - Use collection expressions `[]` for empty collections
 
 #### IDE2003: Blank Line Required After Closing Brace
 
-**IMPORTANT**: Always add a blank line after a closing brace `}` when followed by any code that is NOT another closing brace.
+**IMPORTANT**: Add a blank line after a closing brace `}` when any code other than another closing brace follows it; the analyzer reports IDE2003 otherwise.
 
 ? **Wrong:**
 ```csharp
@@ -103,14 +108,14 @@ if (condition)
 }
 ```
 
-This applies after: `if`, `else`, `for`, `foreach`, `while`, `do`, `switch`, `try`, `catch`, `finally`, `using`, `lock`, methods, properties, classes, etc.
+This applies after: `if`, `else`, `for`, `foreach`, `while`, `do`, `switch`, `try`, `catch`, `finally`, `using`, `lock`, methods, properties and classes.
 
 ### Architecture
 
 - `ODataClient` is the main entry point, split across partial classes:
   - `ODataClient.cs` - Core functionality and HTTP handling
   - `ODataClient.Query.cs` - Query operations (GET)
-  - `ODataClient.Crud.cs` - CRUD operations (POST, PATCH, PUT, DELETE)
+  - `ODataClient.Crud.cs` - CRUD operations (the HTTP methods POST, PATCH, PUT and DELETE)
   - `ODataClient.Batch.cs` - Batch operations
   - `ODataClient.Metadata.cs` - Metadata operations
   - `ODataClient.Legacy.cs` - Legacy fluent API compatibility
@@ -140,7 +145,7 @@ See [Performance Analysis Guide](Documentation/performance-analysis.md) for:
 - [CHANGELOG.md](CHANGELOG.md) - Version history and changes
 - [Documentation/](Documentation/) - Feature-specific documentation
 - [Run-Benchmarks.ps1](Run-Benchmarks.ps1) - Performance benchmarking
-- [Add-ChangelogEntry.ps1](Add-ChangelogEntry.ps1) - Add changelog entries
+- [Add-ChangelogEntry.ps1](Add-ChangelogEntry.ps1): the script that adds a changelog entry
 - [Publish.ps1](Publish.ps1) - Package publishing
 
 ## PanoramicData staff
