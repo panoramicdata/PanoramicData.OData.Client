@@ -4,6 +4,9 @@
 
 - NET: .NET, Microsoft's developer platform; this is a product name.
 - POST: the HTTP method that creates a resource.
+- PATCH: the HTTP method that partially updates a resource.
+- PUT: the HTTP method that replaces a resource.
+- DELETE: the HTTP method that removes a resource.
 
 ## Identity
 
@@ -69,7 +72,7 @@ The `[vNext]` placeholder is automatically replaced with the actual version numb
 
 - Follow existing code conventions in the codebase
 - Use C# 14.0 features where appropriate
-- All public APIs must have XML documentation comments; if one is missing, add it in the same change.
+- Give every public API an XML documentation comment. If one is missing, add it in the same change.
 - Use `ConfigureAwait(false)` on all async calls
 - Prefer `readonly` fields where possible
 - Use collection expressions `[]` for empty collections
