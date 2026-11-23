@@ -104,7 +104,7 @@ internal static partial class ODataExpressionTranslator
 
 	private static string? TryFormatInClause(Expression collectionExpression, Expression propertyArg)
 	{
-		var collection = GetValue(collectionExpression);
+		var collection = GetValue(UnwrapSpanConversion(collectionExpression));
 
 		if (propertyArg is MemberExpression memberExpr && collection is System.Collections.IEnumerable enumerable)
 		{
@@ -112,6 +112,26 @@ internal static partial class ODataExpressionTranslator
 		}
 
 		return null;
+	}
+
+	// C# 14 wraps an array receiver in an implicit conversion to a span, which cannot be boxed or compiled.
+	private static Expression UnwrapSpanConversion(Expression expression)
+	{
+		var type = expression.Type;
+		var isSpan = type.IsGenericType
+			&& (type.GetGenericTypeDefinition() == typeof(ReadOnlySpan<>) || type.GetGenericTypeDefinition() == typeof(Span<>));
+
+		if (!isSpan)
+		{
+			return expression;
+		}
+
+		return expression switch
+		{
+			MethodCallExpression { Method.Name: "op_Implicit", Arguments.Count: 1 } call => call.Arguments[0],
+			UnaryExpression { NodeType: ExpressionType.Convert } convert => convert.Operand,
+			_ => expression
+		};
 	}
 
 	private static string GetStringExpressionPath(Expression expression) => expression switch
