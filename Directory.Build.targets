@@ -19,13 +19,13 @@
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(CodacyParity)' == 'true'">
-		<AdditionalFiles Include="$(MSBuildThisFileDirectory)build/CodeMetricsConfig.txt" />
+		<AdditionalFiles Include="$(MSBuildThisFileDirectory)Build/CodeMetricsConfig.txt" />
 	</ItemGroup>
 
 	<!-- The SDK builds its analyzer config list before this file is evaluated, so add ours just before compiling. -->
 	<Target Name="AddCodacyParityConfig" BeforeTargets="CoreCompile" Condition="'$(CodacyParity)' == 'true'">
 		<ItemGroup>
-			<EditorConfigFiles Include="$(MSBuildThisFileDirectory)build/codacy-parity.globalconfig" />
+			<EditorConfigFiles Include="$(MSBuildThisFileDirectory)Build/codacy-parity.globalconfig" />
 		</ItemGroup>
 	</Target>
 
