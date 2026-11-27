@@ -232,6 +232,95 @@ public class ODataPatchDictionaryTests : MockedODataClientTestBase
     }
 
     // -----------------------------------------------------------------------
+    // Collections in a patch dictionary
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// A collection is never an entity, so the converter must leave it to the default collection serializer.
+    /// </summary>
+    [Theory]
+    [InlineData(typeof(List<string>))]
+    [InlineData(typeof(string[]))]
+    [InlineData(typeof(HashSet<string>))]
+    [InlineData(typeof(List<SimpleEntity>))]
+    public void ODataTypeAnnotationConverter_CanConvert_ReturnsFalse_ForCollections(Type collectionType)
+    {
+        var converter = new ODataTypeAnnotationConverter();
+        converter.CanConvert(collectionType).Should().BeFalse(
+            because: "a collection must serialize as a JSON array, never as an object");
+    }
+
+    /// <summary>
+    /// A list of strings in a patch dictionary is written as a JSON array.
+    /// </summary>
+    [Fact]
+    public void Serialize_PatchDictionary_WithAListOfStrings_WritesAJsonArray()
+    {
+        var patch = new Dictionary<string, object?> { ["tags"] = new List<string> { "A", "B" } };
+
+        var json = JsonSerializer.Serialize(patch, patch.GetType(), BuildODataJsonOptions());
+
+        json.Should().Be("{\"tags\":[\"A\",\"B\"]}");
+    }
+
+    /// <summary>
+    /// A string array in a patch dictionary is written as a JSON array.
+    /// </summary>
+    [Fact]
+    public void Serialize_PatchDictionary_WithAStringArray_WritesAJsonArray()
+    {
+        var patch = new Dictionary<string, object?> { ["tags"] = new[] { "A", "B" } };
+
+        var json = JsonSerializer.Serialize(patch, patch.GetType(), BuildODataJsonOptions());
+
+        json.Should().Be("{\"tags\":[\"A\",\"B\"]}");
+    }
+
+    /// <summary>
+    /// An empty list in a patch dictionary is written as an empty JSON array, which clears the collection.
+    /// </summary>
+    [Fact]
+    public void Serialize_PatchDictionary_WithAnEmptyList_WritesAnEmptyArray()
+    {
+        var patch = new Dictionary<string, object?> { ["tags"] = new List<string>() };
+
+        var json = JsonSerializer.Serialize(patch, patch.GetType(), BuildODataJsonOptions());
+
+        json.Should().Be("{\"tags\":[]}");
+    }
+
+    /// <summary>
+    /// An entity with a list property still writes that property as an array, as a full-entity POST does.
+    /// </summary>
+    [Fact]
+    public void Serialize_EntityWithAListProperty_StillWritesAnArray()
+    {
+        var entity = new TaggedEntity { Id = 1, Tags = ["A", "B"] };
+
+        var json = JsonSerializer.Serialize(entity, BuildODataJsonOptions());
+
+        json.Should().Contain("\"tags\":[\"A\",\"B\"]");
+    }
+
+    /// <summary>
+    /// UpdateAsync sends a list held in the patch dictionary as a JSON array.
+    /// </summary>
+    [Fact]
+    public async Task UpdateAsync_WithAListInTheDictionary_SendsAJsonArray()
+    {
+        // Arrange
+        SetupCaptureAndReturn(HttpStatusCode.OK, """{"id": 7, "tags": ["A", "B"]}""");
+
+        var patch = new Dictionary<string, object?> { ["tags"] = new List<string> { "A", "B" } };
+
+        // Act
+        await Client.UpdateAsync<TaggedEntity>("Entities", 7, patch, cancellationToken: CancellationToken);
+
+        // Assert
+        _capturedBody.Should().Be("{\"tags\":[\"A\",\"B\"]}");
+    }
+
+    // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
 
@@ -252,5 +341,11 @@ public class ODataPatchDictionaryTests : MockedODataClientTestBase
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
+    }
+
+    public class TaggedEntity
+    {
+        public int Id { get; set; }
+        public List<string> Tags { get; set; } = [];
     }
 }

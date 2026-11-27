@@ -26,7 +26,8 @@ public class ODataTypeAnnotationConverter : JsonConverterFactory
         && typeToConvert != typeof(object)
         && !typeToConvert.IsDefined(typeof(JsonConverterAttribute), inherit: false)
         && !IsODataFrameworkType(typeToConvert)
-        && !IsDictionaryType(typeToConvert);
+        && !IsDictionaryType(typeToConvert)
+        && !IsCollectionType(typeToConvert);
 
     /// <inheritdoc />
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
@@ -68,6 +69,13 @@ public class ODataTypeAnnotationConverter : JsonConverterFactory
         type == typeof(Dictionary<string, object>) ||
         typeof(IDictionary).IsAssignableFrom(type) ||
         (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>));
+
+    /// <summary>
+    /// Determines if the given type is a collection, which must serialize as a JSON array. Its elements still
+    /// pass through this converter, so derived entities inside a collection keep their annotation.
+    /// </summary>
+    private static bool IsCollectionType(Type type) =>
+        type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type);
 
     private sealed class ODataTypeAnnotationConverterInner<T> : JsonConverter<T> where T : class
     {
